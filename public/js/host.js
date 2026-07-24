@@ -143,6 +143,47 @@
   });
   byId('btn-sample').addEventListener('click', function () { loadGame(sampleGame()); });
 
+  byId('btn-export').addEventListener('click', function () {
+    var game = collectGame();
+    var blob = new Blob([JSON.stringify(game, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var safeName = (game.title || 'quiz').toLowerCase()
+      .replace(/[^a-z0-9ăâîșț\- ]/gi, '').trim().replace(/\s+/g, '-') || 'quiz';
+    a.href = url;
+    a.download = safeName + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  byId('btn-import').addEventListener('click', function () { byId('import-file').click(); });
+  byId('import-file').addEventListener('change', function () {
+    var file = byId('import-file').files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var game;
+      try {
+        game = JSON.parse(reader.result);
+      } catch (e) {
+        flashEditor('Fișierul nu e un JSON valid.', true);
+        byId('import-file').value = '';
+        return;
+      }
+      if (!game || !Array.isArray(game.questions) || game.questions.length === 0) {
+        flashEditor('Fișierul nu are structura corectă (title + questions).', true);
+        byId('import-file').value = '';
+        return;
+      }
+      loadGame(game);
+      flashEditor('Quiz importat: ' + game.questions.length + ' întrebări ✔', false);
+      byId('import-file').value = '';
+    };
+    reader.readAsText(file);
+  });
+
   function loadGame(game) {
     qList.innerHTML = ''; qCounter = 0;
     byId('game-title').value = game.title || '';
