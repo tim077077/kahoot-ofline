@@ -1,0 +1,225 @@
+{
+  "title": "Cultură Generală — Ediția Tineret 🇷🇴",
+  "questions": [
+    {
+      "text": "Ce culoare rezultă din amestecul vopselelor albastru și galben?",
+      "time": 10,
+      "answers": [
+        { "text": "Verde", "correct": true },
+        { "text": "Mov", "correct": false },
+        { "text": "Portocaliu", "correct": false },
+        { "text": "Gri", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Câte state membre are Uniunea Europeană?",
+      "time": 15,
+      "answers": [
+        { "text": "25", "correct": false },
+        { "text": "27", "correct": true },
+        { "text": "29", "correct": false },
+        { "text": "31", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Cine a scris romanul distopic „1984”?",
+      "time": 15,
+      "answers": [
+        { "text": "Aldous Huxley", "correct": false },
+        { "text": "George Orwell", "correct": true },
+        { "text": "Ray Bradbury", "correct": false },
+        { "text": "Franz Kafka", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Ce aplicație a inventat conceptul de „story” care dispare după 24 de ore?",
+      "time": 15,
+      "answers": [
+        { "text": "Instagram", "correct": false },
+        { "text": "TikTok", "correct": false },
+        { "text": "Snapchat", "correct": true },
+        { "text": "Facebook", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Ce echipă a câștigat Campionatul Mondial de fotbal din 2022, din Qatar?",
+      "time": 15,
+      "answers": [
+        { "text": "Franța", "correct": false },
+        { "text": "Brazilia", "correct": false },
+        { "text": "Argentina", "correct": true },
+        { "text": "Croația", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Cine este autorul poeziei „Luceafărul”?",
+      "time": 15,
+      "answers": [
+        { "text": "Ion Creangă", "correct": false },
+        { "text": "Mihai Eminescu", "correct": true },
+        { "text": "George Coșbuc", "correct": false },
+        { "text": "Tudor Arghezi", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Ce simbol chimic are elementul Oxigen?",
+      "time": 10,
+      "answers": [
+        { "text": "Ox", "correct": false },
+        { "text": "O", "correct": true },
+        { "text": "O2", "correct": false },
+        { "text": "Og", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Care este capitala Australiei? (Nu e orașul la care te gândești!)",
+      "time": 15,
+      "answers": [
+        { "text": "Sydney", "correct": false },
+        { "text": "Melbourne", "correct": false },
+        { "text": "Canberra", "correct": true },
+        { "text": "Perth", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Cine a compus coloana sonoră pentru trilogia „Stăpânul Inelelor”?",
+      "time": 20,
+      "answers": [
+        { "text": "Hans Zimmer", "correct": false },
+        { "text": "John Williams", "correct": false },
+        { "text": "Howard Shore", "correct": true },
+        { "text": "James Horner", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Câte inele are simbolul Jocurilor Olimpice?",
+      "time": 10,
+      "answers": [
+        { "text": "4", "correct": false },
+        { "text": "5", "correct": true },
+        { "text": "6", "correct": false },
+        { "text": "7", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "În ce an a aderat România la Uniunea Europeană?",
+      "time": 15,
+      "answers": [
+        { "text": "2004", "correct": false },
+        { "text": "2007", "correct": true },
+        { "text": "2010", "correct": false },
+        { "text": "1999", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Ce platformă de streaming a produs serialul „Stranger Things”?",
+      "time": 10,
+      "answers": [
+        { "text": "HBO Max", "correct": false },
+        { "text": "Netflix", "correct": true },
+        { "text": "Disney+", "correct": false },
+        { "text": "Amazon Prime", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Care este cea mai bine vândută consolă de jocuri din istorie?",
+      "time": 20,
+      "answers": [
+        { "text": "Nintendo Switch", "correct": false },
+        { "text": "PlayStation 4", "correct": false },
+        { "text": "PlayStation 2", "correct": true },
+        { "text": "Xbox 360", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Cine este supranumit „Regele Popului”?",
+      "time": 10,
+      "answers": [
+        { "text": "Elvis Presley", "correct": false },
+        { "text": "Michael Jackson", "correct": true },
+        { "text": "Prince", "correct": false },
+        { "text": "Freddie Mercury", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Câți kilometri are, aproximativ, un maraton?",
+      "time": 15,
+      "answers": [
+        { "text": "21 km", "correct": false },
+        { "text": "42 km", "correct": true },
+        { "text": "35 km", "correct": false },
+        { "text": "50 km", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Cine a pictat tabloul „Noaptea înstelată”?",
+      "time": 15,
+      "answers": [
+        { "text": "Claude Monet", "correct": false },
+        { "text": "Pablo Picasso", "correct": false },
+        { "text": "Vincent van Gogh", "correct": true },
+        { "text": "Salvador Dalí", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Care e cel mai înalt vârf montan din România?",
+      "time": 20,
+      "answers": [
+        { "text": "Negoiu", "correct": false },
+        { "text": "Moldoveanu", "correct": true },
+        { "text": "Omu", "correct": false },
+        { "text": "Parângul Mare", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Cine este autoarea francizei „Harry Potter”?",
+      "time": 10,
+      "answers": [
+        { "text": "Suzanne Collins", "correct": false },
+        { "text": "J.K. Rowling", "correct": true },
+        { "text": "Stephenie Meyer", "correct": false },
+        { "text": "George R.R. Martin", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Ce înseamnă, de obicei, abrevierea „AI” în tehnologie?",
+      "time": 10,
+      "answers": [
+        { "text": "Aplicație Internet", "correct": false },
+        { "text": "Inteligență Artificială", "correct": true },
+        { "text": "Algoritm Interactiv", "correct": false },
+        { "text": "Automatizare Industrială", "correct": false }
+      ],
+      "image": null
+    },
+    {
+      "text": "Care e cel mai mare ocean de pe Pământ?",
+      "time": 15,
+      "answers": [
+        { "text": "Oceanul Atlantic", "correct": false },
+        { "text": "Oceanul Indian", "correct": false },
+        { "text": "Oceanul Pacific", "correct": true },
+        { "text": "Oceanul Arctic", "correct": false }
+      ],
+      "image": null
+    }
+  ]
+}
