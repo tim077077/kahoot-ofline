@@ -39,6 +39,36 @@
           <button class="btn secondary small" id="btn-export">⬇️ Exportă fișier JSON</button>
           <input type="file" id="import-file" accept="application/json,.json" class="hidden" />
         </div>
+
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer;font-weight:700;color:#46178f">
+            📝 Cel mai simplu mod: scrie/lipește text simplu (fără JSON)
+          </summary>
+          <div style="margin-top:10px">
+            <p class="muted" style="font-size:.92rem">
+              O întrebare pe bloc, separate printr-o linie goală. Prima linie = întrebarea,
+              a doua (opțional) = timpul în secunde, apoi 2–6 răspunsuri, unul singur
+              cu <code>*</code> înainte = răspunsul corect.
+            </p>
+            <textarea id="text-import-area" rows="10" placeholder="Care este capitala României?
+15
+*București
+Cluj-Napoca
+Iași
+Timișoara
+
+Cât fac 7 x 8?
+10
+54
+*56
+64
+48"></textarea>
+            <div class="btn-row">
+              <button class="btn secondary small" id="btn-text-import">📥 Analizează și încarcă în editor</button>
+            </div>
+            <p class="error-msg" id="text-import-msg"></p>
+          </div>
+        </details>
       </div>
       <footer class="hint"><a href="/">← Înapoi</a></footer>
     </section>

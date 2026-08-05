@@ -158,6 +158,79 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   });
 
+  // ---- Simple text import (no JSON needed) -----------------------------
+  //
+  // Format, one question per block, blocks separated by a blank line:
+  //   Question text
+  //   <optional time in seconds, e.g. "15" or "timp: 15">
+  //   Answer one
+  //   *Correct answer (prefixed with * or +)
+  //   Answer three
+  //   Answer four
+  byId('btn-text-import').addEventListener('click', function () {
+    var raw = byId('text-import-area').value;
+    var msg = byId('text-import-msg');
+    var parsed = parseSimpleText(raw);
+
+    if (parsed.questions.length === 0) {
+      msg.style.color = '';
+      msg.textContent = 'Nu am găsit nicio întrebare validă. Verifică formatul (vezi exemplul din placeholder).';
+      return;
+    }
+
+    loadGame({ title: byId('game-title').value.trim() || 'Quiz', questions: parsed.questions });
+
+    msg.style.color = parsed.warnings.length ? '' : '#26890c';
+    msg.textContent = parsed.warnings.length
+      ? parsed.questions.length + ' întrebări încărcate. Atenție: ' + parsed.warnings.join(' ')
+      : parsed.questions.length + ' întrebări încărcate în editor ✔';
+  });
+
+  function parseSimpleText(raw) {
+    var blocks = String(raw || '')
+      .replace(/\r\n/g, '\n')
+      .split(/\n\s*\n+/)
+      .map(function (b) { return b.trim(); })
+      .filter(Boolean);
+
+    var questions = [];
+    var warnings = [];
+
+    blocks.forEach(function (block, bi) {
+      var lines = block.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+      if (lines.length < 3) {
+        warnings.push('Bloc ' + (bi + 1) + ' ignorat (are nevoie de întrebare + minim 2 răspunsuri).');
+        return;
+      }
+
+      var text = lines.shift();
+      var time = 20;
+      var timeMatch = lines[0] && lines[0].match(/^(?:timp\s*:?\s*|t\s*:?\s*)?(\d{1,3})\s*s?$/i);
+      if (timeMatch) {
+        time = Math.max(5, Math.min(120, parseInt(timeMatch[1], 10)));
+        lines.shift();
+      }
+
+      var answers = lines.slice(0, 6).map(function (l) {
+        var correct = /^[*+]/.test(l);
+        return { text: l.replace(/^[*+]\s*/, '').trim(), correct: correct };
+      }).filter(function (a) { return a.text.length > 0; });
+
+      if (answers.length < 2) {
+        warnings.push('Întrebarea "' + text + '" ignorată (prea puține răspunsuri).');
+        return;
+      }
+      if (!answers.some(function (a) { return a.correct; })) {
+        answers[0].correct = true;
+        warnings.push('La "' + text + '" niciun răspuns nu avea *, am marcat primul ca fiind corect.');
+      }
+
+      questions.push({ text: text, time: time, answers: answers, image: null });
+    });
+
+    return { questions: questions, warnings: warnings };
+  }
+
   byId('btn-import').addEventListener('click', function () { byId('import-file').click(); });
   byId('import-file').addEventListener('change', function () {
     var file = byId('import-file').files[0];

@@ -26,68 +26,22 @@ Suportă **30–50 de jucători** simultan, imagini/GIF-uri la întrebări, cron
 
 ## 🚀 TUTORIAL COMPLET — Instalare pe telefonul HOST
 
-> Trebuie făcut **o singură dată**. `npm install` are nevoie de internet **doar la prima instalare** (ca să descarce Node.js și dependențele). După aceea, jocul merge complet offline.
+### ⚡ Instalare rapidă (recomandat — 1 script face tot)
 
-### Pasul 1 — Instalează Termux
+> Ai nevoie de internet **doar la prima rulare** (descarcă Node.js + codul). După aceea, jocul merge 100% offline.
 
-Termux este un terminal Linux pentru Android.
+**Pasul 1 — Instalează Termux**, dacă nu-l ai deja: din [F-Droid](https://f-droid.org/en/packages/com.termux/) (recomandat, **nu** din Google Play — e învechit).
 
-1. Instalează **Termux** din [F-Droid](https://f-droid.org/en/packages/com.termux/) (recomandat) sau din GitHub Releases.
-   > ⚠️ NU folosi versiunea veche din Google Play — e învechită și dă erori.
-2. Deschide Termux.
-
-### Pasul 2 — Instalează Node.js și git
-
-În Termux, scrie pe rând (ai nevoie de internet aici — Wi-Fi normal sau date):
+**Pasul 2 — Deschide Termux și rulează:**
 
 ```bash
-pkg update -y && pkg upgrade -y
-pkg install -y nodejs git
-```
-
-Verifică:
-
-```bash
-node -v
-```
-
-Dacă apare o versiune (ex. `v20.x`), e perfect.
-
-### Pasul 3 — Adu proiectul pe telefon
-
-**Varianta A — cu git (recomandat):**
-
-```bash
+pkg install -y git
 git clone https://github.com/tim077077/kahoot-ofline.git
 cd kahoot-ofline
+bash install.sh
 ```
 
-**Varianta B — fără git:** copiază folderul proiectului pe telefon (ex. în `Download`), apoi dă-i acces Termux la stocare și intră în folder:
-
-```bash
-termux-setup-storage      # acceptă permisiunea care apare
-cd ~/storage/downloads/kahoot-ofline
-```
-
-### Pasul 4 — Instalează dependențele (o singură dată, cu internet)
-
-```bash
-npm install
-```
-
-### Pasul 5 — Pornește serverul
-
-```bash
-npm start
-```
-
-sau, mai simplu, folosește helper-ul (instalează automat + ține telefonul treaz):
-
-```bash
-bash start.sh
-```
-
-Vei vedea în terminal ceva de genul:
+Atât. `install.sh` face automat, în ordine: instalează Node.js, instalează dependențele, și **pornește serverul**. Vei vedea la final:
 
 ```
   Kahoot Offline — server pornit
@@ -97,6 +51,38 @@ Vei vedea în terminal ceva de genul:
 ```
 
 ✅ **Gata!** Serverul rulează. Lasă Termux deschis.
+
+> 💡 Scriptul e **sigur de rulat oricând din nou** — dacă proiectul e deja clonat, îl actualizează în loc să dea eroare. Îl poți folosi și ca „buton de actualizare" în viitor: `cd kahoot-ofline && bash install.sh`.
+
+**Data viitoare** (fără internet, doar pornești jocul):
+
+```bash
+cd kahoot-ofline && bash start.sh
+```
+
+<details>
+<summary>🔧 Instalare manuală, pas cu pas (dacă vrei să înțelegi ce face scriptul, sau ceva nu merge)</summary>
+
+```bash
+# 1) Pachete Termux
+pkg install -y nodejs git
+
+# 2) Adu proiectul pe telefon
+git clone https://github.com/tim077077/kahoot-ofline.git
+cd kahoot-ofline
+
+# 3) Dependențe Node (o singură dată, cu internet)
+npm install
+
+# 4) Pornește serverul
+npm start
+```
+
+> ⚠️ Comenzile `npm install` / `npm start` trebuie date **din interiorul folderului** `kahoot-ofline` (unde e `package.json`). Dacă apare eroarea `Could not read package.json`, ești în folderul greșit — dă `cd kahoot-ofline` (sau `cd ~/kahoot-ofline`) și încearcă iar.
+>
+> Dacă `git clone` dă `destination path already exists`, înseamnă că proiectul e deja clonat — intră direct în el cu `cd kahoot-ofline` în loc să-l clonezi din nou.
+
+</details>
 
 ---
 
@@ -160,6 +146,8 @@ Vei vedea în terminal ceva de genul:
 | Serverul se oprește când închizi ecranul | Instalează `pkg install termux-api` și pornește cu `bash start.sh` (wake-lock). |
 | „address already in use" | Portul 5000 e ocupat. Pornește pe alt port: `PORT=5050 npm start`. |
 | Imaginea nu se încarcă | Trebuie să fie sub 3 MB și format imagine (jpg/png/gif). |
+| `destination path already exists` la `git clone` | Proiectul e deja clonat. Intră direct în el: `cd kahoot-ofline && bash install.sh` (nu-l mai cloni a doua oară). |
+| `Could not read package.json` la `npm install`/`npm start` | Ești în folderul greșit. Dă `cd kahoot-ofline` (sau `cd ~/kahoot-ofline`) și încearcă iar — sau, mai simplu, rulează `bash install.sh` din orice locație, se descurcă singur. |
 
 ---
 
@@ -181,7 +169,10 @@ kahoot-ofline/
 │       ├── host.js
 │       ├── play.js
 │       └── vendor/qrcode.js # Generator QR offline (fără CDN)
-├── start.sh                # Helper de pornire pentru Termux
+├── examples/
+│   └── quiz-cultura-generala.json  # Quiz de test, gata de import
+├── install.sh               # Instalare completă (o singură comandă, Termux)
+├── start.sh                 # Pornire rapidă, fără reinstalare (Termux)
 ├── package.json
 └── README.md
 ```
