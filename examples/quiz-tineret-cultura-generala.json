@@ -35,24 +35,24 @@
       "image": null
     },
     {
-      "text": "Ce aplicație a inventat conceptul de „story” care dispare după 24 de ore?",
+      "text": "Cine a scris poveștile „Mica Sirenă” și „Rățușca cea urâtă”?",
       "time": 15,
       "answers": [
-        { "text": "Instagram", "correct": false },
-        { "text": "TikTok", "correct": false },
-        { "text": "Snapchat", "correct": true },
-        { "text": "Facebook", "correct": false }
+        { "text": "Charles Perrault", "correct": false },
+        { "text": "Hans Christian Andersen", "correct": true },
+        { "text": "Frații Grimm", "correct": false },
+        { "text": "Lewis Carroll", "correct": false }
       ],
       "image": null
     },
     {
-      "text": "Ce echipă a câștigat Campionatul Mondial de fotbal din 2022, din Qatar?",
+      "text": "Ce sport se joacă la Wimbledon, cel mai vechi turneu din lume?",
       "time": 15,
       "answers": [
-        { "text": "Franța", "correct": false },
-        { "text": "Brazilia", "correct": false },
-        { "text": "Argentina", "correct": true },
-        { "text": "Croația", "correct": false }
+        { "text": "Golf", "correct": false },
+        { "text": "Tenis", "correct": true },
+        { "text": "Squash", "correct": false },
+        { "text": "Badminton", "correct": false }
       ],
       "image": null
     },
@@ -90,13 +90,13 @@
       "image": null
     },
     {
-      "text": "Cine a compus coloana sonoră pentru trilogia „Stăpânul Inelelor”?",
+      "text": "Cine a compus celebra lucrare „Anotimpurile” (Le quattro stagioni)?",
       "time": 20,
       "answers": [
-        { "text": "Hans Zimmer", "correct": false },
-        { "text": "John Williams", "correct": false },
-        { "text": "Howard Shore", "correct": true },
-        { "text": "James Horner", "correct": false }
+        { "text": "Johann Sebastian Bach", "correct": false },
+        { "text": "Wolfgang Amadeus Mozart", "correct": false },
+        { "text": "Antonio Vivaldi", "correct": true },
+        { "text": "Ludwig van Beethoven", "correct": false }
       ],
       "image": null
     },
@@ -123,35 +123,35 @@
       "image": null
     },
     {
-      "text": "Ce platformă de streaming a produs serialul „Stranger Things”?",
+      "text": "Cine a fost primul om care a pășit pe Lună?",
       "time": 10,
       "answers": [
-        { "text": "HBO Max", "correct": false },
-        { "text": "Netflix", "correct": true },
-        { "text": "Disney+", "correct": false },
-        { "text": "Amazon Prime", "correct": false }
+        { "text": "Buzz Aldrin", "correct": false },
+        { "text": "Neil Armstrong", "correct": true },
+        { "text": "Yuri Gagarin", "correct": false },
+        { "text": "John Glenn", "correct": false }
       ],
       "image": null
     },
     {
-      "text": "Care este cea mai bine vândută consolă de jocuri din istorie?",
+      "text": "Care este cel mai adânc punct din oceanele lumii?",
       "time": 20,
       "answers": [
-        { "text": "Nintendo Switch", "correct": false },
-        { "text": "PlayStation 4", "correct": false },
-        { "text": "PlayStation 2", "correct": true },
-        { "text": "Xbox 360", "correct": false }
+        { "text": "Groapa Puerto Rico", "correct": false },
+        { "text": "Groapa Marianelor", "correct": true },
+        { "text": "Marea Moartă", "correct": false },
+        { "text": "Oceanul Arctic", "correct": false }
       ],
       "image": null
     },
     {
-      "text": "Cine este supranumit „Regele Popului”?",
+      "text": "Cine este creditat cu inventarea becului electric?",
       "time": 10,
       "answers": [
-        { "text": "Elvis Presley", "correct": false },
-        { "text": "Michael Jackson", "correct": true },
-        { "text": "Prince", "correct": false },
-        { "text": "Freddie Mercury", "correct": false }
+        { "text": "Nikola Tesla", "correct": false },
+        { "text": "Thomas Edison", "correct": true },
+        { "text": "Alexander Graham Bell", "correct": false },
+        { "text": "Benjamin Franklin", "correct": false }
       ],
       "image": null
     },
@@ -200,13 +200,13 @@
       "image": null
     },
     {
-      "text": "Ce înseamnă, de obicei, abrevierea „AI” în tehnologie?",
+      "text": "Care este simbolul chimic al apei?",
       "time": 10,
       "answers": [
-        { "text": "Aplicație Internet", "correct": false },
-        { "text": "Inteligență Artificială", "correct": true },
-        { "text": "Algoritm Interactiv", "correct": false },
-        { "text": "Automatizare Industrială", "correct": false }
+        { "text": "HO2", "correct": false },
+        { "text": "H2O", "correct": true },
+        { "text": "H2O2", "correct": false },
+        { "text": "OH2", "correct": false }
       ],
       "image": null
     },
