@@ -35,24 +35,24 @@
       "image": null
     },
     {
-      "text": "Cine a scris poveștile „Mica Sirenă” și „Rățușca cea urâtă”?",
-      "time": 15,
+      "text": "Care este cel mai lung fluviu din Europa?",
+      "time": 20,
       "answers": [
-        { "text": "Charles Perrault", "correct": false },
-        { "text": "Hans Christian Andersen", "correct": true },
-        { "text": "Frații Grimm", "correct": false },
-        { "text": "Lewis Carroll", "correct": false }
+        { "text": "Dunărea", "correct": false },
+        { "text": "Volga", "correct": true },
+        { "text": "Rinul", "correct": false },
+        { "text": "Nipru", "correct": false }
       ],
       "image": null
     },
     {
-      "text": "Ce sport se joacă la Wimbledon, cel mai vechi turneu din lume?",
-      "time": 15,
+      "text": "Cât este 2 la puterea a 10-a (2¹⁰)?",
+      "time": 20,
       "answers": [
-        { "text": "Golf", "correct": false },
-        { "text": "Tenis", "correct": true },
-        { "text": "Squash", "correct": false },
-        { "text": "Badminton", "correct": false }
+        { "text": "512", "correct": false },
+        { "text": "1024", "correct": true },
+        { "text": "2048", "correct": false },
+        { "text": "1000", "correct": false }
       ],
       "image": null
     },
