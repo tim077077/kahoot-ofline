@@ -41,6 +41,34 @@ deriving every design choice from them.
 
 ---
 
+## 0b. Gathering the inputs (research mode — only if you have tools)
+
+Normally the user attaches the photos and pastes the INPUT block, and you skip this
+section. But if you are running with **web/shell tools** (e.g. Claude Code) and were
+handed a Google Maps link, a website, or just a place name, you may gather the inputs
+yourself first:
+
+- **Best path — run the intake script** in this repo:
+  `node intake/gather.mjs "<place name or Maps URL>" --website <url>` (needs
+  `GOOGLE_MAPS_API_KEY` and/or `FIRECRAWL_API_KEY`). It writes a `photos/` folder, a
+  pre-filled `INPUT.md`, and a scraped `site-content.md`. Then continue as normal.
+- **Or gather directly:** use **Firecrawl** for the property's own site / Booking /
+  Facebook page (richest text + real photo URLs), and the **Google Places API** for a
+  bare Maps pin (address, phone, hours, rating, up to 5 reviews, a few photos).
+- **You must actually SEE the photos.** Fetching a URL as text is not enough — download
+  the candidate images to disk and open/view them, because the theme comes from what
+  they look like.
+- **Never invent** reviews, amenities, prices, distances or legal details. Use only
+  what you gathered or were given; if something is missing, leave it out or ask once.
+- **Plain chat with no tools?** You cannot browse — say so, and ask the user to run
+  `intake/gather.mjs` or to attach the photos and paste the INPUT block.
+
+Honest limits: the Places API caps reviews at ~5 and photos at a handful, and we do
+**not** scrape Google Maps itself (against Google's terms). The property's own web
+presence is the best source.
+
+---
+
 ## 1. Your standard (this is the job)
 
 - Approach this as **the design lead at a small studio known for giving every client
@@ -159,6 +187,17 @@ property (an oversized architectural detail, a material texture, a distinctive
 section treatment, a motif from the building or region). Everything else stays calm so
 this lands.
 
+**Two quick examples of derivation (for range — never copy these):**
+- *A warm, terracotta-roofed rustic pension, garden and pool in the photos* → a warm
+  sand base, a deep garden-green for dark sections, a brick/terracotta accent from the
+  roof; a characterful serif + a calm humanist sans. Warm, yes — but pulled from THESE
+  photos, and never the banned `#F4F1EA`/`#D97757`.
+- *A glass-and-steel city hotel, grey light, minimalist rooms* → a cool off-white or
+  pale greige base, near-black ink, a single restrained steel-blue or brass accent; a
+  crisp grotesk display + a neutral sans. Reaching for warm cream + terracotta here
+  would be pure slop.
+The point: the same process yields opposite palettes because it follows the photos.
+
 ---
 
 ## 5. CRITIC — attack your own plan (fresh eyes)
@@ -195,12 +234,14 @@ reviews, description and amenities:
 Produce **three self-contained files** — no build step, no frameworks, no external
 JS/CSS libraries. The only external resource allowed is **Google Fonts via `<link>`**.
 
-- **`index.html`** — semantic landmarks (`header`/`nav`/`main`/`section`/`footer`), a
-  skip-to-content link, the sections in §8, real `<img>` tags pointing at the client's
-  supplied photo URLs with **descriptive alt text**, `width`/`height` set, and
-  `loading="lazy"` (hero image eager). Working links: `tel:` for the phone,
-  `https://wa.me/<international-number>` for WhatsApp, the Booking URL, a Google Maps
-  link.
+- **`index.html`** — `<html lang="ro">`, semantic landmarks
+  (`header`/`nav`/`main`/`section`/`footer`), a skip-to-content link, the sections in
+  §8, and a complete `<head>` (see **SEO** below). Real `<img>` tags point at the
+  client's supplied photo URLs with **descriptive alt text** and explicit
+  `width`/`height` (to prevent layout shift); below-the-fold images use
+  `loading="lazy"`, while the hero image uses `fetchpriority="high"` and is **not**
+  lazy. Working links: `tel:` for the phone, `https://wa.me/<international-number>`
+  (with a prefilled message, see §8) for WhatsApp, the Booking URL, a Google Maps link.
 - **`styles.css`** — define the palette as **CSS custom properties on `:root`** and use
   every colour via `var()` (nothing hard-coded ad hoc, so the whole theme traces to the
   plan). **Mobile-first** (build for phones first — that is where guests find these
@@ -210,7 +251,27 @@ JS/CSS libraries. The only external resource allowed is **Google Fonts via `<lin
   fight over the same padding/margins.
 - **`main.js`** — **vanilla JS only:** an accessible mobile-nav toggle (`aria-expanded`),
   smooth in-page scrolling for the anchor nav, and a light `IntersectionObserver`
-  scroll-reveal that is skipped when reduced motion is requested. Nothing heavy.
+  scroll-reveal that is skipped when reduced motion is requested. It also shows/hides
+  the sticky mobile action bar (§8). Nothing heavy.
+
+**SEO, metadata & structured data (required in `<head>`):**
+- `<title>` (property name + place + a short hook) and a compelling meta description.
+- `<link rel="canonical">`, a `theme-color`, and a simple inline-SVG favicon.
+- **Open Graph + Twitter** tags (`og:title`, `og:description`, `og:image` → the hero
+  photo, `og:type=website`, `og:url`, `og:locale=ro_RO`) so WhatsApp/Facebook shares
+  render a proper preview.
+- A **JSON-LD `LodgingBusiness`/`Hotel`** block: `name`, `address` (PostalAddress),
+  `geo` (lat/lng if known), `telephone`, `url`, `image`, `priceRange` (from the room
+  prices), `amenityFeature[]` (from the amenities), and `aggregateRating` **only if you
+  have real review data**. This is what helps the property show up properly in Google.
+
+**Performance budget (aim for a high PageSpeed/Lighthouse score):**
+- `<link rel="preconnect">` to `https://fonts.googleapis.com` and
+  `https://fonts.gstatic.com` (crossorigin); load fonts with `&display=swap` and give
+  every face a real system fallback stack.
+- Every image carries intrinsic `width`/`height`; below-the-fold images lazy-load; keep
+  the hero light. `defer` the script. One small CSS file, no libraries, no heavy inline
+  data.
 
 **Motion:** restrained. One or two tasteful reveals, not effects on everything —
 over-animation is itself a tell that a page was AI-generated.
@@ -241,15 +302,21 @@ Include a section only if the client has content for it, and drop it cleanly if 
    gallery (garden, terrace, aerial).
 8. **Attractions nearby** — cards with a photo, a **distance badge**, a title and a
    short description.
-9. **Reservations / Contact** — a section with **two CTAs** (Booking + WhatsApp) and
-   an info card (phone, address, parking, pets).
+9. **Reservations / Contact** — a section with **two CTAs** and an info card (phone,
+   address, parking, pets). Primary CTA is **Booking**; if there is no Booking URL,
+   promote **WhatsApp** (or phone) to primary instead — never render a dead button.
 10. **Map / location** — an address card with "Arată harta" / "Deschide în Google
     Maps" links (embed a map only if a key is available; otherwise link out).
 11. **Footer** — brand + one-line description, a nav column and a contact column, ©
     line, legal links; for RO the ANPC badges (see §9) and the "Site realizat de"
     credit.
-12. **Floating WhatsApp button** — fixed bottom-right, on every screen.
-13. **Smooth-scroll anchor nav** wiring all of the above.
+12. **Floating WhatsApp button** — fixed bottom-right, on every screen, opening a
+    **prefilled** message: `https://wa.me/<number>?text=<url-encoded RO greeting that
+    names the property>` (e.g. "Bună ziua! Aș dori detalii despre o rezervare la …").
+13. **Sticky mobile action bar** — on small screens only, a fixed bottom bar with
+    **Sună** (call), **WhatsApp** and **Rezervă**, so the key actions are always one tap
+    away. Keep it clear of the floating WhatsApp button (don't overlap them).
+14. **Smooth-scroll anchor nav** wiring all of the above.
 
 **Craft cues you may borrow from good hospitality sites (never copy any single one):**
 tracked uppercase eyebrow labels; an editorial serif headline against clean body text;
@@ -270,6 +337,13 @@ The footer must include, in addition to brand + nav + contact:
 
 If locale ≠ RO, drop the ANPC badges and follow that country's norms.
 
+Also for Romanian sites:
+- Use **correct diacritics** throughout — ș and ț (comma-below), ă, â, î — and set
+  `<html lang="ro">`. Never substitute ş/ţ (cedilla) or drop diacritics.
+- **GDPR / cookies:** don't load anything that sets third-party cookies before consent.
+  If you show a Google Maps **iframe**, either lazy-load it behind a click ("Arată
+  harta") so nothing loads until the user asks, or simply link out to Google Maps.
+
 ---
 
 ## 10. QA — final checklist (fix any fail before delivering)
@@ -286,6 +360,14 @@ If locale ≠ RO, drop the ANPC badges and follow that country's norms.
 - [ ] Copy is in the right language, active voice, specific, no filler, no lorem.
 - [ ] Files are **self-contained** (only Google Fonts external), no build step, no
       libraries.
+- [ ] `<head>` complete: title + meta description, Open Graph/Twitter with the hero as
+      `og:image`, favicon, and valid JSON-LD `LodgingBusiness`/`Hotel` (rating only if
+      real). `<html lang="ro">`.
+- [ ] Performance: font `preconnect` + `display=swap`, every image has width/height,
+      below-fold images lazy, script deferred — no layout shift.
+- [ ] Conversion: floating WhatsApp **and** sticky mobile bar present; WhatsApp links
+      prefilled; Booking→WhatsApp/phone fallback when there's no Booking URL.
+- [ ] Romanian diacritics correct (ș/ț/ă/â/î); any Maps embed is consent-gated or a link.
 
 Then deliver the three files, and in **3–4 lines** give a **design rationale**: which
 palette and fonts you chose and which photo each came from, plus the one signature
@@ -297,6 +379,8 @@ element. That rationale is the proof the theme came from the property, not a tem
 
 > Attach the property's photos to the conversation **and** list their URLs below.
 > Leave anything unknown blank; the builder will omit claims it has no data for.
+> Tip: `intake/gather.mjs` can auto-produce this file (and download the photos) from a
+> Google Maps link or website — see the README.
 
 ```
 ### Property
@@ -311,8 +395,11 @@ element. That rationale is the proof the theme came from the property, not a tem
 - Full address:
 - Phone (as displayed):
 - WhatsApp number (international, digits only, e.g. 40756669207):
+- Website (own site, if any):
+- Facebook page (if any):
 - Reservation URL (Booking.com or other):
 - Google Maps link:
+- Geo (lat,lng, optional — sharpens the SEO schema):
 
 ### Rooms / pricing  (one line per room type: name | price/night | short description)
 -
@@ -346,6 +433,7 @@ element. That rationale is the proof the theme came from the property, not a tem
 ### Optional brand hints  (leave blank to let the photos decide)
 - Colours to prefer / avoid:
 - Vibe words:
+- Prefilled WhatsApp message (optional; else a sensible RO default is used):
 
 ### Legal / footer
 - ANPC footer (RO)? yes / no:

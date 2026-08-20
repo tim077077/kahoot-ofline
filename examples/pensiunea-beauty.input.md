@@ -7,6 +7,9 @@ chat, paste `SKILL.md`, and paste the filled block below.
 Items marked `« … »` are placeholders — replace them with the real values (reservation
 URL, map link, hosted photo URLs, real reviews, legal details) before running.
 
+> This is the kind of file `intake/gather.mjs` produces automatically from a Google
+> Maps link or website (see the README) — here it's filled by hand for illustration.
+
 ```
 ### Property
 - Name: Pensiunea Beauty
@@ -20,8 +23,11 @@ URL, map link, hosted photo URLs, real reviews, legal details) before running.
 - Full address: Str. Sergiu Celibidache nr. 65, Cicir, jud. Arad
 - Phone (as displayed): 0756 669 207
 - WhatsApp number (international, digits only, e.g. 40756669207): 40756669207
+- Website (own site, if any): « ex. https://pensiuneabeauty.ro »
+- Facebook page (if any): « link pagină de Facebook »
 - Reservation URL (Booking.com or other): « link Booking.com al pensiunii »
 - Google Maps link: « link Google Maps al locației »
+- Geo (lat,lng, optional — sharpens the SEO schema): « 46.18,21.42 »
 
 ### Rooms / pricing  (one line per room type: name | price/night | short description)
 - 1 persoană | 160 lei/noapte | Cameră cu pat dublu, pentru o persoană.
