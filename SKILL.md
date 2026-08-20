@@ -52,12 +52,17 @@ yourself first:
   `node intake/gather.mjs "<place name or Maps URL>" --website <url>` (needs
   `GOOGLE_MAPS_API_KEY` and/or `FIRECRAWL_API_KEY`). It writes a `photos/` folder, a
   pre-filled `INPUT.md`, and a scraped `site-content.md`. Then continue as normal.
-- **Or gather directly:** use **Firecrawl** for the property's own site / Booking /
-  Facebook page (richest text + real photo URLs), and the **Google Places API** for a
-  bare Maps pin (address, phone, hours, rating, up to 5 reviews, a few photos).
+- **Or gather directly:** most small pensions have **no own website** — they live on
+  Google, **Booking** and **Facebook**. Use **Firecrawl search** to find the Booking +
+  Facebook pages from the name, then **Firecrawl scrape with `proxy:"auto"`**.
+  **Booking is the best photo source** (many real photos on `cf.bstatic.com`); the
+  **Google Places API** adds address/phone/hours/rating/≤5 reviews/a few photos (needs
+  billing for photos+reviews). **Facebook:** Firecrawl refuses to scrape it, so get FB
+  photos another way (a dedicated FB scraper, or ask the owner).
 - **You must actually SEE the photos.** Fetching a URL as text is not enough — download
-  the candidate images to disk and open/view them, because the theme comes from what
-  they look like.
+  the candidate images to disk and open/view them. When a CDN blocks the download, use
+  the **full-page screenshot** Firecrawl returns (`formats:[{type:"screenshot"}]`) — it
+  always works, and you can derive the theme and read the property from it.
 - **Never invent** reviews, amenities, prices, distances or legal details. Use only
   what you gathered or were given; if something is missing, leave it out or ask once.
 - **Plain chat with no tools?** You cannot browse — say so, and ask the user to run

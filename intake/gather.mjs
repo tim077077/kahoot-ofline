@@ -54,10 +54,16 @@ gather.mjs — auto-gather a property's facts, reviews and photos for SKILL.md
 
   node intake/gather.mjs "<place name or Google Maps URL>" [options]
 
+With a Firecrawl key, the Booking.com and Facebook pages are found automatically from
+the name (via Firecrawl search) — you don't need to supply them. A full-page
+screenshot of every source is saved too, so the theme can be derived even when a CDN
+blocks direct photo downloads.
+
 Options:
-  --website URL     Property's own site   (Firecrawl)
-  --booking URL     Booking.com listing   (Firecrawl)
-  --fb URL          Facebook page         (Firecrawl)
+  --booking URL     Booking.com listing   (else auto-discovered)
+  --facebook URL    Facebook page         (else auto-discovered; scraped via mbasic)
+  --website URL     Property's own site, if it has one
+  --no-search       Don't auto-discover Booking/Facebook; use only URLs you pass
   --out DIR         Output directory (default: ./intake-output)
   --max-photos N    Max Google photos to download (default: 10)
   --lang CODE       Places languageCode (default: ro)
@@ -66,21 +72,23 @@ Options:
 
 Env:
   GOOGLE_MAPS_API_KEY   Places API (New) key   (Maps facts + <=5 reviews + photos)
-  FIRECRAWL_API_KEY     Firecrawl key          (own site / Booking / FB scraping)
+  FIRECRAWL_API_KEY     Firecrawl key          (Booking / Facebook / website + search)
 
 Example:
   GOOGLE_MAPS_API_KEY=... FIRECRAWL_API_KEY=... \\
-    node intake/gather.mjs "Pensiunea Beauty, Cicir, Arad" --website https://pensiuneabeauty.ro
+    node intake/gather.mjs "Pensiunea Flora, Cicir, Arad"
 `;
 
 function parseArgs(argv) {
-  const args = { query: '', website: '', booking: '', fb: '', out: './intake-output',
-    maxPhotos: 10, lang: 'ro', region: 'RO', help: false };
-  const withValue = { '--website': 'website', '--booking': 'booking', '--fb': 'fb',
-    '--out': 'out', '--max-photos': 'maxPhotos', '--lang': 'lang', '--region': 'region' };
+  const args = { query: '', website: '', booking: '', fb: '', facebook: '', out: './intake-output',
+    maxPhotos: 10, lang: 'ro', region: 'RO', noSearch: false, help: false };
+  const withValue = { '--website': 'website', '--booking': 'booking', '--fb': 'facebook',
+    '--facebook': 'facebook', '--out': 'out', '--max-photos': 'maxPhotos', '--lang': 'lang',
+    '--region': 'region' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-h' || a === '--help') { args.help = true; }
+    else if (a === '--no-search') { args.noSearch = true; }
     else if (withValue[a]) { args[withValue[a]] = argv[++i] ?? ''; }
     else if (!a.startsWith('-') && !args.query) { args.query = a; }
   }
@@ -107,22 +115,32 @@ async function fetchImage(url) {
 // ---- Google Places (New) ------------------------------------------------------
 
 async function resolveQuery(input) {
-  // Returns a text query string for Places Text Search.
-  if (!/^https?:\/\//i.test(input)) return input; // already a name
+  // Returns { query, lat, lng } for Places Text Search. The coordinates matter: a
+  // name like "Pensiunea Flora" exists in several towns, so we bias the search to the
+  // pin in the URL, otherwise Text Search can return a same-named place elsewhere.
+  if (!/^https?:\/\//i.test(input)) return { query: input };
   let finalUrl = input;
   try {
     const r = await fetch(input, { redirect: 'follow' });
     finalUrl = r.url || input;
     try { await r.body?.cancel(); } catch { /* ignore */ }
   } catch { /* keep original */ }
+  // Prefer the pin (!3d<lat>!4d<lng>), fall back to the map centre (@lat,lng).
+  const coord = finalUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
+    || finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  const geo = coord ? { lat: Number(coord[1]), lng: Number(coord[2]) } : {};
   const nameMatch = finalUrl.match(/\/maps\/place\/([^/@]+)/);
-  if (nameMatch) return decodeURIComponent(nameMatch[1]).replace(/\+/g, ' ');
+  if (nameMatch) return { query: decodeURIComponent(nameMatch[1]).replace(/\+/g, ' '), ...geo };
   const qMatch = finalUrl.match(/[?&]q=([^&]+)/);
-  if (qMatch) return decodeURIComponent(qMatch[1]).replace(/\+/g, ' ');
-  return ''; // couldn't extract a searchable name
+  if (qMatch) return { query: decodeURIComponent(qMatch[1]).replace(/\+/g, ' '), ...geo };
+  return { query: '', ...geo };
 }
 
-async function placesTextSearch(query, key, { lang, region }) {
+async function placesTextSearch(query, key, { lang, region, lat, lng }) {
+  const body = { textQuery: query, languageCode: lang, regionCode: region };
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    body.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 2000 } };
+  }
   const res = await fetch(`${PLACES}/places:searchText`, {
     method: 'POST',
     headers: {
@@ -130,7 +148,7 @@ async function placesTextSearch(query, key, { lang, region }) {
       'X-Goog-Api-Key': key,
       'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress',
     },
-    body: JSON.stringify({ textQuery: query, languageCode: lang, regionCode: region }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Text Search HTTP ${res.status}: ${await res.text()}`);
   const data = await res.json();
@@ -161,53 +179,112 @@ async function downloadPlacePhotos(photos, dir, max, key) {
 
 // ---- Firecrawl ----------------------------------------------------------------
 
-async function firecrawlScrape(url, key) {
+async function firecrawlScrape(url, key, opts = {}) {
+  const formats = [{ type: 'markdown' }, { type: 'links' }, { type: 'rawHtml' }];
+  if (opts.screenshot) formats.push({ type: 'screenshot', fullPage: false });
+  const body = {
+    url, formats,
+    onlyMainContent: opts.onlyMainContent ?? false,
+    proxy: 'auto', // residential proxies with auto-escalation — gets past most blocks
+    waitFor: opts.waitFor ?? 3500,
+    timeout: 120000,
+  };
+  if (opts.actions) body.actions = opts.actions;
   const res = await fetch(`${FIRECRAWL}/scrape`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      url,
-      formats: [{ type: 'markdown' }, { type: 'links' }, { type: 'rawHtml' }],
-      onlyMainContent: true, timeout: 60000,
-    }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Firecrawl HTTP ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.data || {};
+  if (!res.ok) throw new Error(`Firecrawl HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return (await res.json()).data || {};
 }
+
+async function firecrawlSearch(query, key, limit = 6) {
+  const res = await fetch(`${FIRECRAWL}/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ query, limit, sources: ['web'] }),
+  });
+  if (!res.ok) throw new Error(`Firecrawl search HTTP ${res.status}`);
+  return ((await res.json()).data?.web || []).map((r) => r.url).filter(Boolean);
+}
+
+// Booking serves photos from cf.bstatic.com; normalise any size folder to a big one.
+const normalizeBstatic = (u) => u.replace(/\/images\/hotel\/[a-z0-9]+\//i, '/images/hotel/max1024x768/');
+// Facebook's normal site is a JS/login wall; mbasic is server-rendered HTML.
+const toMbasic = (u) => u.replace(/^https?:\/\/(www\.|m\.|web\.)?facebook\.com/i, 'https://mbasic.facebook.com');
 
 function extractImageUrls(rawHtml, markdown, baseUrl) {
   const urls = new Set();
   const push = (u) => {
     if (!u || u.startsWith('data:')) return;
-    try { urls.add(new URL(u, baseUrl).href); } catch { /* skip bad url */ }
+    let abs; try { abs = new URL(u, baseUrl).href; } catch { return; }
+    if (/bstatic\.com\/xdata\/images\/hotel\//i.test(abs)) abs = normalizeBstatic(abs);
+    urls.add(abs);
   };
-  for (const m of (rawHtml || '').matchAll(/<img[^>]+src=["']([^"']+)["']/gi)) push(m[1]);
+  for (const m of (rawHtml || '').matchAll(/<img[^>]+(?:src|data-src|data-lazy)=["']([^"']+)["']/gi)) push(m[1]);
+  for (const m of (rawHtml || '').matchAll(/https:\/\/cf\.bstatic\.com\/xdata\/images\/hotel\/[a-z0-9]+\/[0-9]+\.(?:jpe?g|webp)/gi)) push(m[0]);
   for (const m of (markdown || '').matchAll(/!\[[^\]]*\]\(([^)\s]+)/g)) push(m[1]);
-  return [...urls].filter((u) => !/\.svg(\?|$)/i.test(u) && /^https?:/i.test(u));
+  const seen = new Set();
+  return [...urls].filter((u) => {
+    if (!/^https?:/i.test(u) || /\.svg(\?|$)/i.test(u)) return false;
+    if (/sprite|icon|logo|flag|avatar|placeholder|1x1|blank|badge/i.test(u)) return false;
+    const id = (u.match(/\/(\d{6,})\.(?:jpe?g|webp)/) || [])[1]; // dedupe Booking by image id
+    if (id) { if (seen.has(id)) return false; seen.add(id); }
+    return true;
+  });
 }
 
-async function scrapeSite(label, url, key, dir, startIndex) {
-  console.log(`Firecrawl: scraping ${label} — ${url}`);
-  const data = await firecrawlScrape(url, key);
-  const imgUrls = extractImageUrls(data.rawHtml, data.markdown, url).slice(0, 20);
-  const files = [];
+async function downloadImages(urls, dir, prefix, startIndex) {
+  const files = []; const failed = [];
   let i = startIndex;
-  for (const u of imgUrls) {
+  for (const u of urls) {
     const n = String(++i).padStart(2, '0');
     try {
       const { buf, ext } = await fetchImage(u);
-      const file = `site-${n}.${ext}`;
+      if (buf.length < 3000) throw new Error('too small'); // placeholder / blocked
+      const file = `${prefix}-${n}.${ext}`;
       await writeFile(join(dir, file), buf);
       files.push(file);
-    } catch (e) { console.warn(`  ! site image ${n} failed: ${e.message}`); }
+    } catch { failed.push(u); }
   }
-  return { markdown: data.markdown || '', files, nextIndex: i };
+  return { files, failed, nextIndex: i };
+}
+
+async function saveScreenshot(data, dir, label) {
+  if (!data.screenshot) return null;
+  try {
+    const { buf } = await fetchImage(data.screenshot);
+    const file = `screenshot-${label}.png`;
+    await writeFile(join(dir, file), buf);
+    return file;
+  } catch { return null; }
+}
+
+async function scrapeSource(label, url, key, dir, startIndex, isBooking) {
+  console.log(`Firecrawl: scraping ${label} — ${url}`);
+  const actions = isBooking ? [
+    { type: 'wait', milliseconds: 2500 },
+    { type: 'scroll', direction: 'down' },
+    { type: 'scroll', direction: 'down' },
+    { type: 'wait', milliseconds: 1500 },
+  ] : undefined;
+  let data;
+  try {
+    data = await firecrawlScrape(url, key, { screenshot: true, waitFor: 4000, actions });
+  } catch {
+    data = await firecrawlScrape(url, key, { screenshot: true, waitFor: 4000 }); // retry w/o actions
+  }
+  const remoteUrls = extractImageUrls(data.rawHtml, data.markdown, url).slice(0, 30);
+  const { files, failed, nextIndex } = await downloadImages(remoteUrls, dir, 'photo', startIndex);
+  const screenshotFile = await saveScreenshot(data, dir, slugify(label));
+  return { markdown: data.markdown || '', files, remoteUrls, failed, screenshotFile, nextIndex };
 }
 
 // ---- INPUT.md assembly --------------------------------------------------------
 
-function buildInputMd(d, { photoFiles, siteFiles, hasSiteContent, sources }) {
+function buildInputMd(d, { photoFiles, siteFiles, hasSiteContent, sources,
+  bookingUrl, fbUrl, screenshots = [], remoteCount = 0 }) {
   const name = d?.displayName?.text || '';
   const intl = d?.internationalPhoneNumber || '';
   const reviews = (d?.reviews || []).map((r) => {
@@ -226,7 +303,12 @@ function buildInputMd(d, { photoFiles, siteFiles, hasSiteContent, sources }) {
 > and fill the blanks (« … ») — the script leaves rooms/prices/amenities/attractions
 > for you, since Google does not provide them reliably.${hasSiteContent ? `
 > Rich content was scraped to ./site-content.md — mine it for rooms, prices,
-> amenities and attractions.` : ''}
+> amenities and attractions.` : ''}${screenshots.length ? `
+> Full-page screenshots (${screenshots.join(', ')}) are in ./photos/ — attach them so
+> the AI can SEE the property even for photos that didn't download here.` : ''}${remoteCount ? `
+> ./photo-urls.txt lists ${remoteCount} image URL(s). If some didn't download (a CDN
+> blocked this machine), on your own machine run:
+>   cd photos && xargs -n1 curl -sLO < ../photo-urls.txt` : ''}
 
 \`\`\`
 ### Property
@@ -241,7 +323,9 @@ function buildInputMd(d, { photoFiles, siteFiles, hasSiteContent, sources }) {
 - Full address: ${d?.formattedAddress || ''}
 - Phone (as displayed): ${d?.nationalPhoneNumber || ''}
 - WhatsApp number (international, digits only): ${toWhatsApp(intl)}
-- Reservation URL (Booking.com or other): «  »
+- Website (own site, if any): «  »
+- Facebook page (if any): ${fbUrl || '«  »'}
+- Reservation URL (Booking.com or other): ${bookingUrl || '«  »'}
 - Google Maps link: ${d?.googleMapsUri || ''}
 - Geo (lat,lng): ${d?.location ? `${d.location.latitude},${d.location.longitude}` : ''}
 
@@ -296,7 +380,7 @@ ${hours.length ? hours.map((h) => `- ${h}`).join('\n') : '- «  »'}
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { console.log(HELP); process.exit(0); }
-  if (!args.query && !args.website && !args.booking && !args.fb) {
+  if (!args.query && !args.website && !args.booking && !args.facebook) {
     console.log(HELP); process.exit(1);
   }
 
@@ -308,12 +392,17 @@ async function main() {
     process.exit(1);
   }
   if (args.query && !gmapsKey) console.warn('! GOOGLE_MAPS_API_KEY not set — skipping Google Places (Maps facts/reviews/photos).');
-  if ((args.website || args.booking || args.fb) && !fcKey) console.warn('! FIRECRAWL_API_KEY not set — skipping website/Booking/Facebook scraping.');
+  if (!fcKey) console.warn('! FIRECRAWL_API_KEY not set — skipping Booking/Facebook/website scraping + discovery.');
 
   const sources = [];
   let details = null;
   let photoFiles = [];
-  const outRootSlug = slugify(args.query || args.website || 'property');
+
+  // Resolve a clean name (and coords) early — used for the folder and the search.
+  let resolved = { query: args.query };
+  if (args.query) { try { resolved = await resolveQuery(args.query); } catch { /* keep raw */ } }
+
+  const outRootSlug = slugify(resolved.query || args.website || 'property');
   const outDir = join(args.out, outRootSlug);
   const photosDir = join(outDir, 'photos');
   await mkdir(photosDir, { recursive: true });
@@ -321,10 +410,9 @@ async function main() {
   // Google Places
   if (args.query && gmapsKey) {
     try {
-      const query = await resolveQuery(args.query);
-      if (!query) throw new Error('could not derive a searchable place name from the input');
-      console.log(`Places: searching "${query}"`);
-      const placeId = await placesTextSearch(query, gmapsKey, args);
+      if (!resolved.query) throw new Error('could not derive a searchable place name from the input');
+      console.log(`Places: searching "${resolved.query}"${resolved.lat ? ` near ${resolved.lat},${resolved.lng}` : ''}`);
+      const placeId = await placesTextSearch(resolved.query, gmapsKey, { ...args, lat: resolved.lat, lng: resolved.lng });
       if (!placeId) throw new Error('no place found');
       details = await placeDetails(placeId, gmapsKey, args);
       console.log(`Places: found "${details.displayName?.text}" (${details.userRatingCount || 0} reviews)`);
@@ -334,42 +422,78 @@ async function main() {
     } catch (e) { console.warn(`! Places step failed: ${e.message}`); }
   }
 
-  // Firecrawl (website preferred; also details.websiteUri if not supplied)
-  const siteTargets = [];
-  const website = args.website || details?.websiteUri;
-  if (website) siteTargets.push(['website', website]);
-  if (args.booking) siteTargets.push(['Booking', args.booking]);
-  if (args.fb) siteTargets.push(['Facebook', args.fb]);
-
+  // Firecrawl: discover + scrape Booking / Facebook / own site
   let siteFiles = [];
   let siteMarkdown = '';
-  if (siteTargets.length && fcKey) {
-    let idx = 0;
-    for (const [label, url] of siteTargets) {
+  let allRemoteUrls = [];
+  const screenshots = [];
+  let bookingUrl = '';
+  let fbUrl = '';
+
+  if (fcKey) {
+    let booking = args.booking;
+    let facebook = args.facebook;
+    const website = args.website || details?.websiteUri;
+    const searchName = [resolved.query, details?.formattedAddress].filter(Boolean).join(' ').trim()
+      || args.query;
+
+    if (!args.noSearch && searchName && (!booking || !facebook)) {
       try {
-        const r = await scrapeSite(label, url, fcKey, photosDir, idx);
+        if (!booking) {
+          const hits = await firecrawlSearch(`${searchName} booking.com`, fcKey);
+          booking = hits.find((u) => /booking\.com\/hotel\//i.test(u)) || '';
+          if (booking) console.log(`Discovered Booking: ${booking}`);
+        }
+        if (!facebook) {
+          const hits = await firecrawlSearch(`${searchName} facebook`, fcKey);
+          facebook = hits.find((u) => /facebook\.com/i.test(u) && !/\/(sharer|login|photo\.php)/i.test(u)) || '';
+          if (facebook) console.log(`Discovered Facebook: ${facebook}`);
+        }
+      } catch (e) { console.warn(`! discovery search failed: ${e.message}`); }
+    }
+    bookingUrl = booking; fbUrl = facebook;
+
+    const targets = [];
+    if (website) targets.push(['website', website, false]);
+    if (booking) targets.push(['Booking', booking, true]);
+    if (facebook) targets.push(['Facebook', toMbasic(facebook), false]);
+
+    let idx = 0;
+    for (const [label, url, isBooking] of targets) {
+      try {
+        const r = await scrapeSource(label, url, fcKey, photosDir, idx, isBooking);
         idx = r.nextIndex;
         siteFiles = siteFiles.concat(r.files);
+        allRemoteUrls = allRemoteUrls.concat(r.remoteUrls);
+        if (r.screenshotFile) screenshots.push(r.screenshotFile);
         if (r.markdown) siteMarkdown += `\n\n<!-- ===== ${label}: ${url} ===== -->\n\n${r.markdown}`;
+        console.log(`  ${label}: ${r.files.length} photo(s) saved`
+          + `, ${r.remoteUrls.length} URL(s) found`
+          + `${r.screenshotFile ? ', screenshot ✓' : ''}`
+          + `${r.failed.length ? `, ${r.failed.length} blocked here (see photo-urls.txt)` : ''}`);
+        if (r.files.length || r.markdown || r.screenshotFile) sources.push(label);
       } catch (e) { console.warn(`! Firecrawl (${label}) failed: ${e.message}`); }
     }
-    if (siteFiles.length) console.log(`Firecrawl: downloaded ${siteFiles.length} site image(s).`);
-    if (siteMarkdown) { await writeFile(join(outDir, 'site-content.md'), siteMarkdown.trim() + '\n'); }
-    if (website) sources.push('own site');
-    if (args.booking) sources.push('Booking');
-    if (args.fb) sources.push('Facebook');
+    if (siteMarkdown) await writeFile(join(outDir, 'site-content.md'), siteMarkdown.trim() + '\n');
+    if (allRemoteUrls.length) {
+      allRemoteUrls = [...new Set(allRemoteUrls)];
+      await writeFile(join(outDir, 'photo-urls.txt'), allRemoteUrls.join('\n') + '\n');
+    }
   }
 
   const inputMd = buildInputMd(details, {
     photoFiles, siteFiles, hasSiteContent: !!siteMarkdown, sources,
+    bookingUrl, fbUrl, screenshots, remoteCount: allRemoteUrls.length,
   });
   await writeFile(join(outDir, 'INPUT.md'), inputMd);
 
   console.log('\n─────────────────────────────────────────────');
   console.log(`Done. Output in: ${outDir}`);
-  console.log(`  • photos/          ${photoFiles.length + siteFiles.length} image(s)`);
+  console.log(`  • photos/          ${photoFiles.length + siteFiles.length} image(s)`
+    + `${screenshots.length ? ` + ${screenshots.length} screenshot(s)` : ''}`);
   console.log(`  • INPUT.md         pre-filled input form`);
   if (siteMarkdown) console.log(`  • site-content.md  scraped page text to mine`);
+  if (allRemoteUrls.length) console.log(`  • photo-urls.txt   ${allRemoteUrls.length} image URL(s) (re-download on your machine if any were blocked)`);
   console.log('\nNext steps:');
   console.log('  1) Open a vision-capable AI and ATTACH every image in photos/.');
   console.log('  2) Paste the contents of SKILL.md.');
