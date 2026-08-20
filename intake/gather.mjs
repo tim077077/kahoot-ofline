@@ -438,15 +438,24 @@ async function main() {
       || args.query;
 
     if (!args.noSearch && searchName && (!booking || !facebook)) {
+      // Location tokens keep discovery on the RIGHT property: a same-named pension in
+      // another town must never be picked. Prefer a result whose URL carries the town.
+      const locTokens = [...new Set(`${resolved.query} ${details?.formattedAddress || ''}`
+        .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .split(/[^a-z0-9]+/).filter((w) => w.length > 3))];
+      const pickLocal = (hits, keep) => {
+        const ok = hits.filter(keep);
+        return ok.find((u) => locTokens.some((t) => u.toLowerCase().includes(t))) || ok[0] || '';
+      };
       try {
         if (!booking) {
           const hits = await firecrawlSearch(`${searchName} booking.com`, fcKey);
-          booking = hits.find((u) => /booking\.com\/hotel\//i.test(u)) || '';
+          booking = pickLocal(hits, (u) => /booking\.com\/hotel\//i.test(u));
           if (booking) console.log(`Discovered Booking: ${booking}`);
         }
         if (!facebook) {
           const hits = await firecrawlSearch(`${searchName} facebook`, fcKey);
-          facebook = hits.find((u) => /facebook\.com/i.test(u) && !/\/(sharer|login|photo\.php)/i.test(u)) || '';
+          facebook = pickLocal(hits, (u) => /facebook\.com/i.test(u) && !/\/(sharer|login|photo\.php)/i.test(u));
           if (facebook) console.log(`Discovered Facebook: ${facebook}`);
         }
       } catch (e) { console.warn(`! discovery search failed: ${e.message}`); }
