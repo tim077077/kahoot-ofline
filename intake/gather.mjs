@@ -366,10 +366,12 @@ ${hours.length ? hours.map((h) => `- ${h}`).join('\n') : '- «  »'}
 - Colours to prefer / avoid:
 - Vibe words:
 
-### Legal / footer
+### Legal / footer  (used to generate the mandatory legal pages)
 - ANPC footer (RO)? yes / no: yes
-- Company legal name + registration (for "Informații legale"): «  »
-- Privacy policy URL (or "generate a basic one"): generate a basic one
+- Entitate juridică (SRL / PFA / II / persoană fizică): «  »
+- Denumire legală + CUI/CIF + nr. Reg. Com. (J…): «  »
+- Sediu social / adresă legală: «  »
+- E-mail de contact pentru solicitări GDPR: «  »
 - "Site realizat de" credit: «  »
 \`\`\`
 `;

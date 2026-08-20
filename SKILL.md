@@ -5,7 +5,8 @@ description: >-
   B&B, villa or cazare from its PHOTOS, reviews, description and amenities. The theme
   (palette, typography, mood) is derived from the actual photos — never generic AI
   defaults. Outputs a self-contained multi-file static site (index.html + styles.css
-  + main.js), mobile-first, no build step, no libraries. Use whenever asked to
+  + main.js) plus the mandatory Romanian legal pages (privacy, cookies, terms) and a
+  cookie-consent banner, mobile-first, no build step, no libraries. Use whenever asked to
   build/generate/design a website for a specific lodging property from supplied
   photos and details. Requires a vision-capable model with the photos attached.
 ---
@@ -236,8 +237,11 @@ reviews, description and amenities:
 
 ## 7. BUILDER — the code
 
-Produce **three self-contained files** — no build step, no frameworks, no external
-JS/CSS libraries. The only external resource allowed is **Google Fonts via `<link>`**.
+Produce the site as **multiple self-contained pages** — no build step, no frameworks,
+no external JS/CSS libraries. The only external resource allowed is **Google Fonts via
+`<link>`**. The files: `index.html`, `styles.css`, `main.js`, **plus the mandatory
+legal pages** `politica-confidentialitate.html`, `politica-cookies.html`,
+`termeni-si-conditii.html` (all sharing `styles.css`) — see §9. Never ship without them.
 
 - **`index.html`** — `<html lang="ro">`, semantic landmarks
   (`header`/`nav`/`main`/`section`/`footer`), a skip-to-content link, the sections in
@@ -313,8 +317,9 @@ Include a section only if the client has content for it, and drop it cleanly if 
 10. **Map / location** — an address card with "Arată harta" / "Deschide în Google
     Maps" links (embed a map only if a key is available; otherwise link out).
 11. **Footer** — brand + one-line description, a nav column and a contact column, ©
-    line, legal links; for RO the ANPC badges (see §9) and the "Site realizat de"
-    credit.
+    line, and a **legal-links row**: Termeni și Condiții · Politică de Confidențialitate
+    · Politică de Cookies · Informații legale (each linking to its page, §9). For RO,
+    the ANPC **SAL + SOL** badges and the "Site realizat de" credit.
 12. **Floating WhatsApp button** — fixed bottom-right, on every screen, opening a
     **prefilled** message: `https://wa.me/<number>?text=<url-encoded RO greeting that
     names the property>` (e.g. "Bună ziua! Aș dori detalii despre o rezervare la …").
@@ -322,6 +327,8 @@ Include a section only if the client has content for it, and drop it cleanly if 
     **Sună** (call), **WhatsApp** and **Rezervă**, so the key actions are always one tap
     away. Keep it clear of the floating WhatsApp button (don't overlap them).
 14. **Smooth-scroll anchor nav** wiring all of the above.
+15. **Cookie-consent banner** (RO/EU — see §9) — shown on first visit, blocks
+    non-essential cookies/embeds until the visitor accepts; the choice is remembered.
 
 **Craft cues you may borrow from good hospitality sites (never copy any single one):**
 tracked uppercase eyebrow labels; an editorial serif headline against clean body text;
@@ -331,23 +338,61 @@ generous whitespace; a subtle tilt on stacked cards.
 
 ---
 
-## 9. Romania / ANPC footer (when locale = RO)
+## 9. Legal pages, cookies & ANPC (MANDATORY for RO)
 
-The footer must include, in addition to brand + nav + contact:
-- **"Informații legale"** and **"Politică de Confidențialitate"** links.
+A Romanian site is not finished without these. Generate them every time — never skip.
+
+### Footer legal links
+- A **legal-links row**: **Termeni și Condiții · Politică de Confidențialitate ·
+  Politică de Cookies · Informații legale**, each pointing to its page (below).
 - The two **ANPC compliance badges**, linked out:
   - **SAL** — Soluționarea Alternativă a Litigiilor → `https://anpc.ro/ce-este-sal/`
   - **SOL** — Soluționarea Online a Litigiilor → `https://ec.europa.eu/consumers/odr`
 - The **"Site realizat de <credit>"** line, if a credit is provided.
 
-If locale ≠ RO, drop the ANPC badges and follow that country's norms.
+### The three MANDATORY legal pages
+Build three standalone pages that **share `styles.css`**, with a minimal header (logo →
+back to home) and the same footer. Write them in Romanian, complete and specific to
+this property; fill company data from the INPUT and leave a clear `[ … ]` placeholder
+wherever a value is missing (denumire, CUI, sediu, e-mail). Date each: "Ultima
+actualizare: <lună an>".
 
-Also for Romanian sites:
-- Use **correct diacritics** throughout — ș and ț (comma-below), ă, â, î — and set
-  `<html lang="ro">`. Never substitute ş/ţ (cedilla) or drop diacritics.
-- **GDPR / cookies:** don't load anything that sets third-party cookies before consent.
-  If you show a Google Maps **iframe**, either lazy-load it behind a click ("Arată
-  harta") so nothing loads until the user asks, or simply link out to Google Maps.
+1. **`politica-confidentialitate.html` — Politică de Confidențialitate** (GDPR, Reg. UE
+   2016/679). Cover: operatorul (denumire, sediu, CUI, e-mail); ce date colectăm (nume,
+   telefon, e-mail — prin telefon/WhatsApp/Booking/formular — plus date tehnice/cookies);
+   scopurile (rezervări, răspuns la solicitări); temeiul legal (consimțământ, contract,
+   interes legitim); destinatari/împuterniciți (găzduire, Booking, Meta/WhatsApp,
+   Google); durata stocării; **drepturile persoanei vizate** (acces, rectificare,
+   ștergere, restricționare, opoziție, portabilitate, retragerea consimțământului);
+   dreptul de a te adresa **ANSPDCP** (dataprotection.ro); securitatea datelor.
+2. **`politica-cookies.html` — Politică de Cookies** (Legea 506/2004 + GDPR). Ce sunt
+   cookie-urile; categoriile folosite (strict necesare; funcționale; analiză — Google;
+   terți — Booking, WhatsApp, hărți); rolul consimțământului; cum pot fi gestionate/
+   dezactivate din browser. Keep it consistent with the embeds the site actually uses.
+3. **`termeni-si-conditii.html` — Termeni și Condiții.** Obiectul (site informativ de
+   prezentare); rezervările se fac prin Booking/telefon/WhatsApp, prețurile și
+   disponibilitatea se pot modifica; proprietate intelectuală (texte, imagini);
+   limitarea răspunderii; legea aplicabilă (română) + ANPC (SAL/SOL); modificarea
+   termenilor; date de contact.
+
+Never invent registration numbers — use the INPUT's values or `[ … ]`. In your delivery
+notes, tell the owner to review these pages and fill any placeholder before going live
+(a quick check by a specialist is recommended).
+
+### Cookie-consent banner (mandatory — RO/EU ePrivacy)
+- On first visit, show a small banner: short text + a link to the Cookie Policy +
+  **"Accept"** and **"Refuz"** buttons (equally prominent). Remember the choice in
+  `localStorage`; don't nag on every page.
+- **Nothing that sets a non-essential / third-party cookie may load before consent** —
+  no analytics, and the Google **Maps iframe** stays behind a click ("Arată harta") or
+  is a plain link-out until the visitor accepts. Strictly-necessary only, by default.
+
+### Correct Romanian
+Proper diacritics throughout — ș and ț (comma-below), ă, â, î; `<html lang="ro">`.
+Never substitute ş/ţ (cedilla) or drop diacritics.
+
+If locale ≠ RO: keep the three pages **and** the cookie banner (GDPR applies EU-wide),
+drop the RO-specific ANPC badges, and follow that country's norms.
 
 ---
 
@@ -373,8 +418,13 @@ Also for Romanian sites:
 - [ ] Conversion: floating WhatsApp **and** sticky mobile bar present; WhatsApp links
       prefilled; Booking→WhatsApp/phone fallback when there's no Booking URL.
 - [ ] Romanian diacritics correct (ș/ț/ă/â/î); any Maps embed is consent-gated or a link.
+- [ ] **Legal pages present + linked**: `politica-confidentialitate.html`,
+      `politica-cookies.html`, `termeni-si-conditii.html` — real RO content, company data
+      or clear `[ … ]` placeholders, footer links wired, ANPC SAL/SOL badges present.
+- [ ] **Cookie-consent banner** on first visit (Accept/Refuz), choice remembered; no
+      non-essential cookie or embed (incl. the Maps iframe) loads before consent.
 
-Then deliver the three files, and in **3–4 lines** give a **design rationale**: which
+Then deliver all the files, and in **3–4 lines** give a **design rationale**: which
 palette and fonts you chose and which photo each came from, plus the one signature
 element. That rationale is the proof the theme came from the property, not a template.
 
@@ -440,9 +490,11 @@ element. That rationale is the proof the theme came from the property, not a tem
 - Vibe words:
 - Prefilled WhatsApp message (optional; else a sensible RO default is used):
 
-### Legal / footer
+### Legal / footer  (used to generate the mandatory legal pages — §9)
 - ANPC footer (RO)? yes / no:
-- Company legal name + registration (for "Informații legale"):
-- Privacy policy URL (or "generate a basic one"):
+- Entitate juridică (SRL / PFA / II / persoană fizică):
+- Denumire legală + CUI/CIF + nr. Reg. Com. (J…) — for "Informații legale":
+- Sediu social / adresă legală:
+- E-mail de contact pentru solicitări GDPR:
 - "Site realizat de" credit:
 ```

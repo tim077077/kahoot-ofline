@@ -77,9 +77,11 @@ this tool bootstraps a strong first pass; the owner has the best 15 shots on the
 
 ## What you get
 
-A self-contained **multi-file static site** — `index.html` + `styles.css` +
-`main.js` — mobile-first, no build step, no libraries (Google Fonts only). Deploy it
-on any static host (Netlify, Vercel, GitHub Pages, cPanel, …).
+A self-contained **multi-file static site** — `index.html` + `styles.css` + `main.js`,
+**plus the mandatory Romanian legal pages** (`politica-confidentialitate.html`,
+`politica-cookies.html`, `termeni-si-conditii.html`) and a **cookie-consent banner**
+(GDPR + Legea 506/2004). Mobile-first, no build step, no libraries (Google Fonts only).
+Deploy it on any static host (Netlify, Vercel, GitHub Pages, cPanel, …).
 
 ## Why it doesn't look AI-generated
 
