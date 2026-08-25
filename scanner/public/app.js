@@ -63,7 +63,11 @@ async function scan() {
 
   $("#scanBtn").disabled = true;
   $("#resultsWrap").hidden = true;
-  status(`Scanez ${county}...` + (provider === "apify" ? " (Apify poate dura 1-3 minute)" : ""), false, true);
+  const t0 = Date.now();
+  const label = provider === "apify" ? "(Apify, poate dura 1-3 min) " : "";
+  const tick = () => status(`Scanez ${county}... ${label}${Math.round((Date.now() - t0) / 1000)}s`, false, true);
+  tick();
+  const timer = setInterval(tick, 1000);
   try {
     const r = await fetch("/api/scan", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -73,10 +77,11 @@ async function scan() {
     if (!r.ok) throw new Error(data.error || "scan failed");
     PLACES = data.places;
     renderTable(data);
-    status(`Gata. ${data.total} cazări, ${data.candidates} fără site real.` + (data.capped ? " (Google Places limitează la 60; folosește OSM pentru tot județul.)" : ""));
+    status(`Gata în ${Math.round((Date.now() - t0) / 1000)}s. ${data.total} cazări, ${data.candidates} fără site real.` + (data.capped ? " (Google Places limitează la 60; folosește OSM pentru tot județul.)" : ""));
   } catch (e) {
     status(e.message, true);
   } finally {
+    clearInterval(timer);
     $("#scanBtn").disabled = false;
   }
 }

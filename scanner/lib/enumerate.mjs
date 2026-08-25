@@ -36,18 +36,20 @@ const APIFY_TERMS = {
 
 async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
   if (!apifyToken) throw new Error("Apify provider selected but no Apify API token was provided.");
-  const terms = (types.length ? types.map((t) => APIFY_TERMS[t]).filter(Boolean) : ["pensiune", "hotel", "cabană", "motel", "cazare"]);
-  const perSearch = Math.max(10, Math.min(Math.ceil((Number(maxPlaces) || 60) / terms.length), 120));
-  // Embed the county in each search string - Google Maps geocodes "pensiune Arad,
-  // Romania" reliably, which beats depending on a single locationQuery that often
-  // fails to resolve and then returns zero results.
+  // Keep the search set SMALL. Each search string is a separate Google Maps crawl,
+  // so eight of them is exactly what makes an Apify run drag on for minutes. One
+  // broad "cazare" search (plus at most two selected types) covers accommodation
+  // and finishes far faster. The county is embedded so Google geocodes it directly.
+  const sel = types.length ? types.map((t) => APIFY_TERMS[t]).filter(Boolean) : [];
+  const terms = (sel.length ? Array.from(new Set(["cazare", ...sel])) : ["cazare"]).slice(0, 3);
+  const perSearch = Math.max(20, Math.min(Number(maxPlaces) || 60, 120));
   const searchStringsArray = terms.map((t) => `${t} ${county}, Romania`);
   const input = {
     searchStringsArray,
     language: "ro",
     maxCrawledPlacesPerSearch: perSearch,
     scrapeImages: true,
-    maxImages: 8,
+    maxImages: 4,
     skipClosedPlaces: true,
   };
   console.log(`[apify] actor=${APIFY_ACTOR} perSearch=${perSearch} searches=${JSON.stringify(searchStringsArray)}`);
@@ -65,12 +67,15 @@ async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
 
   // 2. Poll until it finishes (max ~5 min).
   let status = start.data?.status;
-  const deadline = Date.now() + 5 * 60 * 1000;
+  const startedAt = Date.now();
+  const deadline = startedAt + 6 * 60 * 1000;
+  let polls = 0;
   while (!["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"].includes(status)) {
-    if (Date.now() > deadline) throw new Error("Apify run took too long; lower 'max locuri' or run fewer types.");
-    await sleep(3500);
+    if (Date.now() > deadline) throw new Error("Apify a durat prea mult (peste 6 min). Scade 'Max locuri', sau folosește sursa OpenStreetMap (instant, gratis).");
+    await sleep(3000);
     const s = await fetchJson(`https://api.apify.com/v2/actor-runs/${runId}?token=${encodeURIComponent(apifyToken)}`, {}, { retries: 2 });
     status = s.data?.status;
+    if (++polls % 3 === 0) console.log(`[apify] ${status} (${Math.round((Date.now() - startedAt) / 1000)}s)`);
   }
   if (status !== "SUCCEEDED") throw new Error(`Apify run ${status}.`);
 
