@@ -186,7 +186,10 @@ Write a compact plan with four parts. Every value must be traceable to a photo.
 
   If the photos point somewhere else, follow the photos.
 
-**C. Layout** — one-line concept + the section order (from §8).
+**C. Layout** — the **Structure Read** from §8: the hero paradigm, the rooms treatment,
+the facilities treatment, the gallery shape and the section order you have chosen for THIS
+property, plus one line on what makes this composition specific to it. Not the default
+skeleton, and not the same skeleton as the last site you built.
 
 **D. Signature** — the ONE element this site will be remembered by, drawn from the
 property (an oversized architectural detail, a material texture, a distinctive
@@ -287,10 +290,57 @@ over-animation is itself a tell that a page was AI-generated.
 
 ---
 
-## 8. Sections the site MUST include (adapt to the client's data & photos)
+## 8. Compose it differently every time (anti-template rule), then cover the content
 
-Include a section only if the client has content for it, and drop it cleanly if not
-(no pool → no pool block). Order to fit the property, but cover:
+The numbered list below is a **content checklist** (what to cover), NOT a fixed visual
+skeleton or a fixed order. The fastest way to make slop is to pour every property into the
+same wireframe and only swap the colours. **Two Cadru sites must never share the same
+skeleton.**
+
+**The banned default skeleton.** If your page is shaping up as: a full-bleed hero photo
+with the wordmark overlaid, then a row of 3 equal room cards, then a dark facilities band
+of white chips, then a 1-big-plus-2-small bento gallery, then a split "De ce ___" section,
+then a white map card, then the footer, STOP. That is the template, and the template is
+the slop. Recompose before you write a line of code.
+
+**Structure Read (state it before building).** One line: "Composing this as: `<hero
+paradigm>` + `<rooms treatment>` + `<facilities treatment>` + `<gallery shape>`, ordered
+`<order>`, because `<what about this property drives it>`." Drive it from the property's
+size, type, signature, and the shape and quantity of its real photos, never from habit.
+
+**Vary at least the hero paradigm and the rooms treatment between any two builds.** Pick a
+different combination from these menus each time:
+- **Hero:** (a) full-bleed photo, wordmark corner-locked; (b) split: wordmark + copy on
+  one side, a photo on the other; (c) type-led: a large wordmark on a colour field pulled
+  from the photos, a thin photo strip below; (d) offset collage: wordmark beside 2-3
+  stacked photos; (e) quiet centred, for a small boutique. Do not reach for (a) every time.
+- **Rooms / Cazare:** (a) 2-column zigzag with large photos; (b) a horizontal scroll of
+  room pills; (c) one featured room + a compact list; (d) an asymmetric bento; (e) a plain
+  table for a larger hotel. **Cell count equals the number of REAL room types, never
+  forced to 3.**
+- **Facilities:** (a) light inline icon+label rows; (b) a 2-column checklist; (c) a quiet
+  grid on a light background; (d) the dark band of chips. Rotate. The dark-chip band is
+  ONE option, not the house default.
+- **Gallery:** shape it to the actual photos. A full-width strip, a masonry, a simple 2x2,
+  or a single hero shot + a thumb row are all fine. Do not reuse the same bento mosaic
+  every time.
+- **Order:** reorder the sections to the property's story. Lead with the signature when it
+  is the reason people come; put the map early for a hard-to-find cabin; a food-forward
+  guesthouse can put the restaurant above the rooms.
+
+**Drop the "De ce ___" split-header by default.** The "big headline left, small paragraph
+right" split-header is a banned AI tell, and it is exactly where placeholder text has been
+leaking ("split-section"). Keep a "why us" block only if you have real, specific reasons to
+say, and then stack it (headline over body), never as a floating split.
+
+**Demo mode (no real property yet).** If you have no real data or photos, say so plainly.
+Then still vary the composition AND the invented content: do not reuse the same three room
+names and the same six amenities on every demo. Use hotel-appropriate imagery (generated,
+or clearly-neutral architectural/interior placeholders); never drop an unrelated stock
+image (a deer, a highway, a rusty dashboard) into a labelled slot like "Camera dublă".
+
+Now, composed per your Structure Read: include a section only if the client has content
+for it, drop it cleanly if not (no pool, no pool block), and cover:
 
 1. **Sticky header** — logo (brand name with one styled accent word) + in-page nav +
    a prominent primary CTA (default "Rezervă"). Mobile: hamburger menu.
@@ -401,6 +451,19 @@ drop the RO-specific ANPC badges, and follow that country's norms.
 - [ ] Palette **and** fonts are demonstrably derived from the photos, and match none
       of the three AI "looks" by reflex. No banned fonts/colours/gradients. No literal
       `#F4F1EA` / `#D97757`.
+- [ ] **Structure is not the default skeleton.** The Structure Read was stated; the hero
+      paradigm and the rooms treatment differ from the last site built; the page is NOT
+      (full-bleed hero + 3 room cards + dark facility chips + 1-big-2-small bento + split
+      "De ce" + map card). No two Cadru sites share a wireframe.
+- [ ] **No leaked placeholders or scaffolding text** ("split-section", "lorem", a bracket
+      note, a stray class name) anywhere visible. Every string is real Romanian, re-read
+      end to end; on a demo, the room names and amenities are not the same reused set.
+- [ ] **Hero text is legible:** headline and subtitle sit on enough scrim/contrast (AA),
+      do not overlap each other, are not clipped by the image edge, and the subtitle is
+      not cut off.
+- [ ] **Every photo is the property's own and in the right slot** (a room card shows a
+      room, the gallery shows this place). No unrelated stock in a labelled slot; on a
+      demo, hotel-appropriate imagery only.
 - [ ] Every applicable section present with **real content and real photos**;
       missing-data sections dropped cleanly.
 - [ ] Looks right at **360px wide first**, then scales up. **No horizontal scroll.**

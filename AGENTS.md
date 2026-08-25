@@ -371,7 +371,10 @@ Four parts, every value traceable to a photo:
 
   (These seeds may name Fraunces for a genuinely rustic pension; that is the one context
   where it is earned. Elsewhere honour Part 3's serif discipline.)
-- **C. Layout:** one-line concept + the section order (from 5.8).
+- **C. Layout:** the Structure Read from 5.8 (hero paradigm + rooms treatment +
+  facilities treatment + gallery shape + section order chosen for THIS property), plus one
+  line on what makes this composition specific to it. Not the default skeleton, and not the
+  same skeleton as the last site you built.
 - **D. Signature:** the ONE element the site is remembered by, drawn from the property.
   Everything else stays calm so it lands.
 
@@ -407,7 +410,32 @@ link. Never render a dead button.
 image, priceRange, amenityFeature[], and `aggregateRating` **only if you have real review
 data**). This is what helps the property show up in Google and in AI answers.
 
-### 5.8 Sections the site must include (adapt to the data; drop cleanly if no content)
+### 5.8 Compose it differently every time (anti-template rule), then cover the content
+The list below is a **content checklist**, NOT a fixed skeleton or order. **Two Cadru
+sites must never share the same wireframe.** The fastest way to make slop is to pour every
+property into the same layout and only swap the colours.
+
+**Banned default skeleton:** full-bleed hero photo with the wordmark overlaid → 3 equal
+room cards → dark facilities band of white chips → 1-big-2-small bento gallery → split
+"De ce ___" section → white map card → footer. If your page is becoming this, STOP and
+recompose. **State a Structure Read** first: "Composing this as `<hero paradigm>` +
+`<rooms treatment>` + `<facilities treatment>` + `<gallery shape>`, ordered `<order>`,
+because `<what about this property drives it>`."
+
+**Vary at least the hero and the rooms treatment between any two builds**, choosing from:
+*Hero:* full-bleed / split / type-led on a colour field / offset collage / quiet centred.
+*Rooms:* 2-col zigzag / horizontal scroll pills / featured room + list / asymmetric bento
+/ plain table; cells = real room-type count, never forced to 3. *Facilities:* light
+inline rows / 2-col checklist / quiet light grid / dark chip band (one option, not the
+default). *Gallery:* full strip / masonry / 2x2 / hero + thumbs, shaped to the real
+photos, not the same bento each time. *Order:* reorder to the property's story (lead with
+the signature; map early for a hard-to-find cabin). **Drop the "De ce ___" split-header by
+default** (it is a banned tell and where "split-section" placeholder text leaks); if kept,
+stack it. **Demo mode:** if no real data, say so, vary the invented content too (not the
+same 3 room names + 6 amenities every time), and use hotel-appropriate imagery, never an
+unrelated stock photo (a deer, a highway) in a labelled slot like "Camera dublă".
+
+Cover this content, composed per your Structure Read:
 1. Sticky header: brand (one accent word) + in-page nav + primary CTA (default "Rezervă");
    mobile hamburger. 2. Hero: editorial headline with an italic accent phrase + location
    tagline over/beside a strong photo, plus a 3-4 number key-stats strip. 3. Rooms /
@@ -467,7 +495,14 @@ pages and the banner (GDPR is EU-wide), drop the RO-only ANPC badges, follow loc
 
 ### 5.10 QA: final checklist (fix any fail before delivering)
 Palette and fonts demonstrably from the photos, matching none of the three hospitality AI
-looks; all applicable sections present with real content and real photos, missing-data
+looks; **the structure is not the banned default skeleton and differs from the last build**
+(Structure Read stated, hero paradigm and rooms treatment varied); **no leaked placeholder
+or scaffolding text** ("split-section", brackets, stray class names) anywhere and every
+string real Romanian (on a demo, room names and amenities not the same reused set); **hero
+text legible** (AA scrim, headline and subtitle not overlapping, not clipped by the image
+edge); **every photo the property's own and in the right slot** (a room card shows a room,
+not a deer or a highway); all applicable sections present with real content and real
+photos, missing-data
 sections dropped; correct at 360px first with no horizontal scroll; AA contrast, visible
 focus, reduced motion honoured, alt text everywhere; all CTAs wired (`tel:`, `wa.me`,
 Booking, Maps) with the floating WhatsApp + sticky mobile bar present and Booking→WhatsApp
