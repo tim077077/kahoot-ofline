@@ -15,10 +15,86 @@ import { fetchJson, fetchRetry, hostOf, sleep } from "./util.mjs";
 
 const OVERPASS_URL = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 
-export async function enumerate({ provider = "osm", county, types = [], googleKey } = {}) {
+export async function enumerate({ provider = "osm", county, types = [], googleKey, apifyToken, maxPlaces = 60 } = {}) {
   if (!county) throw new Error("county is required");
+  if (provider === "apify") return enumerateApify({ county, types, apifyToken, maxPlaces });
   if (provider === "places") return enumeratePlaces({ county, types, googleKey });
   return enumerateOverpass({ county, types });
+}
+
+// ---- Apify Google Maps Scraper - best coverage (paid) -----------------------
+// One actor run returns every place in the county plus website, phone, rating,
+// reviews and photo URLs, with no 60-result cap. Note: it scrapes Google Maps
+// (against Google's ToS) and the photos are Google-hosted (reuse is a gray area) -
+// see the README. Uses async run + poll so a long county scrape does not hit the
+// 300s run-sync ceiling.
+const APIFY_ACTOR = process.env.APIFY_ACTOR || "compass~crawler-google-places";
+const APIFY_TERMS = {
+  hotel: "hotel", guest_house: "pensiune", motel: "motel", chalet: "cabană",
+  hostel: "hostel", apartment: "apartament de închiriat", resort: "resort", camp_site: "camping",
+};
+
+async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
+  if (!apifyToken) throw new Error("Apify provider selected but no Apify API token was provided.");
+  const terms = (types.length ? types.map((t) => APIFY_TERMS[t]).filter(Boolean) : ["cazare", "pensiune", "hotel", "cabană", "motel"]);
+  const input = {
+    searchStringsArray: terms,
+    locationQuery: `Județul ${county}, România`,
+    language: "ro",
+    maxCrawledPlacesPerSearch: Math.max(1, Math.min(Number(maxPlaces) || 60, 300)),
+    scrapeImages: true,
+    maxImages: 8,
+    skipClosedPlaces: true,
+  };
+
+  // 1. Start the run.
+  const start = await fetchJson(
+    `https://api.apify.com/v2/acts/${APIFY_ACTOR}/runs?token=${encodeURIComponent(apifyToken)}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
+    { retries: 1 },
+  );
+  const runId = start.data?.id;
+  const datasetId = start.data?.defaultDatasetId;
+  if (!runId) throw new Error("Apify did not start a run (check the token and actor).");
+
+  // 2. Poll until it finishes (max ~5 min).
+  let status = start.data?.status;
+  const deadline = Date.now() + 5 * 60 * 1000;
+  while (!["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"].includes(status)) {
+    if (Date.now() > deadline) throw new Error("Apify run took too long; lower 'max locuri' or run fewer types.");
+    await sleep(3500);
+    const s = await fetchJson(`https://api.apify.com/v2/actor-runs/${runId}?token=${encodeURIComponent(apifyToken)}`, {}, { retries: 2 });
+    status = s.data?.status;
+  }
+  if (status !== "SUCCEEDED") throw new Error(`Apify run ${status}.`);
+
+  // 3. Read the dataset.
+  const items = await fetchJson(
+    `https://api.apify.com/v2/datasets/${datasetId}/items?clean=true&format=json&token=${encodeURIComponent(apifyToken)}`,
+    {}, { retries: 2, timeout: 120000 },
+  );
+
+  const places = (Array.isArray(items) ? items : []).map((it) => {
+    const website = it.website || "";
+    return {
+      id: `apify-${it.placeId || it.fid || it.cid || Math.random().toString(36).slice(2)}`,
+      name: it.title || it.name || "(fără nume)",
+      type: it.categoryName || "cazare",
+      town: it.city || it.neighborhood || "",
+      county,
+      address: it.address || it.street || "",
+      phone: it.phone || it.phoneUnformatted || "",
+      email: Array.isArray(it.emails) ? (it.emails[0] || "") : (it.email || ""),
+      website,
+      facebook: hostOf(website).includes("facebook") ? website : "",
+      lat: it.location?.lat, lon: it.location?.lng,
+      rating: it.totalScore, reviews: it.reviewsCount,
+      images: Array.isArray(it.imageUrls) ? it.imageUrls.slice(0, 8) : [],
+      mapsUrl: it.url || (it.location ? `https://www.google.com/maps/search/?api=1&query=${it.location.lat},${it.location.lng}` : ""),
+      source: "apify",
+    };
+  });
+  return dedupe(places);
 }
 
 // ---- OpenStreetMap Overpass -------------------------------------------------

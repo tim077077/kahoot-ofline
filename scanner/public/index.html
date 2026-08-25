@@ -24,13 +24,16 @@
         <label>OpenAI API key <span class="req">necesară pentru generare</span>
           <input type="password" id="k_openai" placeholder="sk-..." autocomplete="off">
         </label>
-        <label>Firecrawl API key <span class="req">necesară pentru poze</span>
+        <label>Firecrawl API key <span class="muted">(poze; opțional dacă folosești Apify)</span>
           <input type="password" id="k_firecrawl" placeholder="fc-..." autocomplete="off">
+        </label>
+        <label>Apify API token <span class="muted">(sursă Google Maps, cea mai completă)</span>
+          <input type="password" id="k_apify" placeholder="apify_api_..." autocomplete="off">
         </label>
         <label>Model OpenAI
           <input type="text" id="k_model" placeholder="gpt-4o">
         </label>
-        <label>Google Places key <span class="muted">(opțional, enumerare mai completă)</span>
+        <label>Google Places key <span class="muted">(opțional)</span>
           <input type="password" id="k_google" placeholder="AIza..." autocomplete="off">
         </label>
       </div>
@@ -44,9 +47,13 @@
         </label>
         <label>Sursă
           <select id="provider">
+            <option value="apify">Apify · Google Maps (cel mai complet)</option>
             <option value="osm">OpenStreetMap (gratis)</option>
             <option value="places">Google Places (cu cheie)</option>
           </select>
+        </label>
+        <label>Max locuri
+          <input type="number" id="maxPlaces" value="60" min="5" max="300" step="5" style="width:90px">
         </label>
         <button id="scanBtn" class="btn primary">Scanează</button>
       </div>

@@ -29,9 +29,9 @@ app.get("/api/config", (_req, res) => {
 
 // STEP 1 + 2: enumerate a county and classify website status.
 app.post("/api/scan", async (req, res) => {
-  const { county, types = [], provider = "osm", googleKey } = req.body || {};
+  const { county, types = [], provider = "osm", googleKey, apifyToken, maxPlaces } = req.body || {};
   try {
-    const raw = await enumerate({ provider, county, types, googleKey });
+    const raw = await enumerate({ provider, county, types, googleKey, apifyToken, maxPlaces });
     const rows = classifyAll(raw);
     res.json({
       county,

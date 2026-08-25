@@ -1,5 +1,5 @@
 const $ = (s) => document.querySelector(s);
-const KEY_FIELDS = { k_openai: "openai", k_firecrawl: "firecrawl", k_model: "model", k_google: "google" };
+const KEY_FIELDS = { k_openai: "openai", k_firecrawl: "firecrawl", k_apify: "apify", k_model: "model", k_google: "google" };
 const STORE = "cadru-scanner-keys";
 
 // ---- keys (localStorage, browser-only) --------------------------------------
@@ -17,6 +17,7 @@ function keys() {
   return {
     openaiKey: $("#k_openai").value.trim(),
     firecrawlKey: $("#k_firecrawl").value.trim(),
+    apifyToken: $("#k_apify").value.trim() || undefined,
     model: $("#k_model").value.trim() || undefined,
     googleKey: $("#k_google").value.trim() || undefined,
   };
@@ -55,15 +56,18 @@ async function scan() {
   const county = $("#county").value;
   const types = [...document.querySelectorAll("#types input:checked")].map((i) => i.value);
   const provider = $("#provider").value;
-  if (provider === "places" && !keys().googleKey) return status("Sursa Google Places are nevoie de o cheie Google.", true);
+  const maxPlaces = Number($("#maxPlaces").value) || 60;
+  const k = keys();
+  if (provider === "places" && !k.googleKey) return status("Sursa Google Places are nevoie de o cheie Google.", true);
+  if (provider === "apify" && !k.apifyToken) return status("Sursa Apify are nevoie de token-ul Apify (panoul de chei).", true);
 
   $("#scanBtn").disabled = true;
   $("#resultsWrap").hidden = true;
-  status(`Scanez ${county}...`, false, true);
+  status(`Scanez ${county}...` + (provider === "apify" ? " (Apify poate dura 1-3 minute)" : ""), false, true);
   try {
     const r = await fetch("/api/scan", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ county, types, provider, googleKey: keys().googleKey }),
+      body: JSON.stringify({ county, types, provider, maxPlaces, googleKey: k.googleKey, apifyToken: k.apifyToken }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "scan failed");
@@ -101,8 +105,9 @@ function renderTable(data) {
 async function generateOne(i) {
   const place = PLACES[i];
   const k = keys();
+  const hasPhotos = place.images && place.images.length;
   if (!k.openaiKey) return status("Adaugă cheia OpenAI (pentru generare) în panoul de chei.", true);
-  if (!k.firecrawlKey) return status("Adaugă cheia Firecrawl (pentru poze) în panoul de chei.", true);
+  if (!k.firecrawlKey && !hasPhotos) return status("Adaugă cheia Firecrawl (poze), sau folosește sursa Apify care aduce pozele.", true);
 
   const cell = document.querySelector(`tr[data-i="${i}"] .demo-cell`);
   cell.innerHTML = `<span class="spinner"></span>caut poze + generez...`;
@@ -123,7 +128,9 @@ async function generateOne(i) {
 
 async function generateAll() {
   const candidates = PLACES.map((p, i) => (p.candidate ? i : -1)).filter((i) => i >= 0);
-  if (!keys().openaiKey || !keys().firecrawlKey) return status("Adaugă cheile OpenAI și Firecrawl întâi.", true);
+  const anyNeedsFirecrawl = candidates.some((i) => !(PLACES[i].images && PLACES[i].images.length));
+  if (!keys().openaiKey) return status("Adaugă cheia OpenAI întâi.", true);
+  if (anyNeedsFirecrawl && !keys().firecrawlKey) return status("Unii candidați nu au poze din enumerare; adaugă cheia Firecrawl sau folosește sursa Apify.", true);
   $("#genAll").disabled = true;
   for (let n = 0; n < candidates.length; n++) {
     status(`Generez ${n + 1}/${candidates.length}...`, false, true);

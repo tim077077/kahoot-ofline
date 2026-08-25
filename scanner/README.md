@@ -16,12 +16,20 @@ County ──▶ enumerate ──▶ classify (no real site?) ──▶ extract 
 
 | Step | Tool used here | Why it is the best fit |
 |---|---|---|
-| **1. Enumerate a whole county** | **OpenStreetMap Overpass API** (free, no key) | Queries the county's admin boundary directly and returns name + website tag + phone + coordinates for every `tourism=*` place. Google Places (New) hard-caps at **60 results per query** (20/page × 3 pages), so a full county needs grid-tiling; Apify/Outscraper bypass the cap but cost money. Overpass is the best free "whole county" source. |
+| **1. Enumerate a whole county** | **Apify Google Maps Scraper** (most complete, paid) or **OSM Overpass** (free default) | Apify's actor returns every place in the county plus website, phone, rating, reviews **and photo URLs** in one run, with no result cap - the best coverage, and it feeds steps 2 and 3 too. Overpass is the free fallback (queries the county boundary directly, but only as complete as OpenStreetMap). Google Places (New) hard-caps at **60 results per query**, so it needs grid-tiling and is the weakest of the three here. |
 | **2. Detect "no real website"** | Deterministic classifier | The website field is all you need: empty, or pointing at facebook / instagram / linktr.ee / an OTA (Booking, Travelminit) = **no real site** = a prospect. No API, no cost, no guessing. |
 | **3. Extract the property's photos** | **Firecrawl** (`/search` + `/scrape`) | The strongest 2025 image extractor: it runs JS, triggers lazy-loading, resolves `srcset`/CDN variants, and returns a full-page **screenshot** as a fallback when a CDN blocks the images. It finds the property's Booking/Travelminit page (the richest real-photo source) even when the place only has a Facebook page. **Not** Google Places Photos: Google's terms forbid caching/storing them and require live display with attribution, so they cannot be reused to build a site. |
 | **4. Generate the demo from the photos** | **OpenAI vision** (`/v1/chat/completions`, `gpt-4o` by default) | A vision model reads the real photos, derives the palette/type/mood, and writes a self-contained `index.html`. The prompt carries the studio's anti-slop + **anti-template** rules so each demo has a different structure, not the same wireframe in new colours. |
 
-Minimum keys to run the whole pipeline: **OpenAI + Firecrawl** (enumeration is free).
+**Three enumeration sources** (Sursă dropdown):
+- **Apify · Google Maps** (recommended) - most complete, brings photos, so you often
+  need no Firecrawl key. Needs an Apify token; costs Apify credits per run; scrapes
+  Google Maps (Google ToS gray area, see below).
+- **OpenStreetMap** - free, no key, instant, but only as complete as OSM.
+- **Google Places** - needs a Google key, capped at 60 results, no photos reused.
+
+Minimum keys per setup: **Apify + OpenAI** (Apify brings the photos), or **OpenAI +
+Firecrawl** with the free OSM source. Enumeration on OSM is free.
 
 ---
 
@@ -62,8 +70,11 @@ Then in the UI:
 ---
 
 ## Legal and etiquette (read this)
-- **Google Maps is not scraped.** Enumeration uses OSM/Overpass and the official Places
-  API only. Do not point this at a Google Maps scraper that violates Google's terms.
+- **Know which source you picked.** OSM/Overpass and the official Places API do **not**
+  scrape Google Maps. The **Apify** source **does** scrape Google Maps to beat the API's
+  60-result cap - that is against Google's ToS (public data, widely used, but your call).
+  Its photos are Google-hosted, so treat them as reference for a private preview, not as
+  assets to publish.
 - **Google Places photos are off-limits for building.** Their terms forbid storing/reusing
   them. That is why images come from the property's own Booking/Facebook presence instead.
 - **The photos belong to the business.** A demo built from a property's own photos, shown
@@ -79,8 +90,11 @@ Then in the UI:
 ---
 
 ## How each step works (for editing)
-- `lib/enumerate.mjs` - Overpass QL against `admin_level=4` (county) for `tourism=*`; a
-  Google Places (New) `searchText` provider is included and clearly flagged as 60-capped.
+- `lib/enumerate.mjs` - three providers: `apify` (Apify Google Maps actor, async run +
+  poll, returns photos; actor id overridable with `APIFY_ACTOR`, default
+  `compass~crawler-google-places`), `osm` (Overpass QL against `admin_level=4`), and
+  `places` (Google Places New `searchText`, 60-capped). Apify input fields can vary by
+  actor version - adjust in `enumerateApify` if a field is renamed.
 - `lib/classify.mjs` - website-status rules; `SOCIAL_HOSTS` is the list that counts as
   "no real site". Add/adjust hosts there.
 - `lib/images.mjs` - Firecrawl discovery + scrape + `<img>` extraction with a `score()`
@@ -93,10 +107,10 @@ Then in the UI:
 - `output/` - generated demos, served at `/demos/...` (gitignored).
 
 ### Getting closer to "ALL" of a county
-Overpass is only as complete as OpenStreetMap. For fuller coverage, add an **Apify** or
-**Outscraper** Google-Maps-scraper provider in `enumerate.mjs` (they bypass the 60/120
-limits and also return email + photo URLs), or grid-tile the Places `searchText` query
-across the county and dedupe by place id.
+The built-in **Apify** source already gives the fullest coverage (no result cap, plus
+photos). To also pull **emails**, swap `APIFY_ACTOR` for a contact-details actor
+(e.g. `lukaskrivka~google-maps-with-contact-details`) or use **Outscraper**. Raise
+**Max locuri** for bigger counties (it costs more Apify credits and takes longer).
 
 ---
 

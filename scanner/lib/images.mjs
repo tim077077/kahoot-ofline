@@ -19,7 +19,18 @@ const PHOTO_HOSTS = ["cf.bstatic.com", "bstatic.com", "travelminit", "imgix", "c
 const LISTING_HOSTS = ["booking.com", "travelminit.ro", "hotel", "tripadvisor", "cazare"];
 
 export async function extractImages(place, { firecrawlKey } = {}) {
-  if (!firecrawlKey) throw new Error("Firecrawl API key is required to extract images.");
+  // If enumeration already brought photos (Apify / Google Maps listing), use them
+  // directly and skip Firecrawl. These are Google-hosted; prefer the owner's own
+  // photos before any public deploy.
+  if (Array.isArray(place.images) && place.images.length) {
+    return {
+      images: place.images.slice(0, 12),
+      screenshot: null,
+      source: place.mapsUrl || null,
+      note: "Poze din listarea Google Maps (via Apify). Folosește pozele proprietarului înainte de publicare.",
+    };
+  }
+  if (!firecrawlKey) throw new Error("Firecrawl API key is required to extract images (or use the Apify source, which brings photos).");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${firecrawlKey}` };
 
   // 1. Pick the URL to scrape.
