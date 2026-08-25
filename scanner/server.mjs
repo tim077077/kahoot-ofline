@@ -50,12 +50,27 @@ app.post("/api/scan", async (req, res) => {
 app.post("/api/generate", async (req, res) => {
   const { place, firecrawlKey, openaiKey, model, openaiBase } = req.body || {};
   if (!place || !place.name) return res.status(400).json({ error: "place is required" });
+  const tag = `[gen] ${place.name}`;
   try {
-    const imgs = await extractImages(place, { firecrawlKey });
-    const result = await generateSite(
-      { place, images: imgs.images, screenshot: imgs.screenshot, source: imgs.source },
-      { openaiKey, model, openaiBase },
-    );
+    let imgs;
+    try {
+      imgs = await extractImages(place, { firecrawlKey });
+    } catch (e) {
+      console.log(`${tag} PHOTOS failed: ${e.message} (firecrawlKey=${firecrawlKey ? "set" : "missing"}, preloaded=${(place.images || []).length})`);
+      throw new Error(`Poze (Firecrawl): ${e.message}`);
+    }
+    console.log(`${tag} photos ok (found=${imgs.images.length}, screenshot=${!!imgs.screenshot})`);
+    let result;
+    try {
+      result = await generateSite(
+        { place, images: imgs.images, screenshot: imgs.screenshot, source: imgs.source },
+        { openaiKey, model, openaiBase },
+      );
+    } catch (e) {
+      const kind = openaiKey ? (openaiKey.startsWith("sk-or") ? "OpenRouter key (sk-or-)" : "NON-OpenRouter key") : "no key";
+      console.log(`${tag} GENERATE failed: ${e.message} (model=${model || "gpt-4o"}, ${kind})`);
+      throw new Error(`Generare: ${e.message}`);
+    }
     res.json({ ...result, imageNote: imgs.note, foundImages: imgs.images.length, hasScreenshot: !!imgs.screenshot });
   } catch (e) {
     res.status(400).json({ error: e.message });

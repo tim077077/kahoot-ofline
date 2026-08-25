@@ -115,16 +115,27 @@ export async function generateSite({ place, images = [], screenshot = null, sour
   };
   if (process.env.OPENAI_TEMPERATURE) body.temperature = Number(process.env.OPENAI_TEMPERATURE);
 
-  const json = await fetchJson(`${base}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${openaiKey}`,
-      "HTTP-Referer": "http://localhost:5173", // OpenRouter likes these; OpenAI ignores them
-      "X-Title": "Cadru Scanner",
-    },
-    body: JSON.stringify(body),
-  }, { retries: 1, timeout: 240000 });
+  let json;
+  try {
+    json = await fetchJson(`${base}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openaiKey}`,
+        "HTTP-Referer": "http://localhost:5173", // OpenRouter likes these; OpenAI ignores them
+        "X-Title": "Cadru Scanner",
+      },
+      body: JSON.stringify(body),
+    }, { retries: 1, timeout: 240000 });
+  } catch (e) {
+    if (e.status === 401) {
+      if (base.includes("openrouter") && !openaiKey.startsWith("sk-or")) {
+        throw new Error(`401 de la OpenRouter: cheia din câmpul „OpenAI / OpenRouter key" nu pare o cheie OpenRouter (sk-or-...). Modelul "${model}" merge prin OpenRouter, deci pune acolo o cheie OpenRouter.`);
+      }
+      throw new Error(`401 (autentificare) de la ${base}. Verifică cheia și că se potrivește cu endpointul. [model=${model}]`);
+    }
+    throw new Error(`${e.message} [endpoint=${base}, model=${model}]`);
+  }
 
   const content = json.choices?.[0]?.message?.content || "";
   const { html, rationale } = parseOutput(content);
