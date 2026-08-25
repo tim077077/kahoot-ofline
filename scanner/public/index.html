@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadru Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand"><span class="mk">C</span> Cadru Scanner</div>
+      <p class="tag">Găsește cazările fără site dintr-un județ, extrage-le pozele, generează un demo.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <details class="panel keys" id="keysPanel">
+      <summary>Chei API <span class="muted" id="keysState">(se salvează doar în acest browser)</span></summary>
+      <div class="grid">
+        <label>OpenAI API key <span class="req">necesară pentru generare</span>
+          <input type="password" id="k_openai" placeholder="sk-..." autocomplete="off">
+        </label>
+        <label>Firecrawl API key <span class="req">necesară pentru poze</span>
+          <input type="password" id="k_firecrawl" placeholder="fc-..." autocomplete="off">
+        </label>
+        <label>Model OpenAI
+          <input type="text" id="k_model" placeholder="gpt-4o">
+        </label>
+        <label>Google Places key <span class="muted">(opțional, enumerare mai completă)</span>
+          <input type="password" id="k_google" placeholder="AIza..." autocomplete="off">
+        </label>
+      </div>
+      <p class="fineprint">Cheile rămân în <code>localStorage</code> pe calculatorul tău și se trimit doar către serverul local. Nu sunt salvate pe disc și nu apar în loguri.</p>
+    </details>
+
+    <section class="panel controls">
+      <div class="row">
+        <label class="grow">Județ
+          <select id="county"></select>
+        </label>
+        <label>Sursă
+          <select id="provider">
+            <option value="osm">OpenStreetMap (gratis)</option>
+            <option value="places">Google Places (cu cheie)</option>
+          </select>
+        </label>
+        <button id="scanBtn" class="btn primary">Scanează</button>
+      </div>
+      <fieldset class="types" id="types"></fieldset>
+    </section>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="resultsWrap" class="panel results" hidden>
+      <div class="results-head">
+        <div><strong id="summary"></strong></div>
+        <button id="genAll" class="btn">Generează demo pentru toți candidații</button>
+      </div>
+      <div class="table-scroll">
+        <table id="table">
+          <thead>
+            <tr><th>Nume</th><th>Tip</th><th>Localitate</th><th>Telefon</th><th>Status</th><th>Demo</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="legal">
+      Preview-urile sunt demonstrative, generate din pozele reale ale proprietății, pentru
+      contactare. Nu publica un site cu poze preluate fără acordul proprietarului și
+      pozele lui. Respectă termenii OpenStreetMap, Firecrawl, Booking și OpenAI.
+    </p>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
