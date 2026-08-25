@@ -1,5 +1,5 @@
 const $ = (s) => document.querySelector(s);
-const KEY_FIELDS = { k_openai: "openai", k_firecrawl: "firecrawl", k_apify: "apify", k_model: "model", k_google: "google" };
+const KEY_FIELDS = { k_openai: "openai", k_firecrawl: "firecrawl", k_apify: "apify", k_model: "model", k_base: "base", k_google: "google" };
 const STORE = "cadru-scanner-keys";
 
 // ---- keys (localStorage, browser-only) --------------------------------------
@@ -19,6 +19,7 @@ function keys() {
     firecrawlKey: $("#k_firecrawl").value.trim(),
     apifyToken: $("#k_apify").value.trim() || undefined,
     model: $("#k_model").value.trim() || undefined,
+    openaiBase: $("#k_base").value.trim() || undefined,
     googleKey: $("#k_google").value.trim() || undefined,
   };
 }
@@ -119,7 +120,7 @@ async function generateOne(i) {
   try {
     const r = await fetch("/api/generate", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ place, openaiKey: k.openaiKey, firecrawlKey: k.firecrawlKey, model: k.model }),
+      body: JSON.stringify({ place, openaiKey: k.openaiKey, firecrawlKey: k.firecrawlKey, model: k.model, openaiBase: k.openaiBase }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "generation failed");

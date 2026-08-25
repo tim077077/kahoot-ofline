@@ -21,8 +21,8 @@
     <details class="panel keys" id="keysPanel">
       <summary>Chei API <span class="muted" id="keysState">(se salvează doar în acest browser)</span></summary>
       <div class="grid">
-        <label>OpenAI API key <span class="req">necesară pentru generare</span>
-          <input type="password" id="k_openai" placeholder="sk-..." autocomplete="off">
+        <label>OpenAI / OpenRouter key <span class="req">necesară pentru generare</span>
+          <input type="password" id="k_openai" placeholder="sk-... / sk-or-..." autocomplete="off">
         </label>
         <label>Firecrawl API key <span class="muted">(poze; opțional dacă folosești Apify)</span>
           <input type="password" id="k_firecrawl" placeholder="fc-..." autocomplete="off">
@@ -30,8 +30,11 @@
         <label>Apify API token <span class="muted">(sursă Google Maps, cea mai completă)</span>
           <input type="password" id="k_apify" placeholder="apify_api_..." autocomplete="off">
         </label>
-        <label>Model OpenAI
+        <label>Model <span class="muted">(gpt-4o, sau slug OpenRouter: stealth/ox-alpha)</span>
           <input type="text" id="k_model" placeholder="gpt-4o">
+        </label>
+        <label>API base URL <span class="muted">(gol = auto; slug cu „/" → OpenRouter)</span>
+          <input type="text" id="k_base" placeholder="auto" autocomplete="off">
         </label>
         <label>Google Places key <span class="muted">(opțional)</span>
           <input type="password" id="k_google" placeholder="AIza..." autocomplete="off">

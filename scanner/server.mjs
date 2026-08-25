@@ -48,13 +48,13 @@ app.post("/api/scan", async (req, res) => {
 
 // STEP 3 + 4: extract images for one place and generate its demo site.
 app.post("/api/generate", async (req, res) => {
-  const { place, firecrawlKey, openaiKey, model } = req.body || {};
+  const { place, firecrawlKey, openaiKey, model, openaiBase } = req.body || {};
   if (!place || !place.name) return res.status(400).json({ error: "place is required" });
   try {
     const imgs = await extractImages(place, { firecrawlKey });
     const result = await generateSite(
       { place, images: imgs.images, screenshot: imgs.screenshot, source: imgs.source },
-      { openaiKey, model },
+      { openaiKey, model, openaiBase },
     );
     res.json({ ...result, imageNote: imgs.note, foundImages: imgs.images.length, hasScreenshot: !!imgs.screenshot });
   } catch (e) {

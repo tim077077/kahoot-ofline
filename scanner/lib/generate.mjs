@@ -12,7 +12,8 @@ import { fetchRetry, fetchJson, slugify } from "./util.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.resolve(__dirname, "..", "output");
-const OPENAI_BASE = process.env.OPENAI_BASE || "https://api.openai.com/v1";
+// The API base is resolved per request in generateSite, so this works with OpenAI,
+// OpenRouter, or any OpenAI-compatible gateway (local model server, Together, Groq...).
 
 const MAX_IMAGES = 6;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -69,9 +70,13 @@ async function toDataUrl(url) {
   return `data:${ct};base64,${buf.toString("base64")}`;
 }
 
-export async function generateSite({ place, images = [], screenshot = null, source = null }, { openaiKey, model } = {}) {
-  if (!openaiKey) throw new Error("OpenAI API key is required to generate a site.");
+export async function generateSite({ place, images = [], screenshot = null, source = null }, { openaiKey, model, openaiBase } = {}) {
+  if (!openaiKey) throw new Error("An API key is required to generate a site.");
   model = model || process.env.OPENAI_MODEL || "gpt-4o";
+  // Resolve the endpoint. Explicit base wins; else env; else auto-detect: a
+  // "vendor/model" slug (stealth/ox-alpha, openai/gpt-4o) means OpenRouter.
+  const base = (openaiBase || process.env.OPENAI_BASE
+    || (model.includes("/") ? "https://openrouter.ai/api/v1" : "https://api.openai.com/v1")).replace(/\/+$/, "");
 
   // Build the image blocks (real photos first, screenshot as backstop).
   const candidateUrls = [...images];
@@ -102,7 +107,7 @@ export async function generateSite({ place, images = [], screenshot = null, sour
 
   const body = {
     model,
-    max_completion_tokens: Number(process.env.OPENAI_MAX_TOKENS || 16000),
+    max_tokens: Number(process.env.OPENAI_MAX_TOKENS || 16000),
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: userContent },
@@ -110,9 +115,14 @@ export async function generateSite({ place, images = [], screenshot = null, sour
   };
   if (process.env.OPENAI_TEMPERATURE) body.temperature = Number(process.env.OPENAI_TEMPERATURE);
 
-  const json = await fetchJson(`${OPENAI_BASE}/chat/completions`, {
+  const json = await fetchJson(`${base}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${openaiKey}`,
+      "HTTP-Referer": "http://localhost:5173", // OpenRouter likes these; OpenAI ignores them
+      "X-Title": "Cadru Scanner",
+    },
     body: JSON.stringify(body),
   }, { retries: 1, timeout: 240000 });
 
