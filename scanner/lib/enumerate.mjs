@@ -36,16 +36,21 @@ const APIFY_TERMS = {
 
 async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
   if (!apifyToken) throw new Error("Apify provider selected but no Apify API token was provided.");
-  const terms = (types.length ? types.map((t) => APIFY_TERMS[t]).filter(Boolean) : ["cazare", "pensiune", "hotel", "cabană", "motel"]);
+  const terms = (types.length ? types.map((t) => APIFY_TERMS[t]).filter(Boolean) : ["pensiune", "hotel", "cabană", "motel", "cazare"]);
+  const perSearch = Math.max(10, Math.min(Math.ceil((Number(maxPlaces) || 60) / terms.length), 120));
+  // Embed the county in each search string - Google Maps geocodes "pensiune Arad,
+  // Romania" reliably, which beats depending on a single locationQuery that often
+  // fails to resolve and then returns zero results.
+  const searchStringsArray = terms.map((t) => `${t} ${county}, Romania`);
   const input = {
-    searchStringsArray: terms,
-    locationQuery: `Județul ${county}, România`,
+    searchStringsArray,
     language: "ro",
-    maxCrawledPlacesPerSearch: Math.max(1, Math.min(Number(maxPlaces) || 60, 300)),
+    maxCrawledPlacesPerSearch: perSearch,
     scrapeImages: true,
     maxImages: 8,
     skipClosedPlaces: true,
   };
+  console.log(`[apify] actor=${APIFY_ACTOR} perSearch=${perSearch} searches=${JSON.stringify(searchStringsArray)}`);
 
   // 1. Start the run.
   const start = await fetchJson(
@@ -56,6 +61,7 @@ async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
   const runId = start.data?.id;
   const datasetId = start.data?.defaultDatasetId;
   if (!runId) throw new Error("Apify did not start a run (check the token and actor).");
+  console.log(`[apify] run=${runId} watch=https://console.apify.com/actors/runs/${runId}`);
 
   // 2. Poll until it finishes (max ~5 min).
   let status = start.data?.status;
@@ -74,6 +80,7 @@ async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
     {}, { retries: 2, timeout: 120000 },
   );
 
+  console.log(`[apify] status=${status} items=${Array.isArray(items) ? items.length : 0}`);
   const places = (Array.isArray(items) ? items : []).map((it) => {
     const website = it.website || "";
     return {
@@ -94,7 +101,11 @@ async function enumerateApify({ county, types, apifyToken, maxPlaces }) {
       source: "apify",
     };
   });
-  return dedupe(places);
+  const result = dedupe(places);
+  if (!result.length) {
+    throw new Error(`Apify a rulat (${status}) dar a găsit 0 locuri pentru "${county}". Deschide logul runului: https://console.apify.com/actors/runs/${runId} . Verifică actorul conectat (acum: ${APIFY_ACTOR}) sau încearcă alt județ.`);
+  }
+  return result;
 }
 
 // ---- OpenStreetMap Overpass -------------------------------------------------
