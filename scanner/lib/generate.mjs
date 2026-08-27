@@ -60,31 +60,41 @@ Return EXACTLY this, nothing else:
 one structural choice that makes this site specific to this property>
 ===END===`;
 
-async function toDataUrl(url) {
+async function toDataUrl(url, maxBytes = MAX_IMAGE_BYTES) {
   const res = await fetchRetry(url, { headers: { "User-Agent": "cadru-scanner/0.1" } }, { retries: 1, timeout: 30000 });
   if (!res.ok) return null;
   const ct = (res.headers.get("content-type") || "").split(";")[0].trim();
   if (!ct.startsWith("image/")) return null;
   const buf = Buffer.from(await res.arrayBuffer());
-  if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
+  if (!buf.length || buf.length > maxBytes) return null;
   return `data:${ct};base64,${buf.toString("base64")}`;
 }
 
 export async function generateSite({ place, images = [], screenshot = null, source = null }, { openaiKey, model, openaiBase } = {}) {
   if (!openaiKey) throw new Error("An API key is required to generate a site.");
   model = model || process.env.OPENAI_MODEL || "gpt-4o";
-  // Resolve the endpoint. Explicit base wins; else env; else auto-detect: a
-  // "vendor/model" slug (stealth/ox-alpha, openai/gpt-4o) means OpenRouter.
-  const base = (openaiBase || process.env.OPENAI_BASE
-    || (model.includes("/") ? "https://openrouter.ai/api/v1" : "https://api.openai.com/v1")).replace(/\/+$/, "");
+  // Resolve the endpoint from the base override, else env, else the key/model shape:
+  //   nvapi-... key -> NVIDIA NIM (integrate.api.nvidia.com)
+  //   sk-or-... key -> OpenRouter
+  //   vendor/model  -> OpenRouter (NVIDIA and OpenRouter both use slash slugs, so
+  //                    the key prefix decides first)
+  //   otherwise     -> OpenAI
+  const detected = openaiKey.startsWith("nvapi-") ? "https://integrate.api.nvidia.com/v1"
+    : openaiKey.startsWith("sk-or") ? "https://openrouter.ai/api/v1"
+    : model.includes("/") ? "https://openrouter.ai/api/v1"
+    : "https://api.openai.com/v1";
+  const base = (openaiBase || process.env.OPENAI_BASE || detected).replace(/\/+$/, "");
 
-  // Build the image blocks (real photos first, screenshot as backstop).
+  // Build the image blocks (real photos first, screenshot as backstop). NVIDIA's
+  // OpenAI-compatible endpoint caps inline base64 images at ~180KB each, so skip
+  // anything larger when routing there instead of getting a hard error.
+  const perImageCap = base.includes("nvidia") ? 180 * 1024 : MAX_IMAGE_BYTES;
   const candidateUrls = [...images];
   if (screenshot) candidateUrls.push(screenshot);
   const dataUrls = [];
   for (const u of candidateUrls) {
     if (dataUrls.length >= MAX_IMAGES) break;
-    try { const d = await toDataUrl(u); if (d) dataUrls.push(d); } catch { /* skip bad image */ }
+    try { const d = await toDataUrl(u, perImageCap); if (d) dataUrls.push(d); } catch { /* skip bad image */ }
   }
   if (!dataUrls.length) throw new Error("Could not download any usable photo for this property, so there is nothing to derive a theme from.");
 
@@ -129,10 +139,10 @@ export async function generateSite({ place, images = [], screenshot = null, sour
     }, { retries: 1, timeout: 240000 });
   } catch (e) {
     if (e.status === 401) {
-      if (base.includes("openrouter") && !openaiKey.startsWith("sk-or")) {
-        throw new Error(`401 de la OpenRouter: cheia din câmpul „OpenAI / OpenRouter key" nu pare o cheie OpenRouter (sk-or-...). Modelul "${model}" merge prin OpenRouter, deci pune acolo o cheie OpenRouter.`);
-      }
-      throw new Error(`401 (autentificare) de la ${base}. Verifică cheia și că se potrivește cu endpointul. [model=${model}]`);
+      const prov = base.includes("nvidia") ? { name: "NVIDIA", key: "nvapi-..." }
+        : base.includes("openrouter") ? { name: "OpenRouter", key: "sk-or-..." }
+        : { name: "OpenAI", key: "sk-..." };
+      throw new Error(`401 (autentificare) de la ${prov.name}. Cheia trebuie să fie una ${prov.name} (${prov.key}) și să se potrivească cu modelul "${model}".`);
     }
     throw new Error(`${e.message} [endpoint=${base}, model=${model}]`);
   }

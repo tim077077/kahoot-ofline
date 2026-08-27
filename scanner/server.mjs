@@ -67,7 +67,10 @@ app.post("/api/generate", async (req, res) => {
         { openaiKey, model, openaiBase },
       );
     } catch (e) {
-      const kind = openaiKey ? (openaiKey.startsWith("sk-or") ? "OpenRouter key (sk-or-)" : "NON-OpenRouter key") : "no key";
+      const kind = !openaiKey ? "no key"
+        : openaiKey.startsWith("nvapi-") ? "NVIDIA key (nvapi-)"
+        : openaiKey.startsWith("sk-or") ? "OpenRouter key (sk-or-)"
+        : "OpenAI-style key (sk-)";
       console.log(`${tag} GENERATE failed: ${e.message} (model=${model || "gpt-4o"}, ${kind})`);
       throw new Error(`Generare: ${e.message}`);
     }

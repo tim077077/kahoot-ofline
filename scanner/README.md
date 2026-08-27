@@ -19,7 +19,7 @@ County ──▶ enumerate ──▶ classify (no real site?) ──▶ extract 
 | **1. Enumerate a whole county** | **Apify Google Maps Scraper** (most complete, paid) or **OSM Overpass** (free default) | Apify's actor returns every place in the county plus website, phone, rating, reviews **and photo URLs** in one run, with no result cap - the best coverage, and it feeds steps 2 and 3 too. Overpass is the free fallback (queries the county boundary directly, but only as complete as OpenStreetMap). Google Places (New) hard-caps at **60 results per query**, so it needs grid-tiling and is the weakest of the three here. |
 | **2. Detect "no real website"** | Deterministic classifier | The website field is all you need: empty, or pointing at facebook / instagram / linktr.ee / an OTA (Booking, Travelminit) = **no real site** = a prospect. No API, no cost, no guessing. |
 | **3. Extract the property's photos** | **Firecrawl** (`/search` + `/scrape`) | The strongest 2025 image extractor: it runs JS, triggers lazy-loading, resolves `srcset`/CDN variants, and returns a full-page **screenshot** as a fallback when a CDN blocks the images. It finds the property's Booking/Travelminit page (the richest real-photo source) even when the place only has a Facebook page. **Not** Google Places Photos: Google's terms forbid caching/storing them and require live display with attribution, so they cannot be reused to build a site. |
-| **4. Generate the demo from the photos** | **OpenAI vision** (`/v1/chat/completions`, `gpt-4o` by default) | A vision model reads the real photos, derives the palette/type/mood, and writes a self-contained `index.html`. The prompt carries the studio's anti-slop + **anti-template** rules so each demo has a different structure, not the same wireframe in new colours. |
+| **4. Generate the demo from the photos** | **A vision LLM** via the OpenAI-compatible `/v1/chat/completions` API (`gpt-4o` by default) | A vision model reads the real photos, derives the palette/type/mood, and writes a self-contained `index.html` carrying the studio's anti-slop + **anti-template** rules. The provider is **auto-detected from the key**: `sk-...` → OpenAI, `sk-or-...` → OpenRouter, `nvapi-...` → NVIDIA NIM. Any OpenAI-compatible endpoint works via the API base field. |
 
 **Three enumeration sources** (Sursă dropdown):
 - **Apify · Google Maps** (recommended) - most complete, brings photos, so you often
@@ -53,7 +53,13 @@ Then in the UI:
    It finds the photos, builds the site, and gives you a **Deschide demo ↗** link.
 
 ### Where to get the keys
-- **OpenAI:** platform.openai.com → API keys. Any vision model works; set it in the Model box.
+- **Generation (pick one, auto-detected):**
+  - **OpenAI** — platform.openai.com → API keys (`sk-...`), model `gpt-4o`.
+  - **OpenRouter** — openrouter.ai → Keys (`sk-or-...`), model e.g. `openai/gpt-4o`.
+  - **NVIDIA NIM** — build.nvidia.com → API key (`nvapi-...`), a vision model e.g.
+    `meta/llama-3.2-90b-vision-instruct`. Note: NVIDIA caps inline images at ~180KB,
+    so the app only sends photos under that size; if none qualify it will say so.
+  Any other OpenAI-compatible endpoint works too — put its URL in the API base field.
 - **Firecrawl:** firecrawl.dev → dashboard → API key (has a free tier).
 - **Google Places (optional):** Google Cloud console → enable *Places API (New)* → create a key. Only needed if you switch the Sursă to Google Places.
 
