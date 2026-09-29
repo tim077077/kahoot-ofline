@@ -1,12 +1,14 @@
 // Single place for brand, pricing and limits. Change the name here once you
-// pick a domain.
-export const BRAND = "Merry Paws";
+// pick one for the stores.
+export const BRAND = "Paw Pictures";
+export const MASCOT = "Biscuit";
 
-export type PlanId = "single" | "trio" | "family";
+export type PlanId = "single" | "matinee" | "season";
 
 export type Plan = {
   id: PlanId;
   name: string;
+  // Tickets: one ticket unlocks one full-resolution portrait.
   credits: number;
   // USD cents.
   price: number;
@@ -14,12 +16,12 @@ export type Plan = {
 };
 
 export const PLANS: Record<PlanId, Plan> = {
-  single: { id: "single", name: "One portrait", credits: 1, price: 1900, blurb: "Perfect for a card or a phone wallpaper" },
-  trio: { id: "trio", name: "Three portraits", credits: 3, price: 2900, blurb: "Try a few looks, keep your favourites" },
-  family: { id: "family", name: "Eight portraits", credits: 8, price: 4900, blurb: "For every pet in the family, or gifts" },
+  single: { id: "single", name: "Single ticket", credits: 1, price: 1900, blurb: "One portrait, full resolution" },
+  matinee: { id: "matinee", name: "Matinee", credits: 3, price: 2900, blurb: "Three portraits to keep" },
+  season: { id: "season", name: "Season pass", credits: 8, price: 4900, blurb: "Every pet, every film" },
 };
 
-export const PLAN_ORDER: PlanId[] = ["single", "trio", "family"];
+export const PLAN_ORDER: PlanId[] = ["single", "matinee", "season"];
 
 export function formatUsd(cents: number): string {
   const value = cents / 100;

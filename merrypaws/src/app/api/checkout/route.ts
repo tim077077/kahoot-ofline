@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     newToken = created.token;
   }
 
-  const back = new URL(`${siteUrl()}/create`);
+  const back = new URL(`${siteUrl()}/`);
   if (unlockId) back.searchParams.set("portrait", unlockId);
 
   const session = await getStripe().checkout.sessions.create({

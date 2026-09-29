@@ -1,27 +1,35 @@
-# Merry Paws
+# Paw Pictures
 
-Christmas portraits of your pet, as a web app. You upload a pet photo (and optionally one of yourself), pick one of 8 festive looks, and get a **free watermarked preview**. Paying unlocks the full-resolution image.
+Your pet, starring in a classic film. Users upload a photo of their pet (and optionally themselves as co-star), pick a film, and get a cinematic still: an old-master royal portrait, 1940s film noir, Technicolor glamour, a silent-era still, a western, the French New Wave, 60s sci-fi, or a 1950s holiday special.
 
-## Why this idea
+The free preview is small and watermarked. A **ticket** unlocks the full-resolution image.
 
-[Pet Plus Us](https://trustmrr.com/startup/pet-plus-us) is a web app selling AI portraits of owners with their pets at $19 each. It was founded on September 6, 2026 and made $15.7k in its first ~3 weeks, $10.8k of that in the last 30 days (TrustMRR-verified, September 2026). This app takes the same proven mechanic and adds a Christmas angle, for the biggest gifting season of the year.
+The app is mobile-first and built to be wrapped as an iOS/Android app with Capacitor (see "Going to the stores" below). The folder is still named `merrypaws` from the first version.
 
-## How it works
+## What's in the app
 
-1. **Preview** (`/api/preview`)
-   - Generates the portrait with fal.ai.
-   - Makes a small (≤640px) preview with a paw-print watermark using `sharp`.
-   - Stores the full-size image URL server-side and returns only the preview. The full-resolution image never reaches the browser before payment.
-2. **Unlock** (`/api/unlock`)
-   - Spends 1 credit per portrait.
-   - Unlocks each portrait only once, even with double clicks or webhook retries.
-3. **Buy** (`/api/checkout` → Stripe → `/api/webhook`)
-   - Packs of 1, 3 or 8 credits.
-   - Buying from a preview unlocks that portrait automatically once the payment lands.
-4. **Download** (`/api/download/[id]`)
-   - Full resolution, only for unlocked portraits.
+- **Onboarding**: three short scenes with the mascot, Biscuit. Scene 1 is the pitch; scene 2 asks for the pet's name, which is used in the "credits"; scene 3 picks the first film. It then drops the user straight into the studio, so their first portrait is the aha moment. It's always skippable and can be replayed from Tickets.
+- **Studio**: the star (pet photo), an optional co-star (you), and the film picker. Then "Action":
+  1. A film-leader countdown shows while Biscuit wears his director's beret.
+  2. The still "develops" from black: blur and sepia resolve into the picture.
+  3. The title card reads "LUNA in THE ROYAL COURT, 1654".
+- **Reel**: every take on this phone, as a contact sheet. You can filter by film, and starred takes become **Highlights**.
+- **Viewer**: full-screen, swipe between takes. From there you can star, keep (unlock), save full quality, share, or delete.
+- **Premiere**: highlights played back like a screening. Opening credits, a slow push-in on each still with its title, then THE END.
+- **Tickets**: the balance, the packs (1 for $19, 3 for $29, 8 for $49), an access link for using tickets on another device, and renaming the pet.
 
-Free previews are capped at 3 per IP per day, plus a global daily cap (your worst-case AI bill). Buyers get 30 previews a day.
+The style world is "film stock": projection-booth darks, silver-screen text, and one Kodak-yellow accent. Type is Big Shoulders for marquee titles, Jost for the interface, and Courier Prime (the screenplay face) for credits and slate details. There's film grain and a vignette over everything, all of it respecting reduced-motion settings. Icons are Phosphor.
+
+## How it works (backend)
+
+- `POST /api/preview`
+  - Generates the still with fal.ai.
+  - Returns only a small, paw-watermarked preview. The full image stays on the server.
+- `POST /api/unlock` spends one ticket. Each portrait is only charged once, even with double taps.
+- `POST /api/checkout` → Stripe → `/api/webhook`. The webhook adds tickets and unlocks the portrait the user paid from.
+- `GET /api/download/[id]` returns the full resolution, for unlocked portraits only.
+- Free previews are capped at 3 per IP per day, with a global daily cap. Buyers get 30 a day.
+- Photos never persist on the device beyond the preview. The reel (previews and metadata) lives in `localStorage`, newest 40 takes.
 
 ## Run locally
 
@@ -31,42 +39,35 @@ cp .env.example .env.local   # all optional locally
 npm run dev
 ```
 
-Without `FAL_KEY` you're in demo mode: the "portrait" is your own photo with the watermark, so you can click through the whole flow for free.
+Without `FAL_KEY` it runs in demo mode: the "still" is your own photo with the watermark.
 
 ```bash
-npm test          # credits, unlocking, webhook (signed test events), watermark, prompts
+npm test            # unlocking, signed Stripe webhook, watermark, prompts
 npm run lint
 npm run typecheck
 npm run build
 ```
 
-## Deploy (Vercel)
-
-1. Import the repo and set **Root Directory** to `merrypaws`.
-2. **Storage → Upstash Redis → Connect.**
-3. Set `FAL_KEY` and add about $10 of credit on fal.ai.
-4. Stripe:
-   - Set `STRIPE_SECRET_KEY`.
-   - Add a webhook to `https://YOUR_DOMAIN/api/webhook` with the events `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
-   - Set its signing secret as `STRIPE_WEBHOOK_SECRET`.
-5. Set `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_CONTACT_EMAIL`.
-6. Connect Stripe to TrustMRR on day one.
-
 ## Before launch (in this order)
 
-- [ ] **Quality check.** Run 10 real pets through every look. Rewrite the prompt for any look that doesn't keep the pet recognisable, in `src/lib/styles.ts`. This is the product.
-- [ ] **Real examples.** Save your best result for each look as `public/styles/<style-id>.jpg`. The landing page and style picker switch from gradients to real photos automatically. Use your own pets or friends' pets, with permission.
-- [ ] Add a privacy policy and terms page. You're processing people's photos.
-- [ ] Name and domain (`BRAND` in `src/lib/config.ts`).
+1. **Quality check (this is the product).**
+   - Run 10 real pets through every film. Also run 5 with an owner photo.
+   - Rewrite `scene` in `src/lib/styles.ts` for any film that doesn't keep the pet recognisable.
+2. **Real posters.** Save your best still for each film as `public/styles/<film-id>.jpg` (for example `public/styles/film-noir.jpg`). The film cards switch from title cards to real stills automatically. Use your own or friends' pets, with permission.
+3. **Name.** "Paw Pictures" is a placeholder in `src/lib/config.ts` (`BRAND`, `MASCOT`). Check that the store name is free before you commit to it.
+4. Add a privacy policy and terms page. You're processing people's faces and pets.
 
-## Known limits
+## Going to the stores
 
-- The full-size image lives on fal.ai's CDN and is fetched on download. If fal expires files sooner than our 30-day window, move them to your own storage (Vercel Blob or R2) in `/api/preview`.
-- No print shop yet. The next upsell is printed cards and canvases through a print-on-demand API, sold for December delivery.
+For the web, deploy on Vercel as-is (Root Directory `merrypaws`). The free `*.vercel.app` address needs no domain. Store builds need three more pieces of work:
 
-## Marketing (TikTok / Instagram)
+1. **Wrap with Capacitor**, the same stack as your Vinted app:
+   - Build the client as static files.
+   - Set `NEXT_PUBLIC_API_BASE` to the deployed Vercel URL (`src/lib/client.ts` already routes every call through it).
+   - Allow CORS from the app's origin on `/api/*`.
+2. **In-app purchases.** Apple and Google require their own billing for digital goods, so Stripe can't be used inside the store app.
+   - Use RevenueCat with consumable products for the three packs, plus a RevenueCat webhook that grants tickets (replacing the Stripe webhook for app purchases).
+   - TrustMRR verifies RevenueCat revenue.
+3. **Native touches**, so Apple doesn't reject the app as a wrapped website (guideline 4.2) or yet another AI photo app (4.3): camera capture, save to Photos, the native share sheet.
 
-- **Format:** the reveal. "I turned my dog into a Christmas portrait 🎄", showing the original photo, then the result, with a trending sound. One video per look, per pet.
-- **Volume:** 3 posts a day from October 1. Use the slideshow maker (`../slides`) to produce them.
-- **Hook for gifters:** "The gift for the friend who loves their dog more than people."
-- **Deadline:** post "order by Dec 15" to create urgency.
+Google Play also requires a new 12-tester, 14-day closed test for this app. Start it as soon as a build exists.

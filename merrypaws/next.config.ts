@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // workspace root to this folder.
   turbopack: { root: process.cwd() },
   outputFileTracingRoot: process.cwd(),
+  // The dev badge sits on top of the bottom tab bar.
+  devIndicators: false,
 };
 
 export default nextConfig;

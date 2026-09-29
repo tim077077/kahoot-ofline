@@ -11,7 +11,7 @@ describe("unlocking portraits", () => {
     const store = new MemoryStore();
     const { account } = await createAccount(store);
     await addCredits(store, account.id, 2);
-    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "royal");
+    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "royal-court");
 
     expect(await unlockWithCredit(store, portrait.id, account.id)).toBe("unlocked");
     expect(await unlockWithCredit(store, portrait.id, account.id)).toBe("already");
@@ -22,7 +22,7 @@ describe("unlocking portraits", () => {
   it("stays locked without credits", async () => {
     const store = new MemoryStore();
     const { account } = await createAccount(store);
-    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "santa");
+    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "holiday-special");
 
     expect(await unlockWithCredit(store, portrait.id, account.id)).toBe("no_credits");
     expect(await isUnlocked(store, portrait.id)).toBe(false);

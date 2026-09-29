@@ -1,90 +1,100 @@
-// The portrait looks. Every prompt insists on keeping the pet recognisable:
-// an owner forgives a cheesy background, never "that's not my dog".
+// The films your pet can star in. Every prompt insists on keeping the pet
+// (and the owner, when present) recognisable: an owner forgives a cheesy set,
+// never "that's not my dog".
 
 export type StyleId =
-  | "fireplace"
-  | "santa"
-  | "snowy-forest"
-  | "royal"
-  | "vintage-card"
-  | "ugly-sweater"
-  | "gingerbread"
-  | "winter-window";
+  | "royal-court"
+  | "film-noir"
+  | "technicolor"
+  | "silent-era"
+  | "western"
+  | "new-wave"
+  | "space-age"
+  | "holiday-special";
 
-export type Style = { id: StyleId; name: string; blurb: string; scene: string; gradient: string; emoji: string };
+export type Style = {
+  id: StyleId;
+  // Shown as a film title: "LUNA in THE ROYAL COURT".
+  title: string;
+  year: number;
+  blurb: string;
+  scene: string;
+  // Card tone before real example stills exist: two colours of the film stock.
+  tone: [string, string];
+};
 
 export const STYLES: Style[] = [
   {
-    id: "fireplace",
-    name: "Cozy fireplace",
-    blurb: "Curled up by the fire, stockings hung",
+    id: "royal-court",
+    title: "The Royal Court",
+    year: 1654,
+    blurb: "Old-master oil portrait. Velvet, ermine, a small crown.",
     scene:
-      "curled up on a chunky knitted blanket in front of a crackling fireplace, Christmas stockings on the mantel, warm golden glow, bokeh fairy lights",
-    gradient: "from-amber-700 to-red-900",
-    emoji: "🔥",
+      "as a regal old-master oil painting from the 1650s: a red velvet cape with ermine trim, a small golden crown, a dark painted backdrop, candlelight, rich visible brushwork and craquelure",
+    tone: ["#3a1d12", "#b8862c"],
   },
   {
-    id: "santa",
-    name: "Santa's little helper",
-    blurb: "Santa hat, presents, twinkling tree",
+    id: "film-noir",
+    title: "The Long Night",
+    year: 1947,
+    blurb: "Black and white noir. Venetian blind shadows, rain on the glass.",
     scene:
-      "wearing a small red Santa hat, sitting among wrapped presents under a decorated Christmas tree with twinkling lights",
-    gradient: "from-red-600 to-rose-900",
-    emoji: "🎅",
+      "as a 1940s film noir still in high-contrast black and white: hard key light through venetian blinds, cigarette-smoke haze, rain on a window, a fedora and trench coat",
+    tone: ["#0e0e10", "#6d6f75"],
   },
   {
-    id: "snowy-forest",
-    name: "Snowy woodland",
-    blurb: "Soft snowfall, red scarf, pine trees",
+    id: "technicolor",
+    title: "Stars Over Hollywood",
+    year: 1954,
+    blurb: "Three-strip Technicolor glamour on a studio set.",
     scene:
-      "in a snowy pine forest with gentle falling snow, wearing a cosy red knitted scarf, soft winter daylight",
-    gradient: "from-sky-600 to-slate-800",
-    emoji: "🌲",
+      "as a 1950s three-strip Technicolor studio glamour portrait: saturated jewel colours, soft Hollywood beauty lighting, a painted studio backdrop, a satin bow tie or pearls",
+    tone: ["#6b1030", "#e0a13a"],
   },
   {
-    id: "royal",
-    name: "Royal Christmas",
-    blurb: "Old-master oil painting, velvet and gold",
+    id: "silent-era",
+    title: "The Gentle Tramp",
+    year: 1925,
+    blurb: "Silent-film sepia, iris vignette, a bowler hat.",
     scene:
-      "as a regal Renaissance oil-painting portrait, wearing a red velvet cape with ermine trim and a small golden crown, holly and candlelight, rich painterly brushwork",
-    gradient: "from-yellow-700 to-red-950",
-    emoji: "👑",
+      "as a 1920s silent-film still: warm sepia tone, an iris vignette, flickering orthochromatic film texture, a bowler hat and bow tie, theatrical pose",
+    tone: ["#2b1f14", "#a88b62"],
   },
   {
-    id: "vintage-card",
-    name: "Vintage card",
-    blurb: "1950s illustrated greeting-card look",
+    id: "western",
+    title: "Dust at Sundown",
+    year: 1962,
+    blurb: "Widescreen western. Cowboy hat, golden hour, dust.",
     scene:
-      "as a charming 1950s vintage illustrated Christmas greeting card, holly, snowflakes, soft painted textures, cream paper background",
-    gradient: "from-emerald-700 to-red-800",
-    emoji: "💌",
+      "as a 1960s widescreen western film still: golden-hour desert light, drifting dust, a cowboy hat and neckerchief, weathered wooden saloon behind, Kodachrome colour",
+    tone: ["#5a2a12", "#e2a15a"],
   },
   {
-    id: "ugly-sweater",
-    name: "Ugly sweater party",
-    blurb: "Loud knitted sweater, party lights",
+    id: "new-wave",
+    title: "Paris, Toujours",
+    year: 1960,
+    blurb: "French New Wave. Black and white street, striped shirt.",
     scene:
-      "wearing a hilarious colourful knitted Christmas sweater with reindeer patterns, at a festive party with string lights and tinsel",
-    gradient: "from-green-600 to-red-700",
-    emoji: "🧶",
+      "as a 1960 French New Wave black and white film still on a Paris street: candid handheld framing, a Breton striped shirt and beret, cafe chairs, natural daylight, 35mm grain",
+    tone: ["#15171a", "#9aa0a6"],
   },
   {
-    id: "gingerbread",
-    name: "Gingerbread kitchen",
-    blurb: "Cookies, flour and a very good helper",
+    id: "space-age",
+    title: "Voyage to the Dog Star",
+    year: 1968,
+    blurb: "Retro sci-fi set. Silver suit, bubble helmet, painted planets.",
     scene:
-      "in a warm rustic kitchen surrounded by freshly baked gingerbread cookies, a little flour on the nose, cosy and playful",
-    gradient: "from-orange-600 to-amber-900",
-    emoji: "🍪",
+      "as a 1960s retro science-fiction film still: a silver space suit with a clear bubble helmet, a painted starfield and ringed planet backdrop, colored gel lighting, Ektachrome colour",
+    tone: ["#0f1a3a", "#7fb5d9"],
   },
   {
-    id: "winter-window",
-    name: "Winter window",
-    blurb: "Frosty window, snowy night outside",
+    id: "holiday-special",
+    title: "A Very Merry Christmas",
+    year: 1955,
+    blurb: "1950s holiday special. Fireplace, stockings, a red scarf.",
     scene:
-      "sitting at a frosty window looking out at a snowy night street with glowing Christmas lights, candles on the windowsill",
-    gradient: "from-indigo-700 to-slate-900",
-    emoji: "❄️",
+      "as a 1950s Christmas film still in Kodachrome colour: a crackling fireplace, stockings on the mantel, a decorated tree with glowing bulbs, a red knitted scarf, cozy and warm",
+    tone: ["#3d0f0f", "#d9b25c"],
   },
 ];
 
@@ -97,17 +107,17 @@ const LIKENESS =
 const OWNER_LIKENESS =
   "Keep the person exactly recognisable from their photo: same face, hair, skin tone and age. Do not beautify or change their identity.";
 const QUALITY =
-  "High quality, beautifully lit, heartwarming, vertical portrait composition. No text, no letters, no watermark, no extra animals or people.";
+  "Cinematic film still, shot on period-accurate film stock with authentic grain, beautiful lighting and composition, vertical portrait framing. No text, no letters, no logos, no watermark, no extra animals or people.";
 
 export function buildPortraitPrompt(style: Style, withOwner: boolean): string {
   if (withOwner) {
     return [
-      "Create a Christmas portrait of the person from the second image together with the pet from the first image,",
-      `the person lovingly holding or hugging the pet, ${style.scene}.`,
+      "Create a film still starring the person from the second image together with the pet from the first image,",
+      `the person holding or sitting close to the pet, ${style.scene}.`,
       LIKENESS,
       OWNER_LIKENESS,
       QUALITY,
     ].join(" ");
   }
-  return [`Create a Christmas portrait of the pet from the image, ${style.scene}.`, LIKENESS, QUALITY].join(" ");
+  return [`Create a film still starring the pet from the image, ${style.scene}.`, LIKENESS, QUALITY].join(" ");
 }

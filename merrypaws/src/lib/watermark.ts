@@ -16,7 +16,7 @@ function paw(x: number, y: number, s: number) {
 }
 
 function overlaySvg(width: number, height: number) {
-  const step = 110;
+  const step = 150;
   const paws: string[] = [];
   for (let y = 0, row = 0; y < height + step; y += step * 0.75, row++) {
     for (let x = row % 2 ? step / 2 : 0; x < width + step; x += step) paws.push(paw(x, y, 1.1));
@@ -29,7 +29,7 @@ function overlaySvg(width: number, height: number) {
   return Buffer.from(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
       <g stroke="white" stroke-opacity="0.18">${bands.join("")}</g>
-      <g fill="white" fill-opacity="0.42" stroke="black" stroke-opacity="0.12" stroke-width="1.5">${paws.join("")}</g>
+      <g fill="white" fill-opacity="0.34" stroke="black" stroke-opacity="0.12" stroke-width="1.5">${paws.join("")}</g>
     </svg>`);
 }
 

@@ -45,8 +45,8 @@ function checkoutEvent(id: string, metadata: Record<string, string>, paymentStat
 describe("stripe webhook", () => {
   it("adds credits and unlocks the portrait the buyer paid from, once", async () => {
     const { account } = await createAccount(store);
-    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "royal");
-    const event = checkoutEvent("evt_1", { accountId: account.id, plan: "trio", unlockId: portrait.id });
+    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "royal-court");
+    const event = checkoutEvent("evt_1", { accountId: account.id, plan: "matinee", unlockId: portrait.id });
 
     expect((await POST(signedRequest(event))).status).toBe(200);
     expect(await isUnlocked(store, portrait.id)).toBe(true);
@@ -65,7 +65,7 @@ describe("stripe webhook", () => {
 
     const forged = new Request("http://localhost/api/webhook", {
       method: "POST",
-      body: JSON.stringify(checkoutEvent("evt_3", { accountId: account.id, plan: "family" })),
+      body: JSON.stringify(checkoutEvent("evt_3", { accountId: account.id, plan: "season" })),
       headers: { "stripe-signature": "t=1,v1=deadbeef" },
     });
     expect((await POST(forged)).status).toBe(400);

@@ -1,41 +1,228 @@
 @import "tailwindcss";
 
+/* Film stock: projection-booth darks, silver-screen text, one Kodak yellow. */
 :root {
-  --paper: #fbf6ee;
-  --card: #ffffff;
-  --ink: #1f1a17;
-  --muted: #6f655c;
-  --line: #eadfce;
-  --accent: #b42318;
-  --accent-ink: #ffffff;
-  --accent-soft: #fdecea;
-  --pine: #1e4d3a;
-  --warn: #9a3412;
-  --warn-soft: #fff1e6;
+  --booth: #0c0d10;
+  --reel: #15161b;
+  --frame: #1e2027;
+  --screen: #ecebe6;
+  --silver: #a4a7b0;
+  --dim: #6f737d;
+  --stock: #f3c318;
+  --stock-ink: #16130a;
+  --stock-soft: rgba(243, 195, 24, 0.14);
+  --line: rgba(236, 235, 230, 0.12);
+  --warn: #ff8a6b;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-paper: var(--paper);
-  --color-card: var(--card);
-  --color-ink: var(--ink);
-  --color-muted: var(--muted);
+  --color-booth: var(--booth);
+  --color-reel: var(--reel);
+  --color-frame: var(--frame);
+  --color-screen: var(--screen);
+  --color-silver: var(--silver);
+  --color-dim: var(--dim);
+  --color-stock: var(--stock);
+  --color-stock-ink: var(--stock-ink);
+  --color-stock-soft: var(--stock-soft);
   --color-line: var(--line);
-  --color-accent: var(--accent);
-  --color-accent-ink: var(--accent-ink);
-  --color-accent-soft: var(--accent-soft);
-  --color-pine: var(--pine);
   --color-warn: var(--warn);
-  --color-warn-soft: var(--warn-soft);
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-jost);
+  --font-marquee: var(--font-shoulders);
+  --font-script: var(--font-courier);
 }
 
+html,
 body {
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--booth);
+  color: var(--screen);
 }
 
-.font-display {
-  font-family: var(--font-display), Georgia, serif;
-  letter-spacing: -0.02em;
+::selection {
+  background: var(--stock);
+  color: var(--stock-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--stock);
+  outline-offset: 3px;
+}
+
+* {
+  scrollbar-color: var(--frame) transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input::placeholder {
+  color: var(--dim);
+}
+
+.font-marquee {
+  font-family: var(--font-marquee), sans-serif;
+  font-variation-settings: "opsz" 72;
+  letter-spacing: 0.01em;
+}
+
+.font-script {
+  font-family: var(--font-script), monospace;
+}
+
+/* Film grain over everything; the texture shifts like a running projector. */
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain 0.9s steps(4) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-3%, 2%); }
+  50% { transform: translate(2%, -3%); }
+  75% { transform: translate(-2%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+.vignette {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+/* Sprocket holes along a film strip edge. */
+.sprockets {
+  background-image: radial-gradient(circle at center, var(--booth) 38%, transparent 40%);
+  background-size: 14px 12px;
+  background-repeat: repeat-x;
+}
+
+/* A developing print: from black and blurred to sharp. The focal moment. */
+@keyframes develop {
+  0% { filter: brightness(0) blur(14px) sepia(1); transform: scale(1.04); }
+  45% { filter: brightness(0.6) blur(6px) sepia(0.8); }
+  100% { filter: none; transform: scale(1); }
+}
+.develop {
+  animation: develop 1.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Film leader countdown sweep. */
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.leader-sweep {
+  transform-origin: 50% 50%;
+  animation: sweep 1s linear infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  47% { opacity: 0.92; }
+  50% { opacity: 0.8; }
+  53% { opacity: 0.95; }
+}
+.flicker {
+  animation: flicker 2.4s infinite;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Premiere: slow push-in on each still. */
+@keyframes kenburns {
+  from { transform: scale(1.02) translate(0, 0); }
+  to { transform: scale(1.12) translate(-1.5%, -1%); }
+}
+.kenburns {
+  animation: kenburns 5s ease-out both;
+}
+
+/* Biscuit, the mascot. Each part moves on its own axis. */
+.mascot * {
+  transform-box: fill-box;
+}
+.mascot .tail {
+  transform-origin: 10% 90%;
+  animation: wag 0.9s ease-in-out infinite;
+}
+.mascot .body {
+  transform-origin: 50% 100%;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.mascot .eyes {
+  transform-origin: 50% 50%;
+  animation: blink 4.6s infinite;
+}
+.mascot .ear-l {
+  transform-origin: 70% 5%;
+  animation: ear 3.2s ease-in-out infinite;
+}
+.mascot .ear-r {
+  transform-origin: 30% 5%;
+  animation: ear 3.2s ease-in-out infinite reverse;
+}
+.mascot[data-mood="working"] .head {
+  transform-origin: 50% 90%;
+  animation: tilt 1.8s ease-in-out infinite;
+}
+.mascot[data-mood="working"] .tail {
+  animation-duration: 1.6s;
+}
+.mascot[data-mood="cheer"] .whole {
+  transform-origin: 50% 100%;
+  animation: hop 0.7s cubic-bezier(0.3, 0, 0.3, 1) 3;
+}
+.mascot[data-mood="cheer"] .tail {
+  animation-duration: 0.35s;
+}
+
+@keyframes wag {
+  0%, 100% { transform: rotate(-14deg); }
+  50% { transform: rotate(16deg); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.025); }
+}
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes ear {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(4deg); }
+}
+@keyframes tilt {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-14%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain,
+  .flicker,
+  .leader-sweep,
+  .kenburns,
+  .mascot *,
+  .mascot .whole {
+    animation: none !important;
+  }
+  .develop {
+    animation: rise 0.3s ease-out both;
+  }
 }
