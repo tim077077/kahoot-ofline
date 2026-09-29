@@ -106,7 +106,7 @@ export function getStore(): Store {
   if (url && token) {
     globalForStore.__appStore = new UpstashStore(url, token);
   } else if (process.env.NODE_ENV === "production") {
-    // An in-memory store on serverless would silently lose paid credits.
+    // An in-memory store on serverless would silently reset the usage caps.
     throw new StoreNotConfiguredError();
   } else {
     globalForStore.__appStore = new MemoryStore();

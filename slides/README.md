@@ -1,69 +1,51 @@
-# SlideDrop
+# SlideDrop studio
 
-A web app for TikTok photo-carousel slideshows. You pick a proven viral format, type a topic (and optionally a product to feature), and Claude writes the hook and every slide. You then pick one of 4 looks, add background photos, and download ready-to-post 1080×1920 slides as a ZIP.
+A local tool that copies the **format** of any viral TikTok photo slideshow and makes one of your own.
 
-It's built to be sold, and to market the other apps: use the "Feature a product" field for Merry Paws or Mobilat.
+1. **Copy a slideshow.** Screenshot 2–5 slides of a viral carousel and drop them in. Claude reads:
+   - the look: text position, caption boxes, outline or shadow, font type, case, colours, photo or plain background
+   - the writing formula: how the hook works, what each slide does, the tone, and how it ends
 
-## What's in it
+   The result is saved to your format library (in your browser).
+2. **Write.** Type a topic, and optionally a product to feature (Merry Paws, Mobilat…). Claude writes new slides in that exact formula. It copies the format, never the content.
+3. **Finish.** Add your own background photos, tweak the look, edit any slide on the big phone preview, then download 1080×1920 PNGs as a ZIP with the caption.
 
-- **Template library** (`src/lib/templates.ts`)
-  - 10 formats that keep going viral (listicles, POV, rankings, Notes-app confessions, "apps that feel illegal to know"…), ranked by a hand-curated "heat" score.
-  - **Curated by hand on purpose.** TikTok has no public "trending slideshows" API, and scraping TikTok breaks their terms.
-  - Keeping this list fresh is your job and your edge: study what's blowing up each week, then add or re-rank formats and bump `LIBRARY_UPDATED`.
-- **AI writer** (`src/lib/writer.ts`)
-  - Calls Claude through the official SDK and returns typed JSON: slides, caption and hashtags.
-  - Server-side fallback is on (`fallbacks: "default"`): if a safety classifier declines, the request is retried on Anthropic's recommended fallback model.
-  - Without a key in dev it returns the format's example.
-- **Renderer** (`src/lib/render.ts`)
-  - Draws the slides on canvas in 4 looks: TikTok-style caption bubbles, bold outline, Notes app, minimal serif.
-  - Text is word-wrapped and auto-shrunk to fit.
-- **Posting** (`src/lib/posting.ts`)
-  - Demo only for now: accepts the slides and reports that nothing was posted.
-  - See "TikTok posting" below.
-- **Pricing**
-  - Free: 3 AI writes a day and a small watermark on the last slide.
-  - Pro: $9/month, 200 AI writes a day, no watermark. It's a Stripe subscription; renewals extend Pro, and cancelled subscriptions run out.
+It also ships with 10 hand-curated formats ("things I wish I knew", "apps that feel illegal to know", POV, rankings, Notes-app confessions…).
 
-## Run locally
+## Run it
 
 ```bash
 npm install
-cp .env.example .env.local
-npm run dev
+cp .env.example .env.local    # add ANTHROPIC_API_KEY
+npm run dev                   # http://localhost:3000
 ```
+
+Without a key it runs in demo mode with example output.
 
 ```bash
-npm test          # templates, text wrapping, Stripe webhook (signed test events)
+npm test          # specs, text wrapping, API routes (demo mode)
 npm run lint
 npm run typecheck
-npm run build
 ```
 
-## Deploy (Vercel)
+## How it's built
 
-1. Import the repo and set **Root Directory** to `slides`.
-2. **Storage → Upstash Redis → Connect.**
-3. Set `ANTHROPIC_API_KEY`.
-4. Stripe:
-   - Set `STRIPE_SECRET_KEY`.
-   - Add a webhook to `https://YOUR_DOMAIN/api/webhook` with the events `checkout.session.completed` and `invoice.paid`.
-   - Set its signing secret as `STRIPE_WEBHOOK_SECRET`.
-5. Set `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_CONTACT_EMAIL`.
+| Path | What it does |
+|---|---|
+| `src/lib/analyze.ts` | Screenshots → template spec (Claude vision, structured output) |
+| `src/lib/writer.ts` | Spec + topic → slides, caption, hashtags |
+| `src/lib/spec.ts` | The spec schema, the curated formats, and colour/number sanitising |
+| `src/lib/render.ts` | Draws any spec on canvas: wrap and auto-shrink, caption boxes, outline, shadow, Notes chrome |
+| `src/components/Studio.tsx` | The studio screen |
+| `src/lib/posting.ts` | Posting adapter. Only a demo poster for now |
 
-## TikTok posting (the real one)
+Both Claude calls use server-side refusal fallback (`fallbacks: "default"`).
 
-Use TikTok's **official Content Posting API in draft mode** (`MEDIA_UPLOAD`). The carousel lands in the creator's TikTok inbox; they add a trending sound and post. That mode works without TikTok's audit. Direct public posting needs the audit, and until then posts are private-only.
+## Posting to TikTok
 
-What it takes:
+"Send to TikTok drafts" is a demo that posts nothing. If this ever becomes a product, the real route is TikTok's official Content Posting API in draft mode (`MEDIA_UPLOAD`). It works without TikTok's audit, but needs a TikTok developer app (Login Kit, `video.upload`) and the slides hosted on a domain you've verified with TikTok. Never use unofficial or reverse-engineered posting.
 
-1. A TikTok developer app with Login Kit and the `video.upload` scope. The review needs a live site, a privacy policy and terms.
-2. Hosting the rendered slides on a domain you've verified with TikTok (for example Vercel Blob behind your domain), because photo posts are pulled from URLs.
-3. Implementing a `TikTokDraftPoster` next to `DemoPoster` in `src/lib/posting.ts`. The rest of the app already calls `sendToDrafts`.
+## Notes
 
-Do not use unofficial or reverse-engineered posting. It gets users' accounts flagged and breaks whenever TikTok changes its app.
-
-## Before launch
-
-- [ ] Write 3 real slideshows with the key set, and check the hooks are actually good. Tune `SYSTEM` in `writer.ts` if they read like AI.
-- [ ] Add a privacy policy and terms page (also needed for the TikTok app review).
-- [ ] Pick a name and domain (`BRAND` in `src/lib/config.ts`).
+- Formats aren't copyrightable, but photos and exact text are. Copy the structure, use your own photos, and write your own words (that's what the writer does).
+- Copied formats live in `localStorage`, so they're per browser. Export them if you switch machines.

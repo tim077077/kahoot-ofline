@@ -1,45 +1,55 @@
-import { LIMITS, PRO } from "@/lib/config";
-import { accountIdForToken, releaseFreeTrial, releaseProWrite, takeFreeTrial, takeProWrite } from "@/lib/credits";
-import { bearerToken, clientIp, storeOr503 } from "@/lib/http";
-import { isPro } from "@/lib/pro";
-import { findTemplate } from "@/lib/templates";
-import { writeSlideshow, WriterError } from "@/lib/writer";
+import { ClaudeError } from "@/lib/claude";
+import { LIMITS } from "@/lib/config";
+import { releaseAiCall, takeAiCall } from "@/lib/limits";
+import { clientIp, storeOr503 } from "@/lib/http";
+import { writeSlideshow } from "@/lib/writer";
 
 export const maxDuration = 60;
+
+const clip = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
 
 export async function POST(request: Request) {
   const store = storeOr503();
   if (store instanceof Response) return store;
 
   const body = (await request.json().catch(() => ({}))) as {
-    templateId?: string;
-    topic?: string;
-    promote?: string;
-    slideCount?: number;
+    name?: unknown;
+    formula?: unknown;
+    exampleSlides?: unknown;
+    topic?: unknown;
+    promote?: unknown;
+    slideCount?: unknown;
   };
-  const template = findTemplate(body.templateId);
-  const topic = typeof body.topic === "string" ? body.topic.trim().slice(0, LIMITS.maxTopicChars) : "";
-  const promote = typeof body.promote === "string" ? body.promote.trim().slice(0, LIMITS.maxTopicChars) : "";
-  const slideCount = Math.min(LIMITS.maxSlides, Math.max(3, Math.round(Number(body.slideCount) || template?.slides || 6)));
-  if (!template || !topic) return Response.json({ error: "bad_request" }, { status: 400 });
+  // The format comes from the client (curated or copied from screenshots), so
+  // bound every field before it reaches the prompt.
+  const name = clip(body.name, 80);
+  const formula = clip(body.formula, 1500);
+  const exampleSlides = Array.isArray(body.exampleSlides)
+    ? body.exampleSlides.slice(0, LIMITS.maxSlides).map((s) => clip(s, 300)).filter(Boolean)
+    : [];
+  const topic = clip(body.topic, LIMITS.maxTopicChars);
+  const promote = clip(body.promote, LIMITS.maxTopicChars);
+  const slideCount = Math.min(LIMITS.maxSlides, Math.max(3, Math.round(Number(body.slideCount)) || exampleSlides.length || 6));
+  if (!name || !formula || !topic) return Response.json({ error: "bad_request" }, { status: 400 });
 
-  const accountId = await accountIdForToken(store, bearerToken(request));
-  const pro = await isPro(store, accountId);
   const ip = clientIp(request);
-  const allowed = pro
-    ? await takeProWrite(store, accountId!, PRO.aiPerDay)
-    : await takeFreeTrial(store, ip, { perIp: LIMITS.freePerIpPerDay, global: LIMITS.freeGlobalPerDay });
-  if (!allowed) return Response.json({ error: "limit_reached" }, { status: 429 });
+  if (!(await takeAiCall(store, ip, { perIp: LIMITS.freePerIpPerDay, global: LIMITS.freeGlobalPerDay }))) {
+    return Response.json({ error: "limit_reached" }, { status: 429 });
+  }
 
   try {
-    const { slideshow, mock } = await writeSlideshow({ template, topic, promote: promote || undefined, slideCount });
+    const { slideshow, mock } = await writeSlideshow({
+      name,
+      formula,
+      exampleSlides,
+      topic,
+      promote: promote || undefined,
+      slideCount,
+    });
     return Response.json({ ...slideshow, mock });
   } catch (err) {
-    if (pro) await releaseProWrite(store, accountId!);
-    else await releaseFreeTrial(store, ip);
-    if (err instanceof WriterError && err.code === "refused") {
-      return Response.json({ error: "refused" }, { status: 422 });
-    }
+    await releaseAiCall(store, ip);
+    if (err instanceof ClaudeError && err.code === "refused") return Response.json({ error: "refused" }, { status: 422 });
     console.error("write failed", err);
     return Response.json({ error: "generation_failed" }, { status: 502 });
   }
