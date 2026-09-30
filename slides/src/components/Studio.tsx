@@ -17,6 +17,14 @@ const ERRORS: Record<string, string> = {
   bad_link: "That doesn't look like a TikTok link. Copy it from TikTok's Share → Copy link.",
   link_unavailable: "TikTok didn't return that post. It may be private or deleted. Use screenshots instead.",
   link_no_cover: "Got the caption but not the cover image. Add a screenshot of at least the first slide.",
+  bad_handle: "That doesn't look like a username. Type it like @name, or paste the profile link.",
+  instagram_not_configured: "Reading Instagram by name needs your Meta token: set IG_USER_ID and IG_ACCESS_TOKEN (README → Copy a creator).",
+  instagram_token_expired: "Your Instagram token expired (they last 60 days). Make a new one: README → Copy a creator.",
+  instagram_busy: "Instagram's rate limit kicked in. Wait an hour and try again.",
+  instagram_failed: "Instagram didn't answer properly. Try again in a minute.",
+  creator_not_found: "Instagram only shares business and creator accounts. This one is personal, private, age-restricted or doesn't exist.",
+  tiktok_needs_posts: "TikTok doesn't let apps list someone's posts. Paste links to 3–10 of their best slideshows, or add a screenshot of their profile grid.",
+  creator_no_images: "Couldn't get any slide images from that account. Add a few screenshots of their slideshows.",
   generic: "Something went wrong. Please try again.",
 };
 
@@ -46,7 +54,10 @@ export function Studio() {
   const [library, setLibrary] = useState<TemplateSpec[]>([]);
   const [draft, setDraft] = useState<Draft>(() => startDraft(CURATED_SPECS[0]));
   const [current, setCurrent] = useState(0);
-  const [tab, setTab] = useState<"copy" | "library">("copy");
+  const [tab, setTab] = useState<"copy" | "creator" | "library">("copy");
+  const [platform, setPlatform] = useState<"instagram" | "tiktok">("instagram");
+  const [handle, setHandle] = useState("");
+  const [postLinks, setPostLinks] = useState("");
 
   const [shots, setShots] = useState<{ blob: Blob; url: string }[]>([]);
   const [link, setLink] = useState("");
@@ -57,7 +68,7 @@ export function Studio() {
 
   const [fonts, setFonts] = useState<Fonts | null>(null);
   const [thumbs, setThumbs] = useState<string[]>([]);
-  const [busy, setBusy] = useState<null | "copy" | "write" | "export">(null);
+  const [busy, setBusy] = useState<null | "copy" | "creator" | "write" | "export">(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [mock, setMock] = useState(false);
@@ -197,6 +208,40 @@ export function Studio() {
     }
   }
 
+  const linkList = postLinks.split(/\s+/).filter(Boolean);
+  const canCopyCreator = platform === "instagram" ? Boolean(handle.trim()) : linkList.length > 0 || shots.length > 0;
+
+  async function copyCreator() {
+    if (!canCopyCreator || busy) return;
+    setBusy("creator");
+    setError(null);
+    setNotice(null);
+    try {
+      const form = new FormData();
+      form.append("platform", platform);
+      form.append("handle", handle.trim());
+      if (platform === "tiktok") linkList.slice(0, 10).forEach((l) => form.append("link", l));
+      shots.forEach((s, i) => form.append("screenshot", s.blob, `shot-${i}.jpg`));
+      const res = await fetch("/api/creator", { method: "POST", body: form });
+      const data = (await res.json().catch(() => ({}))) as { spec?: TemplateSpec; mock?: boolean; error?: string };
+      if (!res.ok || !data.spec) {
+        setError(ERRORS[data.error ?? "generic"] ?? ERRORS.generic);
+        return;
+      }
+      saveToLibrary(data.spec);
+      selectSpec(data.spec);
+      setMock(Boolean(data.mock));
+      setNotice(`Read @${data.spec.creator?.username ?? "creator"}'s slideshows and saved their format. Now type your topic and write it.`);
+      shots.forEach((s) => URL.revokeObjectURL(s.url));
+      setShots([]);
+      setPostLinks("");
+    } catch {
+      setError(ERRORS.generic);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function write() {
     if (busy) return;
     if (!topic.trim()) {
@@ -211,7 +256,9 @@ export function Studio() {
         "/api/write",
         {
           name: spec.name,
-          formula: spec.formula,
+          formula: spec.creator?.hooks.length
+            ? `${spec.formula}\nHook patterns this creator uses (pick or adapt one): ${spec.creator.hooks.join(" | ")}`
+            : spec.formula,
           exampleSlides: spec.exampleSlides,
           topic,
           promote,
@@ -304,6 +351,53 @@ export function Studio() {
   }
 
   const formats = [...library, ...CURATED_SPECS];
+  const insights = spec.creator;
+  const insightLists = insights
+    ? [
+        { title: "Hooks they use", items: insights.hooks },
+        { title: "Why the top posts win", items: insights.whatWorks },
+        { title: "Topics", items: insights.topics },
+      ]
+    : [];
+
+  const shotPicker = (
+    <>
+      <div className="mt-2 grid grid-cols-5 gap-2">
+        {shots.map((s, i) => (
+          <button
+            key={s.url}
+            onClick={() => setShots((prev) => prev.filter((_, j) => j !== i))}
+            title="Remove"
+            className="relative aspect-[9/16] overflow-hidden rounded-md border border-line"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={s.url} alt="" className="h-full w-full object-cover" />
+          </button>
+        ))}
+        {shots.length < LIMITS.maxSlides && (
+          <button
+            onClick={() => shotInput.current?.click()}
+            className="flex aspect-[9/16] items-center justify-center rounded-md border-2 border-dashed border-line text-2xl text-muted hover:border-accent"
+            aria-label="Add screenshots"
+          >
+            +
+          </button>
+        )}
+      </div>
+      <input
+        ref={shotInput}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        data-testid="shot-input"
+        onChange={(e) => {
+          void addShots(e.target.files);
+          e.target.value = "";
+        }}
+      />
+    </>
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -322,14 +416,14 @@ export function Studio() {
         <section className="space-y-5">
           <div className="rounded-2xl border border-line bg-card p-4">
             <div className="mb-3 flex gap-1 rounded-xl bg-paper p-1">
-              {(["copy", "library"] as const).map((t) => (
+              {(["copy", "creator", "library"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
                   aria-pressed={tab === t}
                   className={`flex-1 rounded-lg py-2 text-sm font-semibold ${tab === t ? "bg-card shadow-sm" : "text-muted"}`}
                 >
-                  {t === "copy" ? "📸 Copy a slideshow" : `📚 Formats (${formats.length})`}
+                  {t === "copy" ? "📸 Slideshow" : t === "creator" ? "👤 Creator" : `📚 Formats (${formats.length})`}
                 </button>
               ))}
             </div>
@@ -351,46 +445,79 @@ export function Studio() {
                   so add screenshots of a middle slide and the last one (the call to action) for a full copy.
                 </p>
                 <p className="mt-3 text-sm font-semibold">Screenshots</p>
-                <div className="mt-2 grid grid-cols-5 gap-2">
-                  {shots.map((s, i) => (
-                    <button
-                      key={s.url}
-                      onClick={() => setShots((prev) => prev.filter((_, j) => j !== i))}
-                      title="Remove"
-                      className="relative aspect-[9/16] overflow-hidden rounded-md border border-line"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={s.url} alt="" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                  {shots.length < LIMITS.maxSlides && (
-                    <button
-                      onClick={() => shotInput.current?.click()}
-                      className="flex aspect-[9/16] items-center justify-center rounded-md border-2 border-dashed border-line text-2xl text-muted hover:border-accent"
-                      aria-label="Add screenshots"
-                    >
-                      +
-                    </button>
-                  )}
-                </div>
-                <input
-                  ref={shotInput}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  data-testid="shot-input"
-                  onChange={(e) => {
-                    void addShots(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
+                {shotPicker}
                 <button
                   onClick={() => void copyFormat()}
                   disabled={(shots.length === 0 && !link.trim()) || busy !== null}
                   className="mt-3 w-full rounded-xl bg-ink py-3 font-semibold text-white disabled:opacity-40"
                 >
                   {busy === "copy" ? "Reading the slideshow…" : "Copy this format"}
+                </button>
+              </div>
+            ) : tab === "creator" ? (
+              <div>
+                <div className="mb-3 flex gap-2">
+                  {(["instagram", "tiktok"] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => {
+                        setPlatform(p);
+                        // "@name" carries over; a link to the other platform doesn't.
+                        setHandle((h) => (h.includes("/") ? "" : h));
+                      }}
+                      aria-pressed={platform === p}
+                      className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold ${platform === p ? "border-ink bg-ink text-white" : "border-line text-muted"}`}
+                    >
+                      {p === "instagram" ? "Instagram" : "TikTok"}
+                    </button>
+                  ))}
+                </div>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-semibold">
+                    Username {platform === "tiktok" && <span className="font-normal text-muted">(optional)</span>}
+                  </span>
+                  <input
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    placeholder={platform === "instagram" ? "@creator or instagram.com/creator" : "@creator"}
+                    className="w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm"
+                  />
+                </label>
+                {platform === "instagram" ? (
+                  <p className="mt-2 text-xs text-muted">
+                    Reads their last 50 posts through Instagram&apos;s official API, picks the carousels with the most likes and
+                    comments, and copies the format they share. Works for business and creator accounts (most big creators).
+                  </p>
+                ) : (
+                  <>
+                    <label className="mt-3 block">
+                      <span className="mb-1 block text-sm font-semibold">Links to their best slideshows</span>
+                      <textarea
+                        value={postLinks}
+                        onChange={(e) => setPostLinks(e.target.value)}
+                        rows={3}
+                        placeholder={"One per line, 3–10 links\nhttps://www.tiktok.com/@creator/photo/…"}
+                        className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <p className="mt-1 text-xs text-muted">
+                      TikTok doesn&apos;t let apps list someone&apos;s posts, so pick them yourself: sort their profile by
+                      Popular and copy the top slideshows&apos; links. A screenshot of their profile grid adds the view counts.
+                    </p>
+                  </>
+                )}
+                <p className="mt-3 text-sm font-semibold">
+                  Screenshots <span className="font-normal text-muted">(optional: profile grid, or slides)</span>
+                </p>
+                {shotPicker}
+                <button
+                  onClick={() => void copyCreator()}
+                  disabled={!canCopyCreator || busy !== null}
+                  className="mt-3 w-full rounded-xl bg-ink py-3 font-semibold text-white disabled:opacity-40"
+                >
+                  {busy === "creator" ? "Reading their slideshows… (up to a minute)" : "Copy their format"}
                 </button>
               </div>
             ) : (
@@ -401,7 +528,7 @@ export function Studio() {
                       onClick={() => selectSpec(f)}
                       className={`flex-1 rounded-lg px-3 py-2 text-left text-sm ${f.id === spec.id ? "bg-accent-soft font-semibold text-accent" : "hover:bg-paper"}`}
                     >
-                      {f.source === "copied" ? "📸 " : ""}
+                      {f.creator ? "👤 " : f.source === "copied" ? "📸 " : ""}
                       {f.name}
                     </button>
                     {f.source === "copied" && (
@@ -447,6 +574,31 @@ export function Studio() {
             </button>
           </div>
 
+          {insights && (
+            <div className="space-y-3 rounded-2xl border border-line bg-card p-4 text-sm" data-testid="creator-insights">
+              <p className="font-semibold">
+                What works for @{insights.username}{" "}
+                <span className="font-normal text-muted">
+                  ({insights.platform === "instagram" ? "Instagram" : "TikTok"},{" "}
+                  {insights.postsRead > 0 ? `${insights.postsRead} posts read` : "from your screenshots"})
+                </span>
+              </p>
+              <p className="text-muted">{insights.summary}</p>
+              {insightLists.map(({ title, items }) =>
+                items.length > 0 ? (
+                  <div key={title}>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{title}</p>
+                    <ul className="list-disc space-y-0.5 pl-5">
+                      {items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null,
+              )}
+              <p className="text-xs text-muted">{insights.cadence}</p>
+            </div>
+          )}
           {notice && <p className="rounded-xl bg-accent-soft p-3 text-sm text-accent">{notice}</p>}
           {error && (
             <p role="alert" className="rounded-xl bg-warn-soft p-3 text-sm text-warn">

@@ -23,7 +23,8 @@ export async function POST(request: Request) {
   // The format comes from the client (curated or copied from screenshots), so
   // bound every field before it reaches the prompt.
   const name = clip(body.name, 80);
-  const formula = clip(body.formula, 1500);
+  // Room for a copied formula plus a creator's hook patterns.
+  const formula = clip(body.formula, 2500);
   const exampleSlides = Array.isArray(body.exampleSlides)
     ? body.exampleSlides.slice(0, LIMITS.maxSlides).map((s) => clip(s, 300)).filter(Boolean)
     : [];

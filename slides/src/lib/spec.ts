@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CreatorInsights } from "./creator";
 import { byHeat, type Template, type ThemeId } from "./templates";
 
 // A template is a *spec*: how the slides look and how the writing works.
@@ -36,7 +37,12 @@ export const SpecSchema = z.object({
   exampleSlides: z.array(z.string()),
 });
 
-export type TemplateSpec = z.infer<typeof SpecSchema> & { id: string; source: "curated" | "copied" };
+export type TemplateSpec = z.infer<typeof SpecSchema> & {
+  id: string;
+  source: "curated" | "copied";
+  // Set when the format came from "Copy a creator".
+  creator?: CreatorInsights;
+};
 
 const BASE: SlideStyle = {
   position: "center",
