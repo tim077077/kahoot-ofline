@@ -36,7 +36,9 @@ export const TIERS: Record<Tier, TierInfo> = {
     id: "free",
     name: "Free",
     blurb: "Start their album",
-    photos: 30,
+    // Room for the first page (up to 12) plus more than a month of photos of
+    // the day, so the upgrade question comes after the habit, not before it.
+    photos: 50,
     previewsPerMonth: 0,
     hdPerMonth: 0,
     freezesPerMonth: 1,

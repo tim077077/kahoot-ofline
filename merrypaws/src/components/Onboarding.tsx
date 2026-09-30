@@ -11,18 +11,24 @@ import type { Costume } from "@/lib/styles";
 type Step = 0 | 1 | 2 | 3;
 const STEPS = 4;
 
+// The first page shows a handful; the rest of the camera roll can come later.
+// Capped so a new free album has room for a month of photos of the day.
+const MAX_FIRST_PHOTOS = 12;
+
 type Props = {
   onPhotos: (files: File[], petName: string) => void;
   uploaded: number;
   total: number;
   onDone: (profile: { petName: string; kind: PetKind; memorial: boolean }, next: "album" | "portrait") => void;
   invitedBy?: string | null;
+  // "Already have an album?": a new phone signs in instead of starting over.
+  onSignIn: () => void;
 };
 
 // Four short scenes: the promise, the star, their photos, and the first page
 // of the album made from them. The last scene is the aha: their own dog, in a
 // vintage album, before any account, form or price.
-export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy }: Props) {
+export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSignIn }: Props) {
   const [step, setStep] = useState<Step>(0);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<PetKind>("dog");
@@ -66,6 +72,9 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy }: Pro
           {invitedBy && <p className="font-hand mt-3 text-center text-lg leading-normal">a friend invited you to their pack</p>}
           <Footer>
             <Primary onClick={() => setStep(1)}>Begin</Primary>
+            <button onClick={onSignIn} className="mt-2 min-h-11 w-full text-muted">
+              Already have an album? <span className="text-ink underline underline-offset-4">Sign in</span>
+            </button>
           </Footer>
         </>
       )}
@@ -119,7 +128,7 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy }: Pro
           <h1 className="font-display mt-8 text-center text-[2.2rem] leading-tight">
             Add a few favourite photos of {star === "Your pet" ? "them" : star}
           </h1>
-          <p className="mx-auto mt-3 max-w-[30ch] text-center text-muted">Five to twenty is perfect. They stay private, in your album.</p>
+          <p className="mx-auto mt-3 max-w-[30ch] text-center text-muted">Five to twelve is perfect. They stay private, in your album.</p>
           <Footer>
             <Primary onClick={() => input.current?.click()}>Choose photos</Primary>
             <button onClick={() => done("album")} className="mt-2 min-h-12 w-full text-muted underline underline-offset-4">
@@ -134,7 +143,7 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy }: Pro
             className="hidden"
             data-testid="onboarding-photos"
             onChange={(e) => {
-              const files = Array.from(e.target.files ?? []).slice(0, 20);
+              const files = Array.from(e.target.files ?? []).slice(0, MAX_FIRST_PHOTOS);
               e.target.value = "";
               if (!files.length) return;
               setPreviews(files.map((f) => URL.createObjectURL(f)));

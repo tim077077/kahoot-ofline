@@ -18,7 +18,7 @@ Three paid plans, shown most expensive first (the anchor), with **Plus** in the 
 | Price | $0 | $2.99/mo or $19.99/yr | **$3.99/mo or $29.99/yr** | $7.99/mo or $69.99/yr |
 | HD portraits every month | none | 5 | **30 (one a day)** | 60 |
 | Portrait tries every month | first one free | 10 | **45** | 100 |
-| Album photos | 30 | 300 | **2,000** | 10,000 |
+| Album photos | 50 | 300 | **2,000** | 10,000 |
 | Film looks | 2 | all 6 | **all 6** | all 6 |
 | Streak freezes a month | 1 | 2 | **4** | 4 |
 | Photo-a-day roll, the Pack, highlights, collages, slideshows, Instagram Stories | yes | yes | **yes** | yes |
@@ -108,7 +108,7 @@ So 1,000 photos cost about **$0.01 a month** to keep. Storage is almost free; th
 
 **The honest risk: Plus yearly.** "A portrait every day" at $29.99 a year leaves almost no margin for someone who uses all 45 tries every month. Watch the real usage. If heavy users are common, cut tries to 35 or move yearly to $34.99; both are one line in `src/lib/config.ts`.
 
-**Free users** cost about $0.04 each: one preview, plus storage for 30 photos. The global daily cap (300 free previews) limits the worst day to $12.
+**Free users** cost about $0.04 each: one preview, plus storage for 50 photos. The global daily cap (300 free previews) limits the worst day to $12.
 
 ## Fixed costs, and break-even
 
@@ -123,7 +123,7 @@ That's about **$30 a month**. Break-even is roughly 11 Plus monthly members, or 
 ## Levers if conversion is low
 
 1. **A 7-day free trial on Plus yearly.** Common in this category, and easy in RevenueCat. The best moment to offer it is a streak milestone (day 7), when motivation peaks.
-2. **A lower photo cap on Free** (for example 20) if people fill the album but don't upgrade.
+2. **A lower photo cap on Free** (back to 30) if people fill the album but don't upgrade. It's 50 now so the album fills after the habit forms (a month-plus of photos of the day), not before.
 3. **A physical print shop** (framed prints, a printed album) for later. Physical goods aren't covered by Apple's in-app purchase rule, and margins are larger.
 
 Sources: [Petpix](https://apps.apple.com/us/app/petpix-ai-pet-avatars/id1660518091), [Pawtograph](https://apps.apple.com/us/app/-/id6751736139), [PawPic](https://apps.apple.com/us/app/-/id6740018548), [PawScene](https://apps.apple.com/app/id6760565689), [Pounce](https://apps.apple.com/us/app/-/id1537466540), [AI pet portrait apps compared](https://www.pawcaso.studio/blog/best-ai-pet-portrait-apps-2025), [Pet care apps 2026](https://www.petiogo.com/blog/best-pet-care-apps-2026), [Memory apps](https://memorymurals.com/journal/best-memory-sharing-apps), [Dazz Cam](https://mwm.ai/apps/dazz-cam/1500395485), [1998 Cam](https://apppricinglab.com/app/apple/1450480287), [Cloudflare R2 pricing](https://www.spendbase.co/?p=35561), [Image model pricing](https://pricepertoken.com/image).

@@ -1,8 +1,10 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { deleteAuth, issueToken } from "./auth";
 import type { Store } from "./store";
 
 // Accounts have no password: the browser holds a random access token (also
 // shown to the buyer as a bookmarkable link). The server stores only its hash.
+// A verified email (auth.ts) lets the member sign in again on a new phone.
 
 const DAY = 24 * 60 * 60;
 
@@ -12,9 +14,8 @@ const hashToken = (token: string) => createHash("sha256").update(token).digest("
 
 export async function createAccount(store: Store): Promise<{ account: Account; token: string }> {
   const account: Account = { id: randomUUID(), createdAt: new Date().toISOString() };
-  const token = randomBytes(24).toString("base64url");
   await store.set(`acct:${account.id}`, JSON.stringify(account));
-  await store.set(`tok:${hashToken(token)}`, account.id);
+  const token = await issueToken(store, account.id);
   return { account, token };
 }
 
@@ -119,12 +120,13 @@ export async function takeMinuteSlot(store: Store, accountId: string, perMinute:
   return reserve(store, `rate:${Math.floor(Date.now() / 60000)}:${accountId}`, perMinute, 120);
 }
 
-// In-app account deletion (required by the App Store): the token stops
-// working and unspent tickets are gone.
+// In-app account deletion (required by the App Store): every device's token
+// stops working, the backup email is released and unspent credits are gone.
 export async function deleteAccount(store: Store, token: string) {
   const accountId = await accountIdForToken(store, token);
   if (!accountId) return false;
   await store.del(`tok:${hashToken(token)}`);
+  await deleteAuth(store, accountId);
   await store.del(`credits:${accountId}`);
   await store.del(`acct:${accountId}`);
   return true;

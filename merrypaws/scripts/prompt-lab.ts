@@ -4,6 +4,8 @@
 //   1. Put ~20 real pet photos in prompt-lab/photos/ (different breeds and
 //      colours, some in bad light, a few with odd markings). Optionally put one
 //      photo of a person in prompt-lab/owner.jpg to test "Add me too".
+//      No photos yet? `npm run lab -- --sample` downloads 20 random dogs from
+//      dog.ceo to start with. Real photos from friends are the better test.
 //   2. FAL_KEY=... npm run lab -- --yes            (all eras, main model)
 //      FAL_KEY=... npm run lab -- --yes --model fal-ai/gemini-3-pro-image-preview/edit
 //      FAL_KEY=... npm run lab -- --yes --styles royal-court,film-noir
@@ -29,7 +31,23 @@ const model = flag("model") ?? process.env.FAL_MODEL ?? "fal-ai/nano-banana/edit
 const styles = flag("styles") ? STYLES.filter((s) => flag("styles")!.split(",").includes(s.id)) : STYLES;
 const pricePerImage = Number(flag("price") ?? 0.04);
 
+// 20 random dogs from the free dog.ceo API, so the lab can run on day one.
+async function downloadSamples() {
+  const dir = path.join(ROOT, "photos");
+  await mkdir(dir, { recursive: true });
+  const res = await fetch("https://dog.ceo/api/breeds/image/random/20");
+  const { message } = (await res.json()) as { message: string[] };
+  let n = 0;
+  for (const url of message) {
+    const img = await fetch(url);
+    if (!img.ok) continue;
+    await writeFile(path.join(dir, `sample-${String(++n).padStart(2, "0")}.jpg`), Buffer.from(await img.arrayBuffer()));
+  }
+  console.log(`Saved ${n} sample dogs to prompt-lab/photos/.`);
+}
+
 async function main() {
+  if (args.includes("--sample")) return downloadSamples();
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("Set FAL_KEY first.");
   const photos = (await readdir(path.join(ROOT, "photos"))).filter((f) => /\.(jpe?g|png|webp)$/i.test(f)).sort();

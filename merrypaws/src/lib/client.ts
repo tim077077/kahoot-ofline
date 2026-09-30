@@ -64,6 +64,8 @@ export type Account = {
   photos: number;
   photoLimit: number;
   freeLeft: number;
+  // The verified backup email, once the album can be opened on a new phone.
+  email?: string | null;
 };
 
 export type Photo = {

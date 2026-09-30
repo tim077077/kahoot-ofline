@@ -1,3 +1,4 @@
+import { backupEmail } from "@/lib/auth";
 import { LIMITS, TIERS } from "@/lib/config";
 import { accountIdForToken, createAccount, deleteAccount, freeTrialsLeft, getCredits } from "@/lib/credits";
 import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
@@ -5,6 +6,7 @@ import { getObjects } from "@/lib/objects";
 import { deleteDaily } from "@/lib/daily";
 import { deleteSocial } from "@/lib/pack";
 import { deleteAllPhotos, photoCount } from "@/lib/photos";
+import { removeReminder } from "@/lib/push";
 import { currentTier, getPlan, previewsLeft, refreshAllowance } from "@/lib/plans";
 import { getStripe } from "@/lib/stripe";
 
@@ -48,6 +50,7 @@ export async function GET(request: Request) {
     photos: await photoCount(store, accountId),
     photoLimit: TIERS[tier].photos,
     freeLeft,
+    email: await backupEmail(store, accountId),
   });
 }
 
@@ -97,6 +100,7 @@ export async function DELETE(request: Request) {
     await store.del(`previews:${accountId}`);
     await deleteDaily(store, accountId);
     await deleteSocial(store, accountId);
+    await removeReminder(store, accountId);
     await deleteAccount(store, token);
   }
   return Response.json({ deleted: true, account: Boolean(accountId), photos, portraits: ids.length });

@@ -18,14 +18,16 @@ Membership holds the album; extra portrait credits are one-off packs.
 - The numbers are in [PRICING.md](PRICING.md).
 - The behavioural design and its guardrails are in [PSYCHOLOGY.md](PSYCHOLOGY.md).
 - Instagram Stories setup for the store app is in [docs/INSTAGRAM.md](docs/INSTAGRAM.md).
+- **Putting it online, step by step: [DEPLOY.md](DEPLOY.md).**
 
 The app is mobile-first and built to be wrapped as an iOS/Android app with Capacitor (see "Going to the stores"). The folder is still named `merrypaws` from the first version.
 
 ## The onboarding (4 scenes, no account, no forms)
 
 1. **The promise**: Biscuit's own album page, three taped instant photos with date stamps. "Every good dog deserves an album."
+   - "Already have an album? Sign in" brings an album back on a new phone.
 2. **The star**: their name, written in ink, and whether they're a dog, a cat or another friend.
-3. **Their photos**: pick 5 to 20. They upload in the background, with a quiet guest account created on the first upload.
+3. **Their photos**: pick 5 to 12. They upload in the background, with a quiet guest account created on the first upload.
 4. **Chapter one**: their own photos land on the first album page, taped at angles. That's the aha, before any price.
    - Then "Open Luna's album".
    - Or "Make a vintage portrait, the first is free".
@@ -37,6 +39,12 @@ The app is mobile-first and built to be wrapped as an iOS/Android app with Capac
   - Once today's photo is in: "Story" and "The pack".
   - Milestones at 3, 7, 14, 30, 50, 100, 200 and 365 days.
   - "In loving memory" albums have no streak at all.
+- **Daily reminder**: offered right after a photo of the day ("A nudge tomorrow?"), at an hour the member picks.
+  - One a day at most, and only if today's photo isn't in. Never for memorial albums.
+  - Web push: works in Chrome, Edge, Firefox and on Android. On iPhone it works once the site is on the Home Screen, and the app says so.
+- **Keep it safe**: once the album has 5 photos, a card offers to back it up with an email. No password: a 6-digit code by email.
+  - After a purchase, the backup sheet opens by itself.
+  - A new phone signs in with the same email and gets the album, the pet's name and the roll back.
 - **A year ago today**: memories from the same day in earlier years, or a month ago while the album is young.
 - **Pack**:
   - Friends' pet photo of the day, with paw, heart and laugh reactions.
@@ -63,7 +71,8 @@ The app is mobile-first and built to be wrapped as an iOS/Android app with Capac
   - "In loving memory"
   - extra portrait packs
   - the pet's name and kind
-  - an access link for another phone
+  - "Keep it safe": the backup email, "Sign in to another album", and the old access link
+  - the daily reminder: time, "Send one now", turn off
   - privacy, and Delete my data (which cancels an active subscription first)
 
 ## The look
@@ -122,6 +131,23 @@ FAL_KEY=... npm run lab -- --yes
   - Files go to S3-compatible storage: a 2048px print and a 480px thumbnail.
   - The phone loads files straight from the bucket with 24h signed URLs.
   - The plan's photo limit is enforced on the server. Going over never deletes anything.
+
+### Backup and sign-in
+
+- `POST /api/auth/code` emails a 6-digit code (Resend). `backup` needs this phone's token; `signin` answers the same whether or not the email has an album.
+  - Codes last 15 minutes, work once, and die after 5 wrong tries. 3 codes per email per 15 minutes, 10 per IP per hour.
+- `POST /api/auth/verify` checks it. Backup links the email to the album; sign-in gives this phone its own token.
+- Every phone has its own token, so "Delete my data" signs them all out and frees the email.
+- `GET /api/profile` brings the pet's details to a new phone.
+
+### Daily reminder
+
+- `GET/PUT/DELETE /api/push` stores this album's push subscription, hour and time zone.
+  - Subscriptions sit in 24 buckets by UTC hour. The phone re-sends its subscription on every open, which follows clock changes and travel.
+- `POST /api/push/test` sends one now (3 an hour).
+- `GET /api/push/cron` (hourly, `Authorization: Bearer $CRON_SECRET`) sends the reminders due this hour. It skips anyone whose photo is in, memorial albums, and anyone already reminded today. Dead subscriptions are removed.
+- `public/sw.js` shows the notification; `src/app/manifest.ts` makes the site installable.
+- `GET /api/health` says which services are set up (never any key).
 
 ### Portraits
 
@@ -182,16 +208,18 @@ Locally, with no keys:
 - album photos are written to `.data/`
 
 ```bash
-npm test            # plans, album, allowances, webhook, limits, deletion, events, EXIF, photo checks, prompts
+npm test            # plans, album, allowances, webhook, limits, deletion, backup codes, reminders, events, EXIF, photo checks, prompts
 npm run lint
 npm run typecheck
 npm run build
 ```
 
+Locally, sign-in codes are printed in the terminal and shown on the page, and reminders need VAPID keys (see `.env.example`).
+
 ## Before launch (in this order)
 
-1. **Portrait quality.** Run the prompt lab on 20 real pets.
-2. **Storage.** Create a Cloudflare R2 bucket, add the `S3_*` variables, and add a CORS rule allowing GET from your site and the app's origin.
+1. **Put it online** with [DEPLOY.md](DEPLOY.md): Vercel, Upstash, R2, fal, Resend, VAPID keys and an hourly timer. Check `/api/health`.
+2. **Portrait quality.** Run the prompt lab on 20 real pets (`npm run lab -- --sample` gets 20 random dogs to start).
 3. **Real example stills** for the era cards, in `public/styles/<era-id>.jpg`.
 4. **Name.** "Paw Pictures" and "Biscuit" are placeholders in `src/lib/config.ts`.
 5. **Privacy policy and terms.** Photos are private, used only for the album and requested portraits, never for training.
@@ -211,7 +239,7 @@ npm run build
    - Keep a 7-day trial on Plus yearly as a lever.
    - TrustMRR verifies RevenueCat revenue.
 3. **Native touches**, so Apple doesn't reject it as a wrapped website:
-   - one daily push with the prompt (at a time the member picks)
+   - native push for the daily prompt (the web version already works; the store app replaces it)
    - Instagram Stories straight from the app ([docs/INSTAGRAM.md](docs/INSTAGRAM.md))
    - the native photo picker (multi-select)
    - save to Photos

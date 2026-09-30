@@ -18,7 +18,7 @@ Researched September 2026. Sources are at the end.
 |---|---|---|
 | Value before the ask; endowed progress | The onboarding ends on "chapter one" made from *their* photos. Those photos already count as **Day 1** of the roll. | `Onboarding.tsx` |
 | Tiny action (Fogg: ability) | **Photo of the day**: one button, any photo, about 2 taps. | `Daily.tsx`, `DailyCard` |
-| Daily prompt (Fogg: prompt) | A small new idea every day ("Their sleepy face", "Paws, up close"). In the store app, one push notification a day at most. | `dailyPrompts.ts` |
+| Daily prompt (Fogg: prompt) | A small new idea every day ("Their sleepy face", "Paws, up close"), delivered as **one reminder a day** at the member's chosen hour, only if today's photo isn't in. Offered right after a photo of the day, when motivation is highest. | `dailyPrompts.ts`, `push.ts`, `ReminderCard` |
 | Variable reward | The prompt changes daily; "A year ago today" memories appear unpredictably; paws from friends; the print "develops". | `MemoryCard`, the Pack |
 | Streak with loss aversion | The **photo-a-day roll**: a film strip, one frame per day. | `FilmRoll`, `daily.ts` |
 | Streak freezes (Duolingo: -21% churn among users about to lose a streak) | Freezes cover a missed day automatically: 1 a month on Free, 2 to 4 on plans. | `grantFreezes` |
@@ -41,7 +41,8 @@ These are also Apple review risks. Apple rejects apps that "manipulate users thr
 - **No streaks for memorial albums.** "In loving memory" turns off the roll, the daily prompt and the milestones, and softens the words everywhere. A streak for a pet who has died would be cruel.
 - **No guilt copy.** No "Luna misses you", no crying mascot, and no notifications about a streak about to die. The missed-day story is "a freeze covered it".
 - **No endless feed.** The Pack shows today only. You're done in a minute.
-- **One notification a day, maximum** (store app), and only when there's something new: the prompt, a memory, or a friend's paw.
+- **One notification a day, maximum**, and only when today's photo isn't in yet. Permission is asked only after the member taps "Remind me", never on first open. "Turn off" is in Membership.
+- **Nobody loses their album.** An email backup (a code, no password) means a new phone gets everything back. Losing years of photos would break the trust the whole app runs on.
 - **No fake scarcity.** No countdowns, no fake discounts, no "10,000 people made one today". Prices are the full price.
 - **Cancelling is as easy as subscribing.** "Manage or cancel your plan" sits in Membership (Stripe's billing page on the web, the store's settings in the apps). The FTC's click-to-cancel rule was vacated in 2025, but the FTC still enforces ROSCA case by case, and it's simply right.
 - **Albums are private.** Only the photo of the day is shared with the pack, and "Friends can see it" is one tap to turn off.
@@ -63,7 +64,7 @@ The funnel counters (`/api/stats`) cover each of these:
 
 ## Next steps (store app only)
 
-1. **Push notifications:** the daily prompt at a time the member picks (default 6pm), memories, and paws from friends. One a day at most.
+1. **Native push notifications** to replace web push, plus memories and paws from friends in the same one-a-day slot.
 2. **A home-screen widget** with today's photo from the pack (the Locket move). This needs native code.
 3. **Pack streaks:** days in a row that *both* of you posted. A shared streak is harder to drop.
 

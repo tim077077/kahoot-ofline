@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, Copy, FilmStrip, Lock } from "@phosphor-icons/react";
+import { Check, FilmStrip, Lock } from "@phosphor-icons/react";
 import { useState } from "react";
+import { SafetySection } from "@/components/Safety";
 import { Sheet } from "@/components/Sheet";
 import type { Account, PetKind } from "@/lib/client";
 import { formatUsd, PACK_ORDER, PACKS, PAID_TIERS, TARGET_TIER, TIERS, type Interval, type PackId, type Tier } from "@/lib/config";
@@ -217,9 +218,13 @@ type YouProps = {
   onManage: () => void;
   memorial: boolean;
   onMemorial: (on: boolean) => void;
+  reminderHour: number | null;
+  onReminderHour: (hour: number | null) => void;
+  onBackup: () => void;
+  onSignIn: () => void;
 };
 
-export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, onDeleteData, onManage, memorial, onMemorial }: YouProps) {
+export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, onDeleteData, onManage, memorial, onMemorial, reminderHour, onReminderHour, onBackup, onSignIn }: YouProps) {
   const [copied, setCopied] = useState(false);
   const [name, setName] = useState(petName);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -316,17 +321,17 @@ export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, 
         <input type="checkbox" checked={memorial} onChange={(e) => onMemorial(e.target.checked)} className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
       </label>
 
-      {link && (
-        <>
-          <h2 className="font-display mt-10 text-xl italic">On another phone</h2>
-          <button
-            onClick={() => void navigator.clipboard.writeText(link).then(() => setCopied(true))}
-            className="mt-3 flex min-h-13 w-full items-center justify-center gap-2 rounded-full border border-ink/25 font-medium"
-          >
-            {copied ? <Check size={18} /> : <Copy size={18} />} {copied ? "Link copied" : "Copy my access link"}
-          </button>
-        </>
-      )}
+      <SafetySection
+        email={account?.email ?? null}
+        token={token}
+        hour={reminderHour}
+        memorial={memorial}
+        copied={copied}
+        onBackup={onBackup}
+        onSignIn={onSignIn}
+        onCopyLink={() => link && void navigator.clipboard.writeText(link).then(() => setCopied(true))}
+        onHour={onReminderHour}
+      />
 
       <h2 className="font-display mt-10 text-xl italic">Your privacy</h2>
       <p className="mt-2 text-muted">

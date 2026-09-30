@@ -9,6 +9,7 @@ import { DailyCard, findMemory, MemoryCard, MilestoneSheet } from "@/components/
 import { Onboarding } from "@/components/Onboarding";
 import { PackTab } from "@/components/Pack";
 import { PhotoViewer } from "@/components/PhotoViewer";
+import { BackupNudge, BackupSheet, ReminderCard, type BackupMode } from "@/components/Safety";
 import { LooksSheet, PlansSheet, YouTab, type Busy, type Purchase, type SheetReason } from "@/components/Plans";
 import { ShareSheet } from "@/components/ShareSheet";
 import { Studio, type ShootRequest, type ShootResult } from "@/components/Studio";
@@ -38,11 +39,32 @@ import {
 } from "@/lib/client";
 import { makeCollageCard, makePhotoStoryCard, shareToInstagramStory } from "@/lib/share";
 import { findLook, type LookId } from "@/lib/looks";
+import { disableReminder, registerWorker, syncReminder } from "@/lib/reminders";
 import type { StyleId } from "@/lib/styles";
 
 type Tab = "album" | "pack" | "studio" | "you";
 
 const INVITE_KEY = "pp_invite";
+const BACKUP_LATER_KEY = "pp_backup_later";
+const REMINDER_LATER_KEY = "pp_reminder_later";
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// "Later" on a nudge hides it for a while, not forever.
+function snoozed(key: string, days: number) {
+  try {
+    return Date.now() - Number(localStorage.getItem(key) ?? 0) < days * DAY_MS;
+  } catch {
+    return true;
+  }
+}
+
+function snooze(key: string) {
+  try {
+    localStorage.setItem(key, String(Date.now()));
+  } catch {
+    // Blocked storage: the nudge comes back next visit.
+  }
+}
 
 const ERRORS: Record<string, string> = {
   limit_reached: "You've used your free portrait. Credits let you make more, and keep the ones you love in HD.",
@@ -84,6 +106,10 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
   const [milestone, setMilestone] = useState<number | null>(null);
   const [dailyBusy, setDailyBusy] = useState(false);
   const [invitedBy, setInvitedBy] = useState<string | null>(null);
+  const [backup, setBackup] = useState<BackupMode | null>(null);
+  const [reminderHour, setReminderHour] = useState<number | null>(null);
+  // Bumped when a nudge is snoozed, so the album re-renders without it.
+  const [, setNudges] = useState(0);
   const tokenRef = useRef<string | null>(null);
   const addInput = useRef<HTMLInputElement>(null);
   const dailyInput = useRef<HTMLInputElement>(null);
@@ -110,10 +136,11 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
   const refresh = useCallback(
     async (tok: string | null) => {
       const res = await api("/api/account", {}, tok).catch(() => null);
-      if (!res?.ok) return;
+      if (!res?.ok) return null;
       const data = (await res.json()) as Account & { invalidToken?: boolean };
       if (data.invalidToken) applyToken(null);
       setAccount(data);
+      return data;
     },
     [applyToken],
   );
@@ -192,12 +219,16 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       tokenRef.current = tok;
       setToken(tok);
       setReady(true);
-      await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
+      registerWorker();
+      const [acct] = await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
+      if (tok) void syncReminder(tok).then(setReminderHour);
       await joinInvite(tok);
 
       if (!paid) return;
       setTab(paid === "plan" ? "album" : paidFor ? "studio" : "you");
       setToast(paid === "plan" ? "Welcome in. Your membership is active." : "Payment received. Your credits are on their way.");
+      // Something paid for should never live only on one phone.
+      if (acct?.account && !acct.email) setBackup("backup");
       if (!paidFor) return;
       setOpenPortrait(paidFor);
       for (let i = 0; i < 15; i++) {
@@ -240,6 +271,30 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     applyToken(data.token);
     void joinInvite(data.token);
     return data.token;
+  }
+
+  // A new phone signed in to an existing album: bring back the pet's details
+  // and everything else from the server.
+  async function signedIn(tok: string) {
+    applyToken(tok);
+    const res = await api("/api/profile", {}, tok).catch(() => null);
+    const data = (await res?.json().catch(() => ({}))) as { profile?: { petName: string; kind: Profile["kind"]; memorial: boolean } } | undefined;
+    const current = storage.profile();
+    const restored: Profile = {
+      petName: data?.profile?.petName ?? current?.petName ?? "",
+      kind: data?.profile?.kind ?? current?.kind ?? "dog",
+      memorial: data?.profile?.memorial ?? false,
+      favorite: current?.favorite ?? "royal-court",
+      look: current?.look ?? "summer",
+      onboarded: true,
+    };
+    saveProfile(restored);
+    setBackup(null);
+    setTab("album");
+    await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
+    setReminderHour(await syncReminder(tok));
+    track("signed_in");
+    setToast(`Welcome back. ${starName(restored.petName)}'s album is here.`);
   }
 
   function onDaily(result: DailyResult | undefined) {
@@ -483,6 +538,8 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       setToast("Couldn't reach the server, so nothing was deleted. Try again in a moment.");
       return;
     }
+    if (token) await disableReminder(token);
+    setReminderHour(null);
     storage.clear();
     tokenRef.current = null;
     setToken(null);
@@ -502,10 +559,33 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     else setToast("Manage it in your App Store or Google Play subscriptions, or reply to your receipt email.");
   }
 
+  const backupSheet = backup && (
+    <BackupSheet
+      mode={backup}
+      token={token}
+      name={starName(profile?.petName ?? "")}
+      warning={
+        backup === "signin" && account?.photos && !account.email
+          ? `This phone's album (${account.photos} ${account.photos === 1 ? "photo" : "photos"}) isn't backed up. Signing in to another album leaves it behind.`
+          : null
+      }
+      onClose={() => setBackup(null)}
+      onBackedUp={(email) => {
+        setBackup(null);
+        setAccount((a) => (a ? { ...a, email } : a));
+        track("backup_done");
+        setToast("Done. The album can be opened on any phone with that email.");
+      }}
+      onSignedIn={signedIn}
+    />
+  );
+
   if (!ready) return <div className="min-h-[100dvh]" />;
   if (!profile?.onboarded) {
     return (
+      <>
       <Onboarding
+        onSignIn={() => setBackup("signin")}
         invitedBy={invitedBy}
         onPhotos={(files) => void addPhotos(files, [])}
         uploaded={batch.done}
@@ -518,6 +598,8 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
           setTab(next === "portrait" ? "studio" : "album");
         }}
       />
+      {backupSheet}
+      </>
     );
   }
 
@@ -574,6 +656,30 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
                     onStory={() => todayPhoto && void storyForPhoto(todayPhoto)}
                     onPack={() => setTab("pack")}
                     onMakeRoom={() => openSheet("photos")}
+                  />
+                )}
+                {!profile.memorial && token && daily?.doneToday && reminderHour === null && !snoozed(REMINDER_LATER_KEY, 14) && (
+                  <ReminderCard
+                    token={token}
+                    onOn={(h) => {
+                      track("reminder_on");
+                      setReminderHour(h);
+                      setToast("See you tomorrow. One reminder, only if today's photo isn't in.");
+                    }}
+                    onDismiss={() => {
+                      snooze(REMINDER_LATER_KEY);
+                      setNudges((n) => n + 1);
+                    }}
+                  />
+                )}
+                {account?.account && !account.email && photos.length >= 5 && !snoozed(BACKUP_LATER_KEY, 7) && (
+                  <BackupNudge
+                    name={name}
+                    onAdd={() => setBackup("backup")}
+                    onLater={() => {
+                      snooze(BACKUP_LATER_KEY);
+                      setNudges((n) => n + 1);
+                    }}
                   />
                 )}
                 {memory && (
@@ -662,6 +768,13 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
               saveProfile(next);
               syncProfile(token, next);
             }}
+            reminderHour={reminderHour}
+            onReminderHour={(h) => {
+              track(h === null ? "reminder_off" : "reminder_on");
+              setReminderHour(h);
+            }}
+            onBackup={() => setBackup("backup")}
+            onSignIn={() => setBackup("signin")}
           />
         )}
       </main>
@@ -826,6 +939,8 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
           }}
         />
       )}
+
+      {backupSheet}
 
       {toast && (
         <div role="status" className="rise fixed inset-x-4 bottom-24 z-[60] mx-auto max-w-md rounded-2xl bg-ink px-5 py-3.5 text-paper shadow-lg">
