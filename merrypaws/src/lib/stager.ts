@@ -1,12 +1,15 @@
 import { createFalClient } from "@fal-ai/client";
-import { FAL_MODEL } from "./config";
+import { FAL_FALLBACK_MODEL, FAL_MODEL } from "./config";
 
 export class GenerationError extends Error {}
 
 // Returns the URL of the generated image. Without FAL_KEY in development it
 // echoes the first input back (as a data URL) so the whole flow can be tested
 // for free.
-export async function generateImage(images: Blob[], prompt: string): Promise<{ url: string; mock: boolean }> {
+export type Generated = { url: string; mock: boolean; model?: string };
+
+// Tries the main model, then the fallback. Returns the URL of the image.
+export async function generateImage(images: Blob[], prompt: string): Promise<Generated> {
   const key = process.env.FAL_KEY;
   if (!key) {
     if (process.env.NODE_ENV === "production") throw new GenerationError("FAL_KEY is not set");
@@ -17,20 +20,24 @@ export async function generateImage(images: Blob[], prompt: string): Promise<{ u
 
   const fal = createFalClient({ credentials: key });
   const imageUrls = await Promise.all(images.map((img) => fal.storage.upload(img)));
-  const result = await fal.subscribe(FAL_MODEL, {
-    input: {
-      prompt,
-      image_urls: imageUrls,
-      num_images: 1,
-      output_format: "jpeg",
-      aspect_ratio: "4:5",
-    },
-  });
+  const models = [FAL_MODEL, FAL_FALLBACK_MODEL].filter((m, idx, all): m is string => Boolean(m) && all.indexOf(m) === idx);
 
-  const data = result.data as { images?: { url: string }[] };
-  const url = data.images?.[0]?.url;
-  if (!url) throw new GenerationError("The model returned no image");
-  return { url, mock: false };
+  let lastError: unknown;
+  for (const model of models) {
+    try {
+      const result = await fal.subscribe(model, {
+        input: { prompt, image_urls: imageUrls, num_images: 1, output_format: "jpeg", aspect_ratio: "4:5" },
+      });
+      const data = result.data as { images?: { url: string }[] };
+      const url = data.images?.[0]?.url;
+      if (!url) throw new GenerationError(`${model} returned no image`);
+      return { url, mock: false, model };
+    } catch (err) {
+      lastError = err;
+      console.error(JSON.stringify({ event: "model_failed", model, reason: err instanceof Error ? err.message : String(err) }));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new GenerationError("Every model failed");
 }
 
 // Only fal's CDN (or our own dev data URLs) is ever fetched server-side.

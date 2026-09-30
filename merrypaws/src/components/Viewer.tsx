@@ -1,9 +1,11 @@
 "use client";
 
-import { CaretLeft, CaretRight, DownloadSimple, ShareNetwork, Star, Ticket, Trash, X } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, DownloadSimple, Flag, Heart, ShareNetwork, Trash, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { downloadUrl, type Portrait } from "@/lib/client";
+import { downloadUrl, starName, type Portrait } from "@/lib/client";
 import { findStyle } from "@/lib/styles";
+
+export type ReportReason = "inappropriate" | "not_my_pet" | "other";
 
 type Props = {
   reel: Portrait[];
@@ -13,35 +15,27 @@ type Props = {
   onStar: (id: string) => void;
   onDelete: (id: string) => void;
   onKeep: (p: Portrait) => void;
+  onShare: (p: Portrait) => void;
+  onReport: (p: Portrait, reason: ReportReason) => Promise<boolean>;
 };
 
-async function sharePreview(p: Portrait, title: string) {
-  try {
-    const blob = await (await fetch(p.preview)).blob();
-    const file = new File([blob], "portrait.jpg", { type: "image/jpeg" });
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title });
-      return;
-    }
-  } catch {
-    // Share sheet dismissed or unsupported: fall through to saving.
-  }
-  const a = document.createElement("a");
-  a.href = p.preview;
-  a.download = "portrait-preview.jpg";
-  a.click();
-}
+type Panel = "none" | "delete" | "report" | "reported";
 
-// Full-screen still with its title card. Swipe or use the arrows to move
-// along the reel.
-export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, onKeep }: Props) {
+// One portrait, full screen, with its title card. Swipe or use the arrows to
+// move through the album.
+export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, onKeep, onShare, onReport }: Props) {
   const index = reel.findIndex((p) => p.id === openId);
   const p = reel[index];
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [panel, setPanel] = useState<Panel>("none");
   const touchX = useRef<number | null>(null);
 
   const prev = index > 0 ? reel[index - 1] : null;
   const next = index < reel.length - 1 ? reel[index + 1] : null;
+
+  const go = (id: string) => {
+    setPanel("none");
+    onNavigate(id);
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,28 +49,28 @@ export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, on
 
   if (!p) return null;
   const s = findStyle(p.style)!;
-  const star = (p.petName || "Your pet").toUpperCase();
+  const name = starName(p.petName);
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${star} in ${s.title}`}
-      className="fixed inset-0 z-40 flex flex-col bg-booth pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
+      aria-label={`${name} in ${s.title}`}
+      className="fixed inset-0 z-40 flex flex-col bg-paper pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {
         if (touchX.current === null) return;
         const dx = e.changedTouches[0].clientX - touchX.current;
         touchX.current = null;
-        if (dx > 60 && prev) onNavigate(prev.id);
-        if (dx < -60 && next) onNavigate(next.id);
+        if (dx > 60 && prev) go(prev.id);
+        if (dx < -60 && next) go(next.id);
       }}
     >
       <div className="flex items-center justify-between px-3 py-2">
-        <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full text-screen">
+        <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full">
           <X size={24} />
         </button>
-        <p className="font-script text-sm text-silver">
+        <p className="font-display text-sm italic text-muted">
           {index + 1} of {reel.length}
         </p>
         <button
@@ -85,76 +79,95 @@ export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, on
           aria-label={p.starred ? "Remove from highlights" : "Add to highlights"}
           className="flex h-11 w-11 items-center justify-center rounded-full"
         >
-          <Star size={24} weight={p.starred ? "fill" : "regular"} className={p.starred ? "text-stock" : "text-screen"} />
+          <Heart size={24} weight={p.starred ? "fill" : "regular"} className={p.starred ? "text-accent" : ""} />
         </button>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center px-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img key={p.id} src={p.preview} alt="" className="rise max-h-full max-w-full rounded-md object-contain shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]" />
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-8">
+        <div key={p.id} className="print rise flex max-h-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.preview} alt="" className="max-h-[calc(100dvh-24rem)] w-auto max-w-full object-contain" />
+        </div>
         {prev && (
-          <button onClick={() => onNavigate(prev.id)} aria-label="Previous" className="absolute left-1 hidden h-11 w-11 items-center justify-center rounded-full bg-booth/60 sm:flex">
+          <button onClick={() => go(prev.id)} aria-label="Previous" className="absolute left-1 hidden h-11 w-11 items-center justify-center rounded-full bg-card sm:flex">
             <CaretLeft size={22} />
           </button>
         )}
         {next && (
-          <button onClick={() => onNavigate(next.id)} aria-label="Next" className="absolute right-1 hidden h-11 w-11 items-center justify-center rounded-full bg-booth/60 sm:flex">
+          <button onClick={() => go(next.id)} aria-label="Next" className="absolute right-1 hidden h-11 w-11 items-center justify-center rounded-full bg-card sm:flex">
             <CaretRight size={22} />
           </button>
         )}
       </div>
 
-      <div className="px-5 pb-4 pt-3 text-center">
-        <p className="font-script text-xs text-silver">{star} in</p>
-        <p className="font-marquee text-3xl font-extrabold uppercase leading-none">{s.title}</p>
-        <p className="font-script mt-0.5 text-xs text-silver">
-          {s.year}
-          {p.withOwner ? " with co-star" : ""}
+      <div className="px-5 pb-4 pt-4 text-center">
+        {p.memorial && <p className="font-display text-sm italic text-muted">In loving memory of</p>}
+        <p className="font-script text-[2.6rem] leading-[1.1]">{name}</p>
+        <p className="font-display italic">
+          in {s.title}, {s.year}
+          {p.withOwner ? ", with you" : ""}
         </p>
 
-        {confirmDelete ? (
+        {panel === "delete" && (
           <div className="mt-4 flex items-center justify-center gap-3">
-            <span className="text-sm text-silver">Delete this take?</span>
-            <button onClick={() => onDelete(p.id)} className="min-h-11 rounded-full bg-warn px-4 text-sm font-semibold text-stock-ink">
-              Delete
+            <span className="text-muted">Remove it from the album?</span>
+            <button onClick={() => onDelete(p.id)} className="min-h-11 rounded-full bg-accent px-5 font-medium text-accent-ink">
+              Remove
             </button>
-            <button onClick={() => setConfirmDelete(false)} className="min-h-11 px-3 text-sm text-silver">
+            <button onClick={() => setPanel("none")} className="min-h-11 px-3 text-muted">
               Cancel
             </button>
           </div>
-        ) : (
-          <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2">
-            {p.unlocked ? (
-              <a
-                href={downloadUrl(p.id)}
-                download
-                className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stock font-semibold text-stock-ink"
-              >
-                <DownloadSimple size={20} weight="bold" /> Save full quality
-              </a>
-            ) : (
-              <button
-                onClick={() => onKeep(p)}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stock font-semibold text-stock-ink active:scale-[0.98]"
-              >
-                <Ticket size={20} weight="bold" /> Keep in full quality
-              </button>
-            )}
-            <button
-              onClick={() => void sharePreview(p, `${star} in ${s.title}`)}
-              aria-label="Share"
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-line"
-            >
-              <ShareNetwork size={20} />
-            </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              aria-label="Delete"
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-line"
-            >
-              <Trash size={20} />
-            </button>
+        )}
+        {panel === "report" && (
+          <div className="mt-4">
+            <p className="text-muted">What&apos;s wrong with it?</p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {(
+                [
+                  ["not_my_pet", "Doesn't look like them"],
+                  ["inappropriate", "Inappropriate"],
+                  ["other", "Something else"],
+                ] as const
+              ).map(([reason, label]) => (
+                <button
+                  key={reason}
+                  onClick={async () => setPanel((await onReport(p, reason)) ? "reported" : "none")}
+                  className="min-h-11 rounded-full bg-sand px-4 text-sm"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+        {panel === "reported" && <p className="mt-4 text-muted">Thank you. We&apos;ll take a look.</p>}
+
+        {panel === "none" && (
+          <>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {p.unlocked ? (
+                <a href={downloadUrl(p.id)} download className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink">
+                  <DownloadSimple size={20} weight="bold" /> Save in HD
+                </a>
+              ) : (
+                <button onClick={() => onKeep(p)} className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink active:scale-[0.98]">
+                  <DownloadSimple size={20} weight="bold" /> {p.memorial ? "Keep in HD" : "Save in HD"}
+                </button>
+              )}
+              <button onClick={() => onShare(p)} className="flex min-h-13 items-center justify-center gap-2 rounded-full border border-ink/25 font-medium active:scale-[0.98]">
+                <ShareNetwork size={20} /> Share
+              </button>
+            </div>
+            <div className="mt-2 flex justify-center gap-6">
+              <button onClick={() => setPanel("delete")} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted">
+                <Trash size={16} /> Remove
+              </button>
+              <button onClick={() => setPanel("report")} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted">
+                <Flag size={16} /> Report
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

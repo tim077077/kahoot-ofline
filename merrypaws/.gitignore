@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prompt lab: your test photos and results stay local
+/prompt-lab/photos/*
+!/prompt-lab/photos/.gitkeep
+/prompt-lab/owner.jpg
+/prompt-lab/out

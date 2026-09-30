@@ -60,55 +60,82 @@ export async function claimEvent(store: Store, eventId: string) {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export type FreeLimits = { perIp: number; global: number };
+export type FreeLimits = { perDevice: number; perIp: number; global: number };
+export type Guest = { device: string; ip: string };
 
-// Reserve one free generation for this IP. Returns false when the IP or the
-// global daily budget is used up. Call releaseFreeTrial if generation fails.
-export async function takeFreeTrial(store: Store, ip: string, limits: FreeLimits): Promise<boolean> {
-  const ipKey = `free:${today()}:${hashToken(ip)}`;
-  const globalKey = `free:${today()}:all`;
-
-  const ipCount = await store.incrby(ipKey, 1);
-  if (ipCount === 1) await store.expire(ipKey, 2 * DAY);
-  if (ipCount > limits.perIp) {
-    await store.incrby(ipKey, -1);
-    return false;
-  }
-
-  const globalCount = await store.incrby(globalKey, 1);
-  if (globalCount === 1) await store.expire(globalKey, 2 * DAY);
-  if (globalCount > limits.global) {
-    await store.incrby(globalKey, -1);
-    await store.incrby(ipKey, -1);
-    return false;
-  }
-  return true;
-}
-
-export async function releaseFreeTrial(store: Store, ip: string) {
-  await store.incrby(`free:${today()}:${hashToken(ip)}`, -1);
-  await store.incrby(`free:${today()}:all`, -1);
-}
-
-export async function freeTrialsLeft(store: Store, ip: string, limits: FreeLimits) {
-  const used = Number((await store.get(`free:${today()}:${hashToken(ip)}`)) ?? 0);
-  const globalUsed = Number((await store.get(`free:${today()}:all`)) ?? 0);
-  if (globalUsed >= limits.global) return 0;
-  return Math.max(0, limits.perIp - used);
-}
-
-// Buyers get a larger preview budget, counted per account instead of per IP.
-export async function takeBuyerPreview(store: Store, accountId: string, perDay: number): Promise<boolean> {
-  const key = `buyer:${today()}:${accountId}`;
+// Count one use against a key; undo and refuse when that goes over the limit.
+async function reserve(store: Store, key: string, limit: number, ttl: number): Promise<boolean> {
   const count = await store.incrby(key, 1);
-  if (count === 1) await store.expire(key, 2 * DAY);
-  if (count > perDay) {
+  if (count === 1) await store.expire(key, ttl);
+  if (count > limit) {
     await store.incrby(key, -1);
     return false;
   }
   return true;
 }
 
+const freeKeys = (guest: Guest) => ({
+  // A device keeps its free portrait count for a year; IP and global are daily.
+  device: `free:dev:${hashToken(guest.device)}`,
+  ip: `free:${today()}:${hashToken(guest.ip)}`,
+  global: `free:${today()}:all`,
+});
+
+// Reserve one free generation for this guest. Returns false when the device,
+// the IP or the global daily budget is used up. Call releaseFreeTrial if
+// generation fails, so a failed portrait never costs the guest their trial.
+export async function takeFreeTrial(store: Store, guest: Guest, limits: FreeLimits): Promise<boolean> {
+  const keys = freeKeys(guest);
+  if (!(await reserve(store, keys.device, limits.perDevice, 365 * DAY))) return false;
+  if (!(await reserve(store, keys.ip, limits.perIp, 2 * DAY))) {
+    await store.incrby(keys.device, -1);
+    return false;
+  }
+  if (!(await reserve(store, keys.global, limits.global, 2 * DAY))) {
+    await store.incrby(keys.device, -1);
+    await store.incrby(keys.ip, -1);
+    return false;
+  }
+  return true;
+}
+
+export async function releaseFreeTrial(store: Store, guest: Guest) {
+  const keys = freeKeys(guest);
+  await store.incrby(keys.device, -1);
+  await store.incrby(keys.ip, -1);
+  await store.incrby(keys.global, -1);
+}
+
+export async function freeTrialsLeft(store: Store, guest: Guest, limits: FreeLimits) {
+  const keys = freeKeys(guest);
+  const used = async (key: string) => Number((await store.get(key)) ?? 0);
+  if ((await used(keys.global)) >= limits.global) return 0;
+  return Math.max(0, Math.min(limits.perDevice - (await used(keys.device)), limits.perIp - (await used(keys.ip))));
+}
+
+// Buyers get a larger preview budget, counted per account instead of per
+// device, plus a per-minute cap so a script can't burn through it at once.
+export async function takeBuyerPreview(
+  store: Store,
+  accountId: string,
+  limits: { perDay: number; perMinute: number },
+): Promise<boolean> {
+  const minute = `buyer:min:${Math.floor(Date.now() / 60000)}:${accountId}`;
+  if (!(await reserve(store, minute, limits.perMinute, 120))) return false;
+  return reserve(store, `buyer:${today()}:${accountId}`, limits.perDay, 2 * DAY);
+}
+
 export async function releaseBuyerPreview(store: Store, accountId: string) {
   await store.incrby(`buyer:${today()}:${accountId}`, -1);
+}
+
+// In-app account deletion (required by the App Store): the token stops
+// working and unspent tickets are gone.
+export async function deleteAccount(store: Store, token: string) {
+  const accountId = await accountIdForToken(store, token);
+  if (!accountId) return false;
+  await store.del(`tok:${hashToken(token)}`);
+  await store.del(`credits:${accountId}`);
+  await store.del(`acct:${accountId}`);
+  return true;
 }

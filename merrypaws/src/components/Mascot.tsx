@@ -1,5 +1,8 @@
-// Biscuit: a brown curly-coated doodle in a film-yellow neckerchief. Drawn as
-// clusters of overlapping curls so the coat reads as curly at any size.
+// Biscuit: a brown curly-coated doodle in a burgundy neckerchief. Drawn as
+// clusters of overlapping curls so the coat reads as curly at any size. He
+// dresses for each era on the style cards until real example stills exist.
+
+import type { Costume } from "@/lib/styles";
 
 export type Mood = "idle" | "working" | "cheer";
 
@@ -41,7 +44,111 @@ function Curls({ curls, fill, rim }: { curls: Curl[]; fill: string; rim: string 
   );
 }
 
-export function Mascot({ mood = "idle", size = 160, className = "" }: { mood?: Mood; size?: number; className?: string }) {
+function Neckwear({ costume }: { costume: Costume }) {
+  if (costume === "pearls") {
+    const pearls = Array.from({ length: 9 }, (_, i) => {
+      const t = i / 8;
+      return [72 + t * 56, 114 + Math.sin(t * Math.PI) * 11] as const;
+    });
+    return (
+      <g>
+        {pearls.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={4.2} fill="#f7f1e6" stroke="#b9a88f" strokeWidth={1.2} />
+        ))}
+      </g>
+    );
+  }
+  if (costume === "boater") {
+    // A bow tie for the silent era.
+    return (
+      <g fill="#2a1b14">
+        <path d="M 100 120 L 84 111 L 84 129 Z" />
+        <path d="M 100 120 L 116 111 L 116 129 Z" />
+        <circle cx="100" cy="120" r="4" />
+      </g>
+    );
+  }
+  if (costume === "scarf") {
+    return (
+      <g stroke="#6b0d17" strokeWidth={2}>
+        <path d="M 68 110 Q 100 128 132 110 L 130 124 Q 100 138 70 124 Z" fill="#b3202c" />
+        <path d="M 112 124 L 118 160 L 106 162 L 102 128 Z" fill="#b3202c" />
+        <path d="M 80 116 L 80 126 M 92 119 L 92 130 M 108 119 L 108 130 M 120 116 L 120 126" stroke="#f3eadb" strokeWidth={2.4} />
+      </g>
+    );
+  }
+  if (costume === "crown") {
+    // An ermine collar under the crown.
+    return (
+      <g>
+        <path d="M 64 110 Q 100 132 136 110 L 132 126 Q 100 144 68 126 Z" fill="#f7f1e6" stroke="#b9a88f" strokeWidth={2} />
+        {[78, 92, 108, 122].map((x) => (
+          <path key={x} d={`M ${x} 124 l 2 5 l -4 0 z`} fill="#2a1b14" />
+        ))}
+      </g>
+    );
+  }
+  return (
+    <g>
+      <path d="M 70 112 Q 100 126 130 112 L 122 122 Q 100 134 78 122 Z" fill="#7a0f1b" stroke="#4d0810" strokeWidth={2} />
+      <path d="M 94 124 L 100 144 L 106 124 Z" fill="#7a0f1b" stroke="#4d0810" strokeWidth={2} />
+    </g>
+  );
+}
+
+function Hat({ costume, mood }: { costume: Costume; mood: Mood }) {
+  if (mood === "working") {
+    // Director's beret while the portrait develops.
+    return (
+      <g>
+        <ellipse cx="100" cy="42" rx="26" ry="9" fill="#2a1b14" />
+        <circle cx="100" cy="33" r="3" fill="#2a1b14" />
+      </g>
+    );
+  }
+  if (costume === "crown") {
+    return (
+      <g>
+        <path d="M 82 42 L 84 22 L 92 32 L 100 18 L 108 32 L 116 22 L 118 42 Z" fill="#c9a24a" stroke="#8a6a22" strokeWidth={2} strokeLinejoin="round" />
+        <circle cx="100" cy="35" r="3" fill="#7a0f1b" />
+      </g>
+    );
+  }
+  if (costume === "fedora") {
+    return (
+      <g>
+        <ellipse cx="100" cy="42" rx="40" ry="8" fill="#1d1612" />
+        <path d="M 76 42 Q 76 16 100 18 Q 124 16 124 42 Z" fill="#2b221c" />
+        <path d="M 90 20 Q 100 28 110 20" fill="none" stroke="#1d1612" strokeWidth={3} />
+        <rect x="77" y="34" width="46" height="6" fill="#4a3a30" />
+      </g>
+    );
+  }
+  if (costume === "boater") {
+    return (
+      <g>
+        <ellipse cx="100" cy="40" rx="38" ry="7" fill="#d8b56a" stroke="#9c7a33" strokeWidth={1.5} />
+        <rect x="80" y="24" width="40" height="16" rx="2" fill="#e3c27a" stroke="#9c7a33" strokeWidth={1.5} />
+        <rect x="80" y="32" width="40" height="5" fill="#2a1b14" />
+      </g>
+    );
+  }
+  if (costume === "scarf") {
+    // A knitted bobble hat for Christmas.
+    return (
+      <g>
+        <path d="M 78 44 Q 78 18 100 16 Q 122 18 122 44 Z" fill="#b3202c" stroke="#6b0d17" strokeWidth={2} />
+        <rect x="76" y="38" width="48" height="9" rx="4" fill="#f3eadb" />
+        <circle cx="100" cy="14" r="6" fill="#f3eadb" />
+      </g>
+    );
+  }
+  return null;
+}
+
+type MascotProps = { mood?: Mood; size?: number; className?: string; costume?: Costume; still?: boolean };
+
+export function Mascot({ mood = "idle", size = 160, className = "", costume = "none", still = false }: MascotProps) {
   const coat = "#8a5530";
   const rim = "#5e3519";
   const dark = "#6b3e22";
@@ -54,11 +161,12 @@ export function Mascot({ mood = "idle", size = 160, className = "" }: { mood?: M
       overflow="visible"
       className={`mascot ${className}`}
       data-mood={mood}
+      data-still={still || undefined}
       role="img"
       aria-label="Biscuit, a curly brown dog"
     >
       <g className="whole">
-        <ellipse cx="102" cy="197" rx="46" ry="5" fill="#000" opacity="0.35" />
+        <ellipse cx="102" cy="197" rx="46" ry="5" fill="#2a1b14" opacity="0.18" />
         <g className="tail">
           <Curls curls={TAIL} fill={coat} rim={rim} />
         </g>
@@ -67,9 +175,7 @@ export function Mascot({ mood = "idle", size = 160, className = "" }: { mood?: M
           {/* Front paws */}
           <ellipse cx="88" cy="192" rx="11" ry="7" fill={dark} stroke={rim} strokeWidth={2} />
           <ellipse cx="112" cy="192" rx="11" ry="7" fill={dark} stroke={rim} strokeWidth={2} />
-          {/* Neckerchief in film-stock yellow */}
-          <path d="M 70 112 Q 100 126 130 112 L 122 122 Q 100 134 78 122 Z" fill="#f3c318" stroke="#9c7a07" strokeWidth={2} />
-          <path d="M 94 124 L 100 144 L 106 124 Z" fill="#f3c318" stroke="#9c7a07" strokeWidth={2} />
+          <Neckwear costume={costume} />
         </g>
         <g className="head">
           <g className="ear-l">
@@ -91,13 +197,7 @@ export function Mascot({ mood = "idle", size = 160, className = "" }: { mood?: M
             <circle cx="89.8" cy="75.6" r="1.8" fill="#fff" />
             <circle cx="113.8" cy="75.6" r="1.8" fill="#fff" />
           </g>
-          {mood === "working" && (
-            // Director's beret while the film develops.
-            <g>
-              <ellipse cx="100" cy="42" rx="26" ry="9" fill="#16130a" />
-              <circle cx="100" cy="33" r="3" fill="#16130a" />
-            </g>
-          )}
+          <Hat costume={costume} mood={mood} />
         </g>
       </g>
     </svg>

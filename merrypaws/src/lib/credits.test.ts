@@ -4,9 +4,11 @@ import {
   addCredits,
   claimEvent,
   createAccount,
+  deleteAccount,
   freeTrialsLeft,
   getCredits,
   releaseFreeTrial,
+  takeBuyerPreview,
   takeCredit,
   takeFreeTrial,
 } from "./credits";
@@ -38,26 +40,57 @@ describe("accounts and credits", () => {
 });
 
 describe("free trials", () => {
-  it("allows the per-IP quota and gives it back on failure", async () => {
+  const guest = (device: string, ip = "1.1.1.1") => ({ device, ip });
+
+  it("gives each device one free portrait, and gives it back on failure", async () => {
     const store = new MemoryStore();
-    const limits = { perIp: 1, global: 10 };
-    expect(await takeFreeTrial(store, "1.1.1.1", limits)).toBe(true);
-    expect(await takeFreeTrial(store, "1.1.1.1", limits)).toBe(false);
-    expect(await freeTrialsLeft(store, "1.1.1.1", limits)).toBe(0);
-    await releaseFreeTrial(store, "1.1.1.1");
-    expect(await freeTrialsLeft(store, "1.1.1.1", limits)).toBe(1);
+    const limits = { perDevice: 1, perIp: 3, global: 10 };
+    expect(await takeFreeTrial(store, guest("phone"), limits)).toBe(true);
+    expect(await takeFreeTrial(store, guest("phone"), limits)).toBe(false);
+    expect(await freeTrialsLeft(store, guest("phone"), limits)).toBe(0);
+    await releaseFreeTrial(store, guest("phone"));
+    expect(await freeTrialsLeft(store, guest("phone"), limits)).toBe(1);
+  });
+
+  it("caps an IP even when the device id keeps changing", async () => {
+    const store = new MemoryStore();
+    const limits = { perDevice: 1, perIp: 2, global: 10 };
+    expect(await takeFreeTrial(store, guest("a"), limits)).toBe(true);
+    expect(await takeFreeTrial(store, guest("b"), limits)).toBe(true);
+    expect(await takeFreeTrial(store, guest("c"), limits)).toBe(false);
+    // The refused device still has its own trial for another network.
+    expect(await takeFreeTrial(store, guest("c", "2.2.2.2"), limits)).toBe(true);
   });
 
   it("stops everyone once the global daily budget is spent", async () => {
     const store = new MemoryStore();
-    const limits = { perIp: 5, global: 2 };
-    expect(await takeFreeTrial(store, "a", limits)).toBe(true);
-    expect(await takeFreeTrial(store, "b", limits)).toBe(true);
-    expect(await takeFreeTrial(store, "c", limits)).toBe(false);
-    expect(await freeTrialsLeft(store, "c", limits)).toBe(0);
-    // The rejected request didn't eat into c's own quota.
-    await releaseFreeTrial(store, "a");
-    expect(await freeTrialsLeft(store, "c", limits)).toBe(5);
+    const limits = { perDevice: 1, perIp: 5, global: 2 };
+    expect(await takeFreeTrial(store, guest("a", "1"), limits)).toBe(true);
+    expect(await takeFreeTrial(store, guest("b", "2"), limits)).toBe(true);
+    expect(await takeFreeTrial(store, guest("c", "3"), limits)).toBe(false);
+    expect(await freeTrialsLeft(store, guest("c", "3"), limits)).toBe(0);
+    // The rejected request didn't eat into c's own trial.
+    await releaseFreeTrial(store, guest("a", "1"));
+    expect(await freeTrialsLeft(store, guest("c", "3"), limits)).toBe(1);
   });
 });
 
+describe("buyers and deletion", () => {
+  it("limits buyer previews per minute", async () => {
+    const store = new MemoryStore();
+    const limits = { perDay: 30, perMinute: 2 };
+    expect(await takeBuyerPreview(store, "acct", limits)).toBe(true);
+    expect(await takeBuyerPreview(store, "acct", limits)).toBe(true);
+    expect(await takeBuyerPreview(store, "acct", limits)).toBe(false);
+  });
+
+  it("deletes an account so its token and tickets are gone", async () => {
+    const store = new MemoryStore();
+    const { account, token } = await createAccount(store);
+    await addCredits(store, account.id, 3);
+    expect(await deleteAccount(store, token)).toBe(true);
+    expect(await accountIdForToken(store, token)).toBeNull();
+    expect(await getCredits(store, account.id)).toBe(0);
+    expect(await deleteAccount(store, token)).toBe(false);
+  });
+});

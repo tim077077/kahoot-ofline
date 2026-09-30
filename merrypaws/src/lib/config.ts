@@ -18,7 +18,7 @@ export type Plan = {
 export const PLANS: Record<PlanId, Plan> = {
   single: { id: "single", name: "Single ticket", credits: 1, price: 1900, blurb: "One portrait, full resolution" },
   matinee: { id: "matinee", name: "Matinee", credits: 3, price: 2900, blurb: "Three portraits to keep" },
-  season: { id: "season", name: "Season pass", credits: 8, price: 4900, blurb: "Every pet, every film" },
+  season: { id: "season", name: "Season pass", credits: 8, price: 4900, blurb: "Every pet, every era" },
 };
 
 export const PLAN_ORDER: PlanId[] = ["single", "matinee", "season"];
@@ -29,18 +29,26 @@ export function formatUsd(cents: number): string {
 }
 
 export const LIMITS = {
-  // Free previews per IP per day, and across everyone per day. Each preview
-  // costs about $0.04, so the global cap is your worst-case daily spend.
+  // One free (watermarked) portrait per device, ever. The per-IP daily cap is
+  // the backstop for people who clear app data to farm more, and the global
+  // cap is your worst-case daily spend (each preview costs about $0.04).
+  freePerDevice: Number(process.env.FREE_PER_DEVICE ?? 1),
   freePerIpPerDay: Number(process.env.FREE_PER_IP_PER_DAY ?? 3),
   freeGlobalPerDay: Number(process.env.FREE_GLOBAL_DAILY_CAP ?? 300),
-  // Buyers get extra previews to find the look they want.
+  // Buyers get extra previews to find the look they want, but not a firehose.
   buyerPerDay: 30,
+  buyerPerMinute: 4,
   maxUploadBytes: 4 * 1024 * 1024,
   // How long a generated portrait can be unlocked and downloaded.
   portraitTtlDays: 30,
 };
 
+// The image model, through fal.ai (one key, many models). The fallback runs
+// only when the main model errors or times out; it costs more per image, so
+// it should be rare. Both are Gemini-family edit models with the same inputs.
 export const FAL_MODEL = process.env.FAL_MODEL || "fal-ai/nano-banana/edit";
+export const FAL_FALLBACK_MODEL =
+  process.env.FAL_FALLBACK_MODEL === undefined ? "fal-ai/gemini-3-pro-image-preview/edit" : process.env.FAL_FALLBACK_MODEL;
 
 export function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");

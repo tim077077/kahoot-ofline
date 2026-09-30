@@ -20,3 +20,11 @@ export function storeOr503(): Store | Response {
     throw err;
   }
 }
+
+// A guest is a device (a random id the app keeps) on a network. Old clients
+// without the header are counted per IP.
+export function guestOf(request: Request) {
+  const ip = clientIp(request);
+  const device = request.headers.get("x-device");
+  return { ip, device: device && /^[\w-]{16,64}$/.test(device) ? device : `ip:${ip}` };
+}

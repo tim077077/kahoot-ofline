@@ -39,10 +39,25 @@ describe("unlocking portraits", () => {
 });
 
 describe("prompts", () => {
-  it("always asks to keep the pet recognisable, and the owner when present", () => {
+  it("puts identity first and covers the whole scene for every era", () => {
     for (const style of STYLES) {
-      expect(buildPortraitPrompt(style, false)).toContain("Keep the pet exactly recognisable");
-      expect(buildPortraitPrompt(style, true)).toContain("Keep the person exactly recognisable");
+      const alone = buildPortraitPrompt(style, false);
+      const together = buildPortraitPrompt(style, true);
+      expect(alone.indexOf("Keep the pet exactly recognisable")).toBeLessThan(alone.indexOf("The setting"));
+      expect(alone).not.toContain("Keep the person");
+      expect(together).toContain("Keep the person exactly recognisable");
+      expect(together).toContain(style.prompt.ownerWardrobe);
+      expect(together).toContain(style.prompt.ownerPose);
+      for (const part of ["medium", "wardrobe", "set", "pose", "light", "camera", "palette", "texture", "mood", "avoid"] as const) {
+        expect(alone).toContain(style.prompt[part]);
+      }
+    }
+  });
+
+  it("never names a trademark", () => {
+    const all = STYLES.map((s) => buildPortraitPrompt(s, true) + s.title + s.blurb).join(" ").toLowerCase();
+    for (const mark of ["technicolor", "kodak", "kodachrome", "ektachrome", "polaroid", "hollywood", "disney", "pixar", "ghibli", "chaplin"]) {
+      expect(all).not.toContain(mark);
     }
   });
 });

@@ -16,20 +16,17 @@ function paw(x: number, y: number, s: number) {
 }
 
 function overlaySvg(width: number, height: number) {
-  const step = 150;
+  // Sparse and soft: enough that nobody prints the preview, light enough that
+  // a shared preview still looks like a portrait. The 640px size does the
+  // rest of the protecting.
+  const step = 210;
   const paws: string[] = [];
-  for (let y = 0, row = 0; y < height + step; y += step * 0.75, row++) {
-    for (let x = row % 2 ? step / 2 : 0; x < width + step; x += step) paws.push(paw(x, y, 1.1));
-  }
-  // Diagonal bands make the preview useless for printing even after cropping.
-  const bands: string[] = [];
-  for (let i = -height; i < width; i += 90) {
-    bands.push(`<line x1="${i}" y1="${height}" x2="${i + height}" y2="0" stroke-width="10"/>`);
+  for (let y = step * 0.4, row = 0; y < height + step; y += step * 0.8, row++) {
+    for (let x = row % 2 ? step / 2 : step * 0.15; x < width + step; x += step) paws.push(paw(x, y, 1.25));
   }
   return Buffer.from(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      <g stroke="white" stroke-opacity="0.18">${bands.join("")}</g>
-      <g fill="white" fill-opacity="0.34" stroke="black" stroke-opacity="0.12" stroke-width="1.5">${paws.join("")}</g>
+      <g fill="white" fill-opacity="0.3" stroke="black" stroke-opacity="0.1" stroke-width="1.5">${paws.join("")}</g>
     </svg>`);
 }
 

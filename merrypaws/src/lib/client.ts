@@ -10,12 +10,12 @@ import type { StyleId } from "./styles";
 export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
 
 const TOKEN_KEY = "pp_token";
+const DEVICE_KEY = "pp_device";
 const PROFILE_KEY = "pp_profile";
 const REEL_KEY = "pp_reel";
 const MAX_REEL = 40;
 
-export type PetKind = "dog" | "cat" | "other";
-export type Profile = { petName: string; kind: PetKind; favorite: StyleId; onboarded: boolean };
+export type Profile = { petName: string; favorite: StyleId; onboarded: boolean };
 
 export type Portrait = {
   id: string;
@@ -26,6 +26,8 @@ export type Portrait = {
   createdAt: string;
   unlocked: boolean;
   starred: boolean;
+  // Made "in loving memory": gentler copy everywhere it appears.
+  memorial?: boolean;
   mock?: boolean;
 };
 
@@ -47,6 +49,15 @@ function write(key: string, value: unknown) {
   }
 }
 
+function deviceId(): string {
+  let id = read<string | null>(DEVICE_KEY, null);
+  if (!id) {
+    id = crypto.randomUUID();
+    write(DEVICE_KEY, id);
+  }
+  return id;
+}
+
 export const storage = {
   token: () => read<string | null>(TOKEN_KEY, null),
   setToken: (token: string | null) => write(TOKEN_KEY, token),
@@ -55,18 +66,53 @@ export const storage = {
   reel: () => read<Portrait[]>(REEL_KEY, []),
   // Newest first; the oldest previews fall off so storage stays small.
   setReel: (reel: Portrait[]) => write(REEL_KEY, reel.slice(0, MAX_REEL)),
+  // "Delete my data": everything except the device id, which keeps the free
+  // portrait from resetting.
+  clear: () => [TOKEN_KEY, PROFILE_KEY, REEL_KEY].forEach((k) => write(k, null)),
 };
 
 export function api(path: string, init: RequestInit = {}, token?: string | null) {
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  headers.set("X-Device", deviceId());
   return fetch(`${API_BASE}${path}`, { ...init, headers });
+}
+
+export type UploadPhase = { kind: "loading"; progress: number } | { kind: "developing" };
+
+// The preview request, over XHR so the loader can show real upload progress
+// instead of a fake bar.
+export function postPreview(form: FormData, token: string | null, onPhase: (p: UploadPhase) => void) {
+  return new Promise<{ status: number; body: Record<string, unknown> }>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/api/preview`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("X-Device", deviceId());
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onPhase({ kind: "loading", progress: e.loaded / e.total });
+    };
+    xhr.upload.onload = () => onPhase({ kind: "developing" });
+    xhr.onload = () => {
+      let body: Record<string, unknown> = {};
+      try {
+        body = JSON.parse(xhr.responseText) as Record<string, unknown>;
+      } catch {
+        // Non-JSON error page: handled by status.
+      }
+      resolve({ status: xhr.status, body });
+    };
+    xhr.onerror = () => reject(new Error("network"));
+    xhr.send(form);
+  });
+}
+
+// Funnel events. Fire and forget; never blocks or breaks the app.
+export function track(name: string) {
+  void api("/api/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }), keepalive: true }).catch(() => {});
 }
 
 export function downloadUrl(id: string) {
   return `${API_BASE}/api/download/${id}`;
 }
 
-export function filmTitle(p: { petName: string }, style: { title: string }) {
-  return { star: (p.petName || "Your pet").toUpperCase(), film: style.title };
-}
+export const starName = (name: string) => name.trim() || "Your pet";

@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { PLANS, type PlanId } from "@/lib/config";
 import { addCredits, claimEvent, setAccountEmail } from "@/lib/credits";
+import { track } from "@/lib/events";
 import { unlockWithCredit } from "@/lib/portraits";
 import { getStore, type Store } from "@/lib/store";
 import { getStripe } from "@/lib/stripe";
@@ -45,6 +46,7 @@ async function handleEvent(store: Store, event: Stripe.Event) {
   if (!accountId || !plan) return;
 
   await addCredits(store, accountId, plan.credits);
+  await track(store, "purchase");
   const email = session.customer_details?.email;
   if (email) await setAccountEmail(store, accountId, email);
 

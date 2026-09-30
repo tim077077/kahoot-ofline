@@ -6,7 +6,8 @@ import {
   takeBuyerPreview,
   takeFreeTrial,
 } from "@/lib/credits";
-import { bearerToken, clientIp, storeOr503 } from "@/lib/http";
+import { track } from "@/lib/events";
+import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
 import { savePortrait } from "@/lib/portraits";
 import { fetchImageBytes, generateImage } from "@/lib/stager";
 import { buildPortraitPrompt, findStyle } from "@/lib/styles";
@@ -33,17 +34,25 @@ export async function POST(request: Request) {
   if (owner != null && !validImage(owner)) return Response.json({ error: "bad_request" }, { status: 400 });
 
   const accountId = await accountIdForToken(store, bearerToken(request));
-  const ip = clientIp(request);
+  const guest = guestOf(request);
   const allowed = accountId
-    ? await takeBuyerPreview(store, accountId, LIMITS.buyerPerDay)
-    : await takeFreeTrial(store, ip, { perIp: LIMITS.freePerIpPerDay, global: LIMITS.freeGlobalPerDay });
-  if (!allowed) return Response.json({ error: "limit_reached" }, { status: 429 });
+    ? await takeBuyerPreview(store, accountId, { perDay: LIMITS.buyerPerDay, perMinute: LIMITS.buyerPerMinute })
+    : await takeFreeTrial(store, guest, {
+        perDevice: LIMITS.freePerDevice,
+        perIp: LIMITS.freePerIpPerDay,
+        global: LIMITS.freeGlobalPerDay,
+      });
+  if (!allowed) {
+    if (!accountId) await track(store, "guest_refused");
+    return Response.json({ error: accountId ? "slow_down" : "limit_reached" }, { status: 429 });
+  }
 
   try {
     const images = owner ? [pet, owner] : [pet];
     const { url, mock } = await generateImage(images, buildPortraitPrompt(style, Boolean(owner)));
     const preview = await makePreview(await fetchImageBytes(url));
     const portrait = await savePortrait(store, url, style.id);
+    await track(store, "generation_ok");
     return Response.json({
       id: portrait.id,
       style: style.id,
@@ -51,9 +60,12 @@ export async function POST(request: Request) {
       mock,
     });
   } catch (err) {
-    console.error("preview failed", err);
+    // One line per failure with a reason, so the logs show what breaks.
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ event: "generation_failed", style: style.id, withOwner: Boolean(owner), reason }));
+    await track(store, "generation_failed");
     if (accountId) await releaseBuyerPreview(store, accountId);
-    else await releaseFreeTrial(store, ip);
+    else await releaseFreeTrial(store, guest);
     return Response.json({ error: "generation_failed" }, { status: 502 });
   }
 }

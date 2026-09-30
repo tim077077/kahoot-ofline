@@ -1,225 +1,516 @@
 "use client";
 
-import { Camera, FilmStrip, Ticket, UserPlus, X } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
-import { Leader } from "@/components/Leader";
+import { ArrowCounterClockwise, Check, CheckCircle, Circle, DownloadSimple, ShareNetwork, XCircle } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { StyleArt } from "@/components/StyleCard";
 import { MASCOT } from "@/lib/config";
-import type { Portrait } from "@/lib/client";
+import { downloadUrl, starName, track, type Portrait, type UploadPhase } from "@/lib/client";
 import { prepareUpload } from "@/lib/image";
-import { findStyle, STYLES, type StyleId } from "@/lib/styles";
+import { checkPhoto, PROBLEM_TEXT, type PhotoProblem } from "@/lib/photoCheck";
+import { findStyle, STYLES, type Style, type StyleId } from "@/lib/styles";
 
 type Upload = { blob: Blob; url: string };
+type Step = "photo" | "style" | "develop" | "reveal";
 
-export type ShootResult = { ok: true; portrait: Portrait } | { ok: false; error: string };
+export type ShootResult = { ok: true; portrait: Portrait } | { ok: false; error: string; code?: string };
+export type ShootRequest = { pet: Blob; owner: Blob | null; style: StyleId; memorial: boolean };
 
 type Props = {
   petName: string;
+  onPetName: (name: string) => void;
   style: StyleId;
   onStyle: (id: StyleId) => void;
   samples: Record<StyleId, string | null>;
-  latest: Portrait | null;
-  shoot: (pet: Blob, owner: Blob | null, style: StyleId) => Promise<ShootResult>;
+  freeLeft: number;
+  credits: number;
+  shoot: (req: ShootRequest, onPhase: (p: UploadPhase) => void) => Promise<ShootResult>;
   onKeep: (p: Portrait) => void;
-  onOpenReel: () => void;
+  onShare: (p: Portrait) => void;
+  onTickets: () => void;
+  onOpenAlbum: () => void;
 };
 
-export function Studio({ petName, style, onStyle, samples, latest, shoot, onKeep, onOpenReel }: Props) {
+export function Studio(props: Props) {
+  const [step, setStep] = useState<Step>("photo");
   const [pet, setPet] = useState<Upload | null>(null);
   const [owner, setOwner] = useState<Upload | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [shown, setShown] = useState<Portrait | null>(null);
-  const petInput = useRef<HTMLInputElement>(null);
-  const ownerInput = useRef<HTMLInputElement>(null);
+  const [memorial, setMemorial] = useState(false);
+  const [error, setError] = useState<{ text: string; code?: string } | null>(null);
+  const [result, setResult] = useState<Portrait | null>(null);
+  const [phase, setPhase] = useState<UploadPhase | { kind: "drying" }>({ kind: "loading", progress: 0 });
 
-  const result = shown ?? null;
-  const film = findStyle(style)!;
-  const star = petName || "your pet";
+  useEffect(() => {
+    if (step === "photo") track("photo_step");
+    if (step === "style") track("style_step");
+  }, [step]);
 
-  async function pick(file: File | undefined, set: (u: Upload | null) => void, prev: Upload | null) {
-    if (!file) return;
+  async function develop() {
+    if (!pet) return;
     setError(null);
-    try {
-      const blob = await prepareUpload(file);
-      if (prev) URL.revokeObjectURL(prev.url);
-      set({ blob, url: URL.createObjectURL(blob) });
-    } catch {
-      setError("That photo couldn't be read. Try a JPG or PNG.");
+    setPhase({ kind: "loading", progress: 0 });
+    setStep("develop");
+    const res = await props.shoot({ pet: pet.blob, owner: owner?.blob ?? null, style: props.style, memorial }, setPhase);
+    if (!res.ok) {
+      setError({ text: res.error, code: res.code });
+      setStep("style");
+      return;
     }
+    // Drying: the print is decoded before it is shown, so the reveal never
+    // starts on a half-loaded image.
+    setPhase({ kind: "drying" });
+    const img = new Image();
+    img.src = res.portrait.preview;
+    await img.decode().catch(() => {});
+    setResult(res.portrait);
+    setStep("reveal");
+    track("reveal_seen");
   }
 
-  async function action() {
-    if (!pet || busy) return;
-    setBusy(true);
-    setError(null);
-    setShown(null);
-    const res = await shoot(pet.blob, owner?.blob ?? null, style);
-    setBusy(false);
-    if (res.ok) setShown(res.portrait);
-    else setError(res.error);
-  }
-
-  if (busy) {
+  if (step === "photo") {
     return (
-      <section className="flex min-h-[70dvh] flex-col items-center justify-center px-6 text-center" aria-live="polite">
-        <div className="relative w-full max-w-[18rem] overflow-hidden rounded-lg border border-line">
-          <div className="sprockets h-3 bg-frame" />
-          <div className="aspect-square">
-            <Leader />
-          </div>
-          <div className="sprockets h-3 bg-frame" />
-        </div>
-        <Mascot mood="working" size={110} className="-mt-6" />
-        <p className="font-marquee mt-2 text-2xl font-extrabold uppercase">Developing the film</p>
-        <p className="mt-1 text-sm text-silver">Usually 20 to 40 seconds. {MASCOT} is in the darkroom.</p>
-      </section>
+      <PhotoStep
+        current={pet}
+        onPicked={(u) => {
+          if (pet && pet.url !== u.url) URL.revokeObjectURL(pet.url);
+          setPet(u);
+          setStep("style");
+        }}
+        onBack={pet ? () => setStep("style") : undefined}
+      />
     );
   }
 
-  if (result) {
-    const s = findStyle(result.style)!;
+  if (step === "develop") {
+    return <DevelopStep photo={pet?.url ?? null} phase={phase} memorial={memorial} />;
+  }
+
+  if (step === "reveal" && result) {
     return (
-      <section className="px-5 pb-8 pt-4">
-        <div className="mx-auto max-w-sm">
-          <div className="overflow-hidden rounded-lg border border-line bg-black">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={result.preview} alt={`${star} in ${s.title}`} className="develop block w-full" />
-          </div>
-          <div className="rise mt-5 text-center" style={{ animationDelay: "1.2s" }}>
-            <p className="font-script text-sm text-silver">{(petName || "Your pet").toUpperCase()} in</p>
-            <p className="font-marquee text-4xl font-extrabold uppercase leading-none">{s.title}</p>
-            <p className="font-script mt-1 text-sm text-silver">{s.year}</p>
-          </div>
-          {result.mock && (
-            <p className="mt-3 text-center text-xs text-warn">Demo mode: no FAL_KEY yet, so this is your own photo.</p>
-          )}
-          <div className="mt-6 grid gap-3">
-            <button
-              onClick={() => onKeep(result)}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stock font-semibold text-stock-ink active:scale-[0.98]"
-            >
-              <Ticket size={20} weight="bold" /> Keep it in full quality
-            </button>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => void action()}
-                className="min-h-12 rounded-full border border-line font-semibold text-screen active:scale-[0.98]"
-              >
-                Another take
-              </button>
-              <button
-                onClick={() => setShown(null)}
-                className="min-h-12 rounded-full border border-line font-semibold text-screen active:scale-[0.98]"
-              >
-                New film
-              </button>
-            </div>
-            <button onClick={onOpenReel} className="inline-flex min-h-11 items-center justify-center gap-2 text-sm text-silver">
-              <FilmStrip size={18} /> It&apos;s saved in your reel
-            </button>
-          </div>
+      <RevealStep
+        portrait={result}
+        onKeep={() => props.onKeep(result)}
+        onShare={() => props.onShare(result)}
+        onAnother={() => setStep("style")}
+        onOpenAlbum={props.onOpenAlbum}
+      />
+    );
+  }
+
+  const selected = findStyle(props.style)!;
+  const star = starName(props.petName);
+
+  return (
+    <section className="px-5 pb-10 pt-2">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setStep("photo")}
+          className="print w-16 shrink-0 !p-1 !pb-1.5"
+          aria-label="Change the star's photo"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {pet && <img src={pet.url} alt="" className="aspect-square w-full object-cover" />}
+        </button>
+        <div>
+          <h1 className="font-display text-[2rem] leading-none">Choose the era</h1>
+          <p className="mt-1 text-muted">Where should {star === "Your pet" ? "they" : star} be remembered?</p>
         </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5" role="radiogroup" aria-label="Era">
+        {STYLES.map((s) => (
+          <EraCard key={s.id} style={s} sample={props.samples[s.id]} selected={props.style === s.id} onSelect={() => props.onStyle(s.id)} />
+        ))}
+      </div>
+      <p className="mt-4 text-muted">
+        <span className="font-display italic text-ink">{selected.title}.</span> {selected.blurb}
+      </p>
+
+      <div className="mt-8 divide-y divide-line border-y border-line">
+        <label className="flex min-h-16 items-center justify-between gap-4 py-3">
+          <span>
+            <span className="block font-medium">Their name</span>
+            <span className="text-sm text-muted">Written on the title card</span>
+          </span>
+          <input
+            value={props.petName}
+            onChange={(e) => props.onPetName(e.target.value.slice(0, 24))}
+            placeholder="Luna"
+            autoComplete="off"
+            className="min-h-11 w-36 rounded-full border border-line bg-card px-4 text-right text-base outline-none focus:border-accent"
+          />
+        </label>
+        <OwnerRow owner={owner} setOwner={setOwner} star={star} />
+        <Toggle
+          label="In loving memory"
+          hint="For a pet who has passed. Gentler words, same care."
+          checked={memorial}
+          onChange={setMemorial}
+        />
+      </div>
+
+      {error && (
+        <div role="alert" className="mt-6 rounded-2xl bg-card p-4 text-ink shadow-[0_10px_30px_-20px_var(--shadow)]">
+          <p>{error.text}</p>
+          {error.code === "limit_reached" && (
+            <button onClick={props.onTickets} className="mt-2 min-h-11 font-medium text-accent underline underline-offset-4">
+              See tickets
+            </button>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={() => void develop()}
+        disabled={!pet}
+        className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink transition active:scale-[0.98] disabled:opacity-40"
+      >
+        Develop the portrait
+      </button>
+      <p className="mt-3 text-center text-sm text-muted">
+        {props.credits > 0
+          ? `Previews are free. Keeping one in HD uses a ticket (you have ${props.credits}).`
+          : props.freeLeft > 0
+            ? "Your first portrait is free."
+            : "You've used your free portrait. Tickets let you make more."}
+      </p>
+    </section>
+  );
+}
+
+function EraCard({ style, sample, selected, onSelect }: { style: Style; sample: string | null; selected: boolean; onSelect: () => void }) {
+  return (
+    <button role="radio" aria-checked={selected} onClick={onSelect} className="group text-left">
+      <div className={`arch relative p-1 transition ${selected ? "bg-accent" : "bg-transparent"}`}>
+        <StyleArt style={style} sample={sample} mascotSize={88} />
+        {selected && (
+          <span className="absolute right-2 top-[18%] flex h-7 w-7 items-center justify-center rounded-full bg-accent text-accent-ink">
+            <Check size={16} weight="bold" />
+          </span>
+        )}
+      </div>
+      <p className="font-display mt-2 text-[1.05rem] leading-tight">{style.title}</p>
+      <p className="font-display text-sm italic text-muted">{style.year}</p>
+    </button>
+  );
+}
+
+function Toggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className="flex min-h-16 w-full items-center justify-between gap-4 py-3 text-left">
+      <span>
+        <span className="block font-medium">{label}</span>
+        <span className="text-sm text-muted">{hint}</span>
+      </span>
+      <span className={`relative h-8 w-13 shrink-0 rounded-full transition ${checked ? "bg-accent" : "bg-sand"}`}>
+        <span className={`absolute top-1 h-6 w-6 rounded-full bg-card shadow transition-all ${checked ? "left-6" : "left-1"}`} />
+      </span>
+    </button>
+  );
+}
+
+function OwnerRow({ owner, setOwner, star }: { owner: Upload | null; setOwner: (u: Upload | null) => void; star: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex min-h-16 items-center justify-between gap-4 py-3">
+      <span>
+        <span className="block font-medium">Add me too</span>
+        <span className="text-sm text-muted">
+          {owner ? `You and ${star === "Your pet" ? "your pet" : star}, together` : "You and your pet in one portrait"}
+        </span>
+      </span>
+      {owner ? (
+        <span className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={owner.url} alt="Your photo" className="h-11 w-11 rounded-full object-cover" />
+          <button
+            onClick={() => {
+              URL.revokeObjectURL(owner.url);
+              setOwner(null);
+            }}
+            className="min-h-11 px-2 text-sm text-muted underline underline-offset-4"
+          >
+            Remove
+          </button>
+        </span>
+      ) : (
+        <button onClick={() => input.current?.click()} className="min-h-11 rounded-full border border-line px-4 text-sm font-medium">
+          Add a photo
+        </button>
+      )}
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        data-testid="owner-input"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          const blob = await prepareUpload(file).catch(() => null);
+          if (blob) setOwner({ blob, url: URL.createObjectURL(blob) });
+        }}
+      />
+    </div>
+  );
+}
+
+function PhotoStep({ current, onPicked, onBack }: { current: Upload | null; onPicked: (u: Upload) => void; onBack?: () => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [checking, setChecking] = useState(false);
+  const [pending, setPending] = useState<{ upload: Upload; problem: PhotoProblem } | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setChecking(true);
+    setFailed(false);
+    try {
+      const [{ problem }, blob] = await Promise.all([checkPhoto(file), prepareUpload(file)]);
+      const upload = { blob, url: URL.createObjectURL(blob) };
+      if (problem) {
+        track("photo_rejected");
+        setPending({ upload, problem });
+      } else onPicked(upload);
+    } catch {
+      setFailed(true);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  const chooser = (
+    <input
+      ref={input}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      data-testid="pet-input"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        void pick(file);
+      }}
+    />
+  );
+
+  if (pending) {
+    return (
+      <section className="px-6 pb-10 pt-6 text-center">
+        <div className="print mx-auto w-44 -rotate-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={pending.upload.url} alt="The photo you chose" className="aspect-square w-full object-cover" />
+        </div>
+        <h1 className="font-display mt-8 text-[2rem] leading-tight">Maybe another one?</h1>
+        <p className="mx-auto mt-2 max-w-[32ch] text-muted">{PROBLEM_TEXT[pending.problem]}</p>
+        <button
+          onClick={() => {
+            URL.revokeObjectURL(pending.upload.url);
+            setPending(null);
+            input.current?.click();
+          }}
+          className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink active:scale-[0.98]"
+        >
+          Choose another photo
+        </button>
+        <button
+          onClick={() => {
+            track("photo_used_anyway");
+            onPicked(pending.upload);
+          }}
+          className="mt-2 min-h-12 w-full text-muted underline underline-offset-4"
+        >
+          Use this one anyway
+        </button>
+        {chooser}
       </section>
     );
   }
 
   return (
-    <section className="px-5 pb-8 pt-2">
-      <h1 className="font-marquee text-5xl font-extrabold uppercase leading-none">Studio</h1>
-      <p className="mt-1 text-silver">Cast {star}, choose the film, call action.</p>
+    <section className="px-6 pb-10 pt-4">
+      <h1 className="font-display text-[2.4rem] leading-[1.05]">
+        Who&apos;s the <span className="font-script text-[3rem] text-accent">star</span>?
+      </h1>
+      <p className="mt-2 text-muted">One clear photo of their face works best.</p>
 
-      <div className="mt-6 grid grid-cols-[1fr_auto] gap-3">
-        <button
-          onClick={() => petInput.current?.click()}
-          className="group relative overflow-hidden rounded-lg border border-line bg-reel text-left"
-          aria-label={pet ? "Change your pet's photo" : "Add your pet's photo"}
-        >
-          <div className="sprockets h-3 bg-frame" />
-          <div className="relative aspect-[4/5]">
-            {pet ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={pet.url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-                <Camera size={34} className="text-stock" />
-                <span className="font-semibold">The star</span>
-                <span className="text-sm text-silver">A clear photo of their face</span>
-              </div>
-            )}
-          </div>
-          <div className="sprockets h-3 bg-frame" />
-        </button>
-
-        <div className="flex w-24 flex-col gap-2">
-          <button
-            onClick={() => ownerInput.current?.click()}
-            className="relative overflow-hidden rounded-lg border border-dashed border-line bg-reel"
-            aria-label={owner ? "Change your photo" : "Add yourself as co-star"}
-          >
-            <div className="aspect-[4/5]">
-              {owner ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={owner.url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-1 px-1 text-center">
-                  <UserPlus size={22} className="text-silver" />
-                  <span className="text-[11px] leading-tight text-silver">Co-star: you</span>
-                </div>
-              )}
-            </div>
-          </button>
-          {owner && (
-            <button onClick={() => setOwner(null)} className="inline-flex min-h-11 items-center justify-center gap-1 text-xs text-silver">
-              <X size={14} /> Remove
-            </button>
-          )}
-        </div>
+      <div className="mt-6 grid grid-cols-4 gap-2.5">
+        <Tip good label="Clear face" />
+        <Tip good label="Daylight" light />
+        <Tip label="Blurry" look="blur(2.5px)" />
+        <Tip label="Too dark" look="brightness(0.3)" />
       </div>
-      <input ref={petInput} type="file" accept="image/*" className="hidden" data-testid="pet-input" onChange={(e) => void pick(e.target.files?.[0], setPet, pet)} />
-      <input ref={ownerInput} type="file" accept="image/*" className="hidden" data-testid="owner-input" onChange={(e) => void pick(e.target.files?.[0], setOwner, owner)} />
-
-      <h2 className="mt-8 text-sm font-semibold text-silver">The film</h2>
-      <div className="-mx-5 mt-3 flex snap-x gap-3 overflow-x-auto px-5 pb-2">
-        {STYLES.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => onStyle(s.id)}
-            aria-pressed={style === s.id}
-            className={`w-28 shrink-0 snap-start overflow-hidden rounded-lg border-2 text-left transition ${style === s.id ? "border-stock" : "border-transparent"}`}
-          >
-            <StyleArt style={s} sample={samples[s.id]} compact />
-          </button>
-        ))}
-      </div>
-      <p className="mt-2 text-sm text-silver">{film.blurb}</p>
-
-      {error && (
-        <p role="alert" className="mt-4 rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm text-warn">
-          {error}
-        </p>
-      )}
 
       <button
-        onClick={() => void action()}
-        disabled={!pet}
-        className="mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-stock text-lg font-bold uppercase tracking-wide text-stock-ink transition active:scale-[0.98] disabled:bg-frame disabled:text-dim"
+        onClick={() => input.current?.click()}
+        disabled={checking}
+        className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink transition active:scale-[0.98] disabled:opacity-60"
       >
-        Action
+        {checking ? "Looking at the photo" : "Choose from Photos"}
       </button>
-      {!pet && <p className="mt-2 text-center text-xs text-dim">Add the star&apos;s photo first</p>}
-
-      {latest && (
-        <button onClick={onOpenReel} className="mt-8 flex w-full items-center gap-3 rounded-lg border border-line bg-reel p-2 text-left">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={latest.preview} alt="" className="h-14 w-11 rounded object-cover" />
-          <span className="text-sm">
-            <span className="block font-semibold">Last take: {findStyle(latest.style)?.title}</span>
-            <span className="text-silver">Open your reel</span>
-          </span>
+      {failed && (
+        <p role="alert" className="mt-3 text-center text-accent">
+          That photo couldn&apos;t be opened. Try a JPG or PNG.
+        </p>
+      )}
+      {onBack && current && (
+        <button onClick={onBack} className="mt-3 min-h-11 w-full text-muted underline underline-offset-4">
+          Keep the current photo
         </button>
       )}
+      <p className="mt-6 text-center text-sm text-muted">Only the photo you pick is used. Nothing else in your library is read.</p>
+      {chooser}
+    </section>
+  );
+}
+
+function Tip({ label, good = false, look, light = false }: { label: string; good?: boolean; look?: string; light?: boolean }) {
+  return (
+    <figure className="text-center">
+      <div
+        className={`arch relative flex aspect-[3/4] items-end justify-center overflow-hidden ${light ? "bg-[#f3dcb4]" : "bg-blue"}`}
+        style={look ? { filter: look } : undefined}
+      >
+        <Mascot size={62} still className="mb-[6%]" />
+      </div>
+      <figcaption className="mt-1.5 flex items-center justify-center gap-1 text-[0.8rem] leading-tight">
+        {good ? (
+          <CheckCircle size={16} weight="fill" className="shrink-0 text-[#3d6b45]" aria-label="Good:" />
+        ) : (
+          <XCircle size={16} weight="fill" className="shrink-0 text-accent" aria-label="Avoid:" />
+        )}
+        {label}
+      </figcaption>
+    </figure>
+  );
+}
+
+function DevelopStep({ photo, phase, memorial }: { photo: string | null; phase: UploadPhase | { kind: "drying" }; memorial: boolean }) {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const order = ["loading", "developing", "drying"] as const;
+  const at = order.indexOf(phase.kind);
+  const steps = [
+    {
+      label: "Loading the film",
+      detail: phase.kind === "loading" ? (phase.progress > 0 ? `${Math.round(phase.progress * 100)}% sent` : "Sending your photo") : null,
+    },
+    { label: "Developing", detail: phase.kind === "developing" ? `${seconds}s, usually 20 to 40` : null },
+    { label: "Drying the print", detail: null },
+  ];
+
+  return (
+    <section className="flex min-h-[72dvh] flex-col items-center px-6 pb-10 pt-6" aria-live="polite">
+      <div className="relative w-52">
+        <div className="print -rotate-1">
+          <div className="grain overflow-hidden bg-[#1f140d]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {photo && <img src={photo} alt="" className="negative aspect-[4/5] w-full object-cover" />}
+          </div>
+        </div>
+        <Mascot mood="working" size={96} className="absolute -bottom-8 -right-12" />
+      </div>
+
+      <h1 className="font-display mt-12 text-center text-[2rem] leading-tight">
+        {memorial ? "Taking our time with this one" : "In the darkroom"}
+      </h1>
+      <p className="mt-1 text-center text-muted">{MASCOT} is looking after it. Keep the app open.</p>
+
+      <ol className="mt-8 w-full max-w-xs space-y-4">
+        {steps.map((s, i) => {
+          const done = i < at;
+          const active = i === at;
+          return (
+            <li key={s.label} className={`flex items-center gap-3 ${done || active ? "text-ink" : "text-muted"}`}>
+              {done ? (
+                <CheckCircle size={24} weight="fill" className="shrink-0 text-accent" />
+              ) : active ? (
+                <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+                  <span className="absolute h-6 w-6 animate-ping rounded-full bg-accent/25 motion-reduce:animate-none" />
+                  <span className="h-3 w-3 rounded-full bg-accent" />
+                </span>
+              ) : (
+                <Circle size={24} className="shrink-0" />
+              )}
+              <span>
+                <span className={`block ${active ? "font-medium" : ""}`}>{s.label}</span>
+                {active && s.detail && <span className="text-sm text-muted">{s.detail}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function RevealStep({
+  portrait,
+  onKeep,
+  onShare,
+  onAnother,
+  onOpenAlbum,
+}: {
+  portrait: Portrait;
+  onKeep: () => void;
+  onShare: () => void;
+  onAnother: () => void;
+  onOpenAlbum: () => void;
+}) {
+  const s = findStyle(portrait.style)!;
+  return (
+    <section className="px-6 pb-10 pt-4 text-center">
+      <div className="print mx-auto w-[82%] max-w-xs">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={portrait.preview} alt={`${starName(portrait.petName)} in ${s.title}`} className="develop block w-full" />
+      </div>
+
+      <div className="rise mt-7" style={{ animationDelay: "1.6s" }}>
+        {portrait.memorial && <p className="font-display italic text-muted">In loving memory of</p>}
+        <p className="font-script text-[3.2rem] leading-[1.1]">{starName(portrait.petName)}</p>
+        <p className="font-display text-lg italic">
+          in {s.title}, {s.year}
+        </p>
+      </div>
+      {portrait.mock && (
+        <p className="mt-3 text-sm text-muted">Demo mode: there&apos;s no image key yet, so this is your own photo.</p>
+      )}
+
+      <div className="rise mt-7 grid gap-3" style={{ animationDelay: "2s" }}>
+        {portrait.unlocked ? (
+          <a
+            href={downloadUrl(portrait.id)}
+            download
+            className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent text-lg font-medium text-accent-ink"
+          >
+            <DownloadSimple size={20} weight="bold" /> Save in HD
+          </a>
+        ) : (
+          <button
+            onClick={onKeep}
+            className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent text-lg font-medium text-accent-ink active:scale-[0.98]"
+          >
+            <DownloadSimple size={20} weight="bold" /> {portrait.memorial ? "Keep it in HD" : "Save in HD"}
+          </button>
+        )}
+        <button
+          onClick={onShare}
+          className="flex min-h-14 items-center justify-center gap-2 rounded-full border border-ink/25 text-lg font-medium active:scale-[0.98]"
+        >
+          <ShareNetwork size={20} /> Share
+        </button>
+        <button onClick={onAnother} className="inline-flex min-h-12 items-center justify-center gap-2 text-muted underline underline-offset-4">
+          <ArrowCounterClockwise size={18} /> Try another era
+        </button>
+        <button onClick={onOpenAlbum} className="min-h-11 text-sm text-muted">
+          It&apos;s already in your album
+        </button>
+      </div>
     </section>
   );
 }
