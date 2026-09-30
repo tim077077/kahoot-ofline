@@ -8,6 +8,12 @@ export interface Store {
   incrby(key: string, by: number): Promise<number>;
   expire(key: string, seconds: number): Promise<void>;
   del(key: string): Promise<void>;
+  // Hashes hold one record per field (the album's photos).
+  hset(key: string, field: string, value: string): Promise<void>;
+  hget(key: string, field: string): Promise<string | null>;
+  hgetall(key: string): Promise<Record<string, string>>;
+  hdel(key: string, field: string): Promise<void>;
+  hlen(key: string): Promise<number>;
 }
 
 class UpstashStore implements Store {
@@ -47,6 +53,29 @@ class UpstashStore implements Store {
   async del(key: string) {
     await this.cmd<number>(["DEL", key]);
   }
+
+  async hset(key: string, field: string, value: string) {
+    await this.cmd<number>(["HSET", key, field, value]);
+  }
+
+  hget(key: string, field: string) {
+    return this.cmd<string | null>(["HGET", key, field]);
+  }
+
+  async hgetall(key: string) {
+    const flat = (await this.cmd<string[] | null>(["HGETALL", key])) ?? [];
+    const out: Record<string, string> = {};
+    for (let i = 0; i < flat.length; i += 2) out[flat[i]] = flat[i + 1];
+    return out;
+  }
+
+  async hdel(key: string, field: string) {
+    await this.cmd<number>(["HDEL", key, field]);
+  }
+
+  hlen(key: string) {
+    return this.cmd<number>(["HLEN", key]);
+  }
 }
 
 export class MemoryStore implements Store {
@@ -85,6 +114,31 @@ export class MemoryStore implements Store {
 
   async del(key: string) {
     this.data.delete(key);
+    this.hashes.delete(key);
+  }
+
+  private hashes = new Map<string, Map<string, string>>();
+
+  async hset(key: string, field: string, value: string) {
+    const hash = this.hashes.get(key) ?? new Map<string, string>();
+    hash.set(field, value);
+    this.hashes.set(key, hash);
+  }
+
+  async hget(key: string, field: string) {
+    return this.hashes.get(key)?.get(field) ?? null;
+  }
+
+  async hgetall(key: string) {
+    return Object.fromEntries(this.hashes.get(key) ?? []);
+  }
+
+  async hdel(key: string, field: string) {
+    this.hashes.get(key)?.delete(field);
+  }
+
+  async hlen(key: string) {
+    return this.hashes.get(key)?.size ?? 0;
   }
 }
 

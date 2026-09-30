@@ -8,7 +8,7 @@ import {
   freeTrialsLeft,
   getCredits,
   releaseFreeTrial,
-  takeBuyerPreview,
+  takeMinuteSlot,
   takeCredit,
   takeFreeTrial,
 } from "./credits";
@@ -76,12 +76,11 @@ describe("free trials", () => {
 });
 
 describe("buyers and deletion", () => {
-  it("limits buyer previews per minute", async () => {
+  it("limits previews per minute", async () => {
     const store = new MemoryStore();
-    const limits = { perDay: 30, perMinute: 2 };
-    expect(await takeBuyerPreview(store, "acct", limits)).toBe(true);
-    expect(await takeBuyerPreview(store, "acct", limits)).toBe(true);
-    expect(await takeBuyerPreview(store, "acct", limits)).toBe(false);
+    expect(await takeMinuteSlot(store, "acct", 2)).toBe(true);
+    expect(await takeMinuteSlot(store, "acct", 2)).toBe(true);
+    expect(await takeMinuteSlot(store, "acct", 2)).toBe(false);
   });
 
   it("deletes an account so its token and tickets are gone", async () => {

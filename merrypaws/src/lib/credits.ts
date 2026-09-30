@@ -113,20 +113,10 @@ export async function freeTrialsLeft(store: Store, guest: Guest, limits: FreeLim
   return Math.max(0, Math.min(limits.perDevice - (await used(keys.device)), limits.perIp - (await used(keys.ip))));
 }
 
-// Buyers get a larger preview budget, counted per account instead of per
-// device, plus a per-minute cap so a script can't burn through it at once.
-export async function takeBuyerPreview(
-  store: Store,
-  accountId: string,
-  limits: { perDay: number; perMinute: number },
-): Promise<boolean> {
-  const minute = `buyer:min:${Math.floor(Date.now() / 60000)}:${accountId}`;
-  if (!(await reserve(store, minute, limits.perMinute, 120))) return false;
-  return reserve(store, `buyer:${today()}:${accountId}`, limits.perDay, 2 * DAY);
-}
-
-export async function releaseBuyerPreview(store: Store, accountId: string) {
-  await store.incrby(`buyer:${today()}:${accountId}`, -1);
+// A per-minute cap on previews for accounts, so a script can't burn through
+// an allowance at once.
+export async function takeMinuteSlot(store: Store, accountId: string, perMinute: number): Promise<boolean> {
+  return reserve(store, `rate:${Math.floor(Date.now() / 60000)}:${accountId}`, perMinute, 120);
 }
 
 // In-app account deletion (required by the App Store): the token stops

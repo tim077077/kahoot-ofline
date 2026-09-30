@@ -1,3 +1,4 @@
+import { getObjects, ObjectsNotConfiguredError, type ObjectStore } from "./objects";
 import { getStore, StoreNotConfiguredError, type Store } from "./store";
 
 export function clientIp(request: Request): string {
@@ -27,4 +28,13 @@ export function guestOf(request: Request) {
   const ip = clientIp(request);
   const device = request.headers.get("x-device");
   return { ip, device: device && /^[\w-]{16,64}$/.test(device) ? device : `ip:${ip}` };
+}
+
+export function objectsOr503(): ObjectStore | Response {
+  try {
+    return getObjects();
+  } catch (err) {
+    if (err instanceof ObjectsNotConfiguredError) return Response.json({ error: "not_configured" }, { status: 503 });
+    throw err;
+  }
 }

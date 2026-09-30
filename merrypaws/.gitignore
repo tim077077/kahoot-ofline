@@ -46,3 +46,4 @@ next-env.d.ts
 !/prompt-lab/photos/.gitkeep
 /prompt-lab/owner.jpg
 /prompt-lab/out
+/.data

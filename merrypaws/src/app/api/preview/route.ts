@@ -1,13 +1,8 @@
 import { LIMITS } from "@/lib/config";
-import {
-  accountIdForToken,
-  releaseBuyerPreview,
-  releaseFreeTrial,
-  takeBuyerPreview,
-  takeFreeTrial,
-} from "@/lib/credits";
+import { accountIdForToken, releaseFreeTrial, takeFreeTrial, takeMinuteSlot } from "@/lib/credits";
 import { track } from "@/lib/events";
 import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
+import { refreshAllowance, releasePreview, takePreview, type PreviewSource } from "@/lib/plans";
 import { savePortrait } from "@/lib/portraits";
 import { fetchImageBytes, generateImage } from "@/lib/stager";
 import { buildPortraitPrompt, findStyle } from "@/lib/styles";
@@ -35,16 +30,23 @@ export async function POST(request: Request) {
 
   const accountId = await accountIdForToken(store, bearerToken(request));
   const guest = guestOf(request);
-  const allowed = accountId
-    ? await takeBuyerPreview(store, accountId, { perDay: LIMITS.buyerPerDay, perMinute: LIMITS.buyerPerMinute })
-    : await takeFreeTrial(store, guest, {
-        perDevice: LIMITS.freePerDevice,
-        perIp: LIMITS.freePerIpPerDay,
-        global: LIMITS.freeGlobalPerDay,
-      });
-  if (!allowed) {
-    if (!accountId) await track(store, "guest_refused");
-    return Response.json({ error: accountId ? "slow_down" : "limit_reached" }, { status: 429 });
+  const freeLimits = { perDevice: LIMITS.freePerDevice, perIp: LIMITS.freePerIpPerDay, global: LIMITS.freeGlobalPerDay };
+
+  // Members spend their plan's previews, then pack previews. Anyone without
+  // an allowance (guests, or members who ran out) gets the one free portrait
+  // per device, if it's still unused.
+  let source: PreviewSource | "free" | null = null;
+  if (accountId) {
+    if (!(await takeMinuteSlot(store, accountId, LIMITS.previewsPerMinute))) {
+      return Response.json({ error: "slow_down" }, { status: 429 });
+    }
+    await refreshAllowance(store, accountId);
+    source = await takePreview(store, accountId);
+  }
+  if (!source && (await takeFreeTrial(store, guest, freeLimits))) source = "free";
+  if (!source) {
+    await track(store, "guest_refused");
+    return Response.json({ error: "limit_reached" }, { status: 429 });
   }
 
   try {
@@ -64,8 +66,8 @@ export async function POST(request: Request) {
     const reason = err instanceof Error ? err.message : String(err);
     console.error(JSON.stringify({ event: "generation_failed", style: style.id, withOwner: Boolean(owner), reason }));
     await track(store, "generation_failed");
-    if (accountId) await releaseBuyerPreview(store, accountId);
-    else await releaseFreeTrial(store, guest);
+    if (source === "free") await releaseFreeTrial(store, guest);
+    else if (accountId) await releasePreview(store, accountId, source);
     return Response.json({ error: "generation_failed" }, { status: 502 });
   }
 }

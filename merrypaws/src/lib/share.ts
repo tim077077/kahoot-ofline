@@ -120,3 +120,92 @@ export async function shareOrSave(blob: Blob, filename: string, title: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   return "saved" as const;
 }
+
+// A scrapbook page for stories: up to five prints, taped down at angles, with
+// the highlight's title in script.
+const COLLAGE_SLOTS = [
+  { x: 90, y: 330, w: 520, h: 640, r: -4 },
+  { x: 560, y: 380, w: 430, h: 520, r: 5 },
+  { x: 110, y: 1000, w: 440, h: 540, r: 3 },
+  { x: 540, y: 930, w: 450, h: 560, r: -3 },
+  { x: 330, y: 1330, w: 420, h: 330, r: -1 },
+];
+
+export async function makeCollageCard(
+  photos: { src: string; date: string }[],
+  text: { title: string; name: string; filter: string },
+): Promise<Blob> {
+  const display = family("--font-bodoni", "serif");
+  const script = family("--font-pinyon", "cursive");
+  const hand = family("--font-hand", "cursive");
+  const sans = family("--font-jost", "sans-serif");
+  await Promise.all([
+    document.fonts.load(`110px ${script}`),
+    document.fonts.load(`italic 40px ${display}`),
+    document.fonts.load(`28px ${hand}`),
+    document.fonts.load(`600 26px ${sans}`),
+  ]).catch(() => {});
+  const images = await Promise.all(photos.map((p) => loadImage(p.src)));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = INK;
+  ctx.font = `130px ${script}`;
+  ctx.fillText(text.title, 540, 190);
+  ctx.font = `italic 40px ${display}`;
+  ctx.fillStyle = MUTED;
+  ctx.fillText(`starring ${text.name}`, 540, 262);
+
+  images.forEach((img, i) => {
+    const slot = COLLAGE_SLOTS[i];
+    const pad = 22;
+    ctx.save();
+    ctx.translate(slot.x + slot.w / 2, slot.y + slot.h / 2);
+    ctx.rotate((slot.r * Math.PI) / 180);
+    ctx.shadowColor = "rgba(58, 34, 20, 0.3)";
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetY = 14;
+    ctx.fillStyle = "#fbf8f2";
+    ctx.fillRect(-slot.w / 2 - pad, -slot.h / 2 - pad, slot.w + pad * 2, slot.h + pad * 2);
+    ctx.shadowColor = "transparent";
+    // Cover-crop the photo into its slot, through the album's film look.
+    const scale = Math.max(slot.w / img.width, slot.h / img.height);
+    const sw = slot.w / scale;
+    const sh = slot.h / scale;
+    ctx.filter = text.filter;
+    ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, -slot.w / 2, -slot.h / 2, slot.w, slot.h);
+    ctx.filter = "none";
+    // The date stamp, burned into the corner.
+    const d = new Date(photos[i].date);
+    ctx.font = `600 26px ${sans}`;
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ff9a3c";
+    ctx.shadowColor = "rgba(255, 110, 20, 0.8)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(`'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`, slot.w / 2 - 18, slot.h / 2 - 18);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowColor = "transparent";
+    // A strip of masking tape across the top edge.
+    ctx.fillStyle = "rgba(226, 208, 168, 0.85)";
+    ctx.rotate(((i % 2 ? 6 : -6) * Math.PI) / 180);
+    ctx.fillRect(-70, -slot.h / 2 - pad - 18, 140, 40);
+    ctx.restore();
+  });
+
+  ctx.textAlign = "center";
+  ctx.font = `500 26px ${sans}`;
+  ctx.fillStyle = MUTED;
+  if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "4px";
+  ctx.fillText(`MADE WITH ${BRAND.toUpperCase()}`, 540, 1830);
+
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", 0.9),
+  );
+}

@@ -5,6 +5,14 @@ import type { Store } from "./store";
 
 export const CLIENT_EVENTS = [
   "intro_seen",
+  "onboarding_name",
+  "onboarding_photos",
+  "onboarding_page",
+  "onboarding_done",
+  "photos_added",
+  "highlight_opened",
+  "slideshow_played",
+  "plans_shown",
   "photo_step",
   "photo_rejected",
   "photo_used_anyway",

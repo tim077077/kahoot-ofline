@@ -1,5 +1,8 @@
 "use client";
 
+import type { Tier } from "./config";
+import { readExifDate } from "./exif";
+import type { LookId } from "./looks";
 import type { StyleId } from "./styles";
 
 // Client-side state that lives on the device: the access token, the pet's
@@ -15,7 +18,34 @@ const PROFILE_KEY = "pp_profile";
 const REEL_KEY = "pp_reel";
 const MAX_REEL = 40;
 
-export type Profile = { petName: string; favorite: StyleId; onboarded: boolean };
+export type PetKind = "dog" | "cat" | "other";
+export type Profile = { petName: string; kind?: PetKind; favorite: StyleId; onboarded: boolean; look?: LookId };
+
+// What the server says about this member.
+export type Account = {
+  account: boolean;
+  tier: Tier;
+  renewsUntil?: string | null;
+  interval?: "month" | "year" | null;
+  credits: number;
+  previews: number;
+  photos: number;
+  photoLimit: number;
+  freeLeft: number;
+};
+
+export type Photo = {
+  id: string;
+  takenAt: string;
+  addedAt: string;
+  tags: string[];
+  caption: string;
+  favorite: boolean;
+  w: number;
+  h: number;
+  thumb: string;
+  full: string;
+};
 
 export type Portrait = {
   id: string;
@@ -116,3 +146,61 @@ export function downloadUrl(id: string) {
 }
 
 export const starName = (name: string) => name.trim() || "Your pet";
+
+// The phone resizes every album photo before upload: a 2048px print and a
+// 480px thumbnail. Fast on mobile data, and cheap to store.
+export async function preparePhoto(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const taken = readExifDate(bytes) ?? (file.lastModified ? new Date(file.lastModified) : new Date());
+  const bitmap = await createImageBitmap(file);
+  const encode = async (edge: number, quality: number) => {
+    const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", quality),
+    );
+  };
+  const image = await encode(2048, 0.85);
+  const thumb = await encode(480, 0.78);
+  const out = { image, thumb, w: bitmap.width, h: bitmap.height, takenAt: taken.toISOString() };
+  bitmap.close();
+  return out;
+}
+
+export async function uploadPhoto(
+  prepared: Awaited<ReturnType<typeof preparePhoto>>,
+  tags: string[],
+  token: string,
+): Promise<{ photo?: Photo; error?: string }> {
+  const form = new FormData();
+  form.append("image", prepared.image, "photo.jpg");
+  form.append("thumb", prepared.thumb, "thumb.jpg");
+  form.append("takenAt", prepared.takenAt);
+  form.append("w", String(prepared.w));
+  form.append("h", String(prepared.h));
+  form.append("tags", JSON.stringify(tags));
+  const res = await api("/api/photos", { method: "POST", body: form }, token).catch(() => null);
+  if (!res) return { error: "network" };
+  const data = (await res.json().catch(() => ({}))) as { photo?: Photo; error?: string };
+  return res.ok ? { photo: data.photo } : { error: data.error ?? "generic" };
+}
+
+export async function patchPhoto(id: string, patch: Partial<Pick<Photo, "tags" | "caption" | "favorite">>, token: string) {
+  const res = await api(`/api/photos/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) }, token).catch(() => null);
+  if (!res?.ok) return null;
+  return ((await res.json()) as { photo: Photo }).photo;
+}
+
+export async function removePhoto(id: string, token: string) {
+  const res = await api(`/api/photos/${id}`, { method: "DELETE" }, token).catch(() => null);
+  return Boolean(res?.ok);
+}
+
+// "'24 7 14": the orange date stamp of a 90s point-and-shoot.
+export function dateStamp(iso: string) {
+  const d = new Date(iso);
+  return `'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`;
+}

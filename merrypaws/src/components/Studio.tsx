@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { StyleArt } from "@/components/StyleCard";
 import { MASCOT } from "@/lib/config";
-import { downloadUrl, starName, track, type Portrait, type UploadPhase } from "@/lib/client";
+import { downloadUrl, starName, track, type Photo, type Portrait, type UploadPhase } from "@/lib/client";
 import { prepareUpload } from "@/lib/image";
 import { checkPhoto, PROBLEM_TEXT, type PhotoProblem } from "@/lib/photoCheck";
 import { findStyle, STYLES, type Style, type StyleId } from "@/lib/styles";
@@ -23,11 +23,13 @@ type Props = {
   onStyle: (id: StyleId) => void;
   samples: Record<StyleId, string | null>;
   freeLeft: number;
+  previews: number;
+  album: Photo[];
   credits: number;
   shoot: (req: ShootRequest, onPhase: (p: UploadPhase) => void) => Promise<ShootResult>;
   onKeep: (p: Portrait) => void;
   onShare: (p: Portrait) => void;
-  onTickets: () => void;
+  onPlans: () => void;
   onOpenAlbum: () => void;
 };
 
@@ -77,6 +79,7 @@ export function Studio(props: Props) {
           setStep("style");
         }}
         onBack={pet ? () => setStep("style") : undefined}
+        album={props.album}
       />
     );
   }
@@ -153,8 +156,8 @@ export function Studio(props: Props) {
         <div role="alert" className="mt-6 rounded-2xl bg-card p-4 text-ink shadow-[0_10px_30px_-20px_var(--shadow)]">
           <p>{error.text}</p>
           {error.code === "limit_reached" && (
-            <button onClick={props.onTickets} className="mt-2 min-h-11 font-medium text-accent underline underline-offset-4">
-              See tickets
+            <button onClick={props.onPlans} className="mt-2 min-h-11 font-medium text-accent underline underline-offset-4">
+              See portrait credits
             </button>
           )}
         </div>
@@ -168,11 +171,11 @@ export function Studio(props: Props) {
         Develop the portrait
       </button>
       <p className="mt-3 text-center text-sm text-muted">
-        {props.credits > 0
-          ? `Previews are free. Keeping one in HD uses a ticket (you have ${props.credits}).`
+        {props.previews > 0
+          ? `Uses 1 of your ${props.previews} previews. Keeping one in HD uses a credit (you have ${props.credits}).`
           : props.freeLeft > 0
             ? "Your first portrait is free."
-            : "You've used your free portrait. Tickets let you make more."}
+            : "You've used your free portrait. Credits let you make more."}
       </p>
     </section>
   );
@@ -256,7 +259,7 @@ function OwnerRow({ owner, setOwner, star }: { owner: Upload | null; setOwner: (
   );
 }
 
-function PhotoStep({ current, onPicked, onBack }: { current: Upload | null; onPicked: (u: Upload) => void; onBack?: () => void }) {
+function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | null; onPicked: (u: Upload) => void; onBack?: () => void; album: Photo[] }) {
   const input = useRef<HTMLInputElement>(null);
   const [checking, setChecking] = useState(false);
   const [pending, setPending] = useState<{ upload: Upload; problem: PhotoProblem } | null>(null);
@@ -358,6 +361,33 @@ function PhotoStep({ current, onPicked, onBack }: { current: Upload | null; onPi
         <button onClick={onBack} className="mt-3 min-h-11 w-full text-muted underline underline-offset-4">
           Keep the current photo
         </button>
+      )}
+      {album.length > 0 && (
+        <>
+          <h2 className="font-display mt-8 italic">Or one from the album</h2>
+          <div className="-mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-2">
+            {album.slice(0, 24).map((p) => (
+              <button
+                key={p.id}
+                disabled={checking}
+                onClick={async () => {
+                  setChecking(true);
+                  try {
+                    const blob = await (await fetch(p.full)).blob();
+                    await pick(new File([blob], "album.jpg", { type: blob.type || "image/jpeg" }));
+                  } catch {
+                    setFailed(true);
+                    setChecking(false);
+                  }
+                }}
+                className="w-20 shrink-0 bg-[#fbf8f2] p-1 shadow-[0_6px_12px_-8px_var(--shadow)]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.thumb} alt="" className="aspect-square w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </>
       )}
       <p className="mt-6 text-center text-sm text-muted">Only the photo you pick is used. Nothing else in your library is read.</p>
       {chooser}
