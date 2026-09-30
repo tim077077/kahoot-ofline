@@ -4,7 +4,7 @@ import { Check, Copy, FilmStrip, Lock } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Sheet } from "@/components/Sheet";
 import type { Account, PetKind } from "@/lib/client";
-import { formatUsd, PACK_ORDER, PACKS, PAID_TIERS, TIERS, type Interval, type PackId, type Tier } from "@/lib/config";
+import { formatUsd, PACK_ORDER, PACKS, PAID_TIERS, TARGET_TIER, TIERS, type Interval, type PackId, type Tier } from "@/lib/config";
 import { findLook, LOOKS, type LookId } from "@/lib/looks";
 
 export type Purchase = { kind: "plan"; tier: Tier; interval: Interval } | { kind: "pack"; pack: PackId };
@@ -13,16 +13,22 @@ const busyKey = (p: Purchase) => (p.kind === "plan" ? `${p.tier}-${p.interval}` 
 
 function perks(tier: Tier) {
   const t = TIERS[tier];
-  const list = [`${t.photos.toLocaleString()} photos in the album`, "Highlights, collages and slideshows"];
-  if (t.allLooks) list.push(`Every film look (${LOOKS.length})`);
-  else list.push("2 film looks");
-  if (t.previewsPerMonth) list.push(`${t.previewsPerMonth} portrait previews and ${t.hdPerMonth} HD portraits every month`);
-  else list.push("Your first portrait preview free");
+  const list: string[] = [];
+  if (tier === TARGET_TIER) list.push(`A portrait every day (${t.hdPerMonth} a month, in HD)`);
+  else if (t.hdPerMonth) list.push(`${t.hdPerMonth} HD portraits a month`);
+  list.push(`${t.photos.toLocaleString()} photos in the album`);
+  list.push(t.allLooks ? "Every film look" : "2 film looks");
+  list.push(`${t.freezesPerMonth} streak ${t.freezesPerMonth === 1 ? "freeze" : "freezes"} a month`);
+  list.push(t.previewsPerMonth ? `${t.previewsPerMonth} portrait tries a month` : "Your first portrait free");
   return list;
 }
 
 const savings = (tier: Tier) => Math.round((1 - TIERS[tier].price.year / (TIERS[tier].price.month * 12)) * 100);
+const perDay = (cents: number, interval: Interval) => (cents / (interval === "year" ? 365 : 30)).toFixed(0);
 
+// Three plans, the priciest first as the anchor and Plus in the middle,
+// highlighted and ready to pick. Every price is the full price: no fake
+// discounts, no countdowns (see PSYCHOLOGY.md).
 export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: Purchase) => void; busy: Busy }) {
   const [interval, setInterval] = useState<Interval>("year");
   return (
@@ -36,7 +42,7 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
             onClick={() => setInterval(i)}
             className={`min-h-10 rounded-full px-5 text-sm transition ${interval === i ? "bg-card font-medium shadow-sm" : "text-muted"}`}
           >
-            {i === "month" ? "Monthly" : `Yearly, save ${savings("plus")}%`}
+            {i === "month" ? "Monthly" : `Yearly, save ${savings(TARGET_TIER)}%`}
           </button>
         ))}
       </div>
@@ -45,25 +51,32 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
           const t = TIERS[tier];
           const price = t.price[interval];
           const isCurrent = current === tier;
-          const featured = tier === "plus";
+          const featured = tier === TARGET_TIER;
           return (
-            <div key={tier} className={`rounded-2xl bg-card p-5 ${featured ? "ring-2 ring-accent" : ""}`}>
+            <div key={tier} className={`relative rounded-2xl bg-card p-5 ${featured ? "ring-2 ring-accent shadow-[0_18px_36px_-24px_var(--shadow)]" : "opacity-95"}`}>
+              {featured && (
+                <span className="dymo absolute -top-3 left-5" data-tone="red">
+                  Most loved
+                </span>
+              )}
               <div className="flex items-baseline justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-display text-2xl">{t.name}</h3>
                   <p className="font-hand text-sm leading-normal text-muted">{t.blurb}</p>
                 </div>
-                <p className="text-right">
+                <p className="shrink-0 text-right">
                   <span className="block text-xl font-medium">
                     {formatUsd(price)}
                     <span className="text-sm font-normal text-muted">/{interval === "month" ? "mo" : "yr"}</span>
                   </span>
-                  {interval === "year" && <span className="whitespace-nowrap text-sm text-muted">{formatUsd(Math.round(price / 12))} a month</span>}
+                  <span className="whitespace-nowrap text-sm text-muted">
+                    {featured ? `about ${perDay(price, interval)}¢ a day` : interval === "year" ? `${formatUsd(Math.round(price / 12))} a month` : ""}
+                  </span>
                 </p>
               </div>
               <ul className="mt-4 space-y-2">
-                {perks(tier).map((perk) => (
-                  <li key={perk} className="flex gap-2 text-[0.95rem]">
+                {perks(tier).map((perk, k) => (
+                  <li key={perk} className={`flex gap-2 text-[0.95rem] ${featured && k === 0 ? "font-medium" : ""}`}>
                     <Check size={18} weight="bold" className="mt-0.5 shrink-0 text-accent" /> {perk}
                   </li>
                 ))}
@@ -79,7 +92,7 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
           );
         })}
       </div>
-      <p className="mt-3 text-center text-sm text-muted">Cancel anytime. Your photos stay in the album if you do.</p>
+      <p className="mt-3 text-center text-sm text-muted">Cancel anytime in two taps. Your photos stay in the album if you do.</p>
     </div>
   );
 }
@@ -109,10 +122,10 @@ export function PackList({ onBuy, busy }: { onBuy: (p: Purchase) => void; busy: 
 export type SheetReason = "photos" | "hd" | "previews" | "looks";
 
 const SHEET_COPY: Record<SheetReason, { title: (name: string) => string; body: string; packs: boolean }> = {
-  photos: { title: (n) => `${n}'s album is full`, body: "Free albums hold 30 photos. Plus holds 1,000, and nothing you've added is ever removed.", packs: false },
+  photos: { title: (n) => `${n}'s album is full`, body: "Free albums hold 30 photos. Plans hold hundreds or thousands, and nothing you've added is ever removed.", packs: false },
   hd: { title: (n) => `Keep ${n} in HD`, body: "Full resolution, no watermark, ready to print or frame.", packs: true },
   previews: { title: () => "More portraits", body: "You've used your free portrait. Take a few more, or get some every month with a plan.", packs: true },
-  looks: { title: () => "Every film look", body: "Faded '70s, golden hour, sepia and silver come with Plus.", packs: false },
+  looks: { title: () => "Every film look", body: "Faded '70s, golden hour, sepia and silver come with every plan.", packs: false },
 };
 
 export function PlansSheet({ reason, name, current, onBuy, busy, onClose }: {
@@ -201,9 +214,12 @@ type YouProps = {
   busy: Busy;
   onProfile: (patch: { petName?: string; kind?: PetKind }) => void;
   onDeleteData: () => Promise<void>;
+  onManage: () => void;
+  memorial: boolean;
+  onMemorial: (on: boolean) => void;
 };
 
-export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, onDeleteData }: YouProps) {
+export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, onDeleteData, onManage, memorial, onMemorial }: YouProps) {
   const [copied, setCopied] = useState(false);
   const [name, setName] = useState(petName);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -240,6 +256,12 @@ export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, 
           </span>
         </div>
       </div>
+
+      {tier !== "free" && (
+        <button onClick={onManage} className="mt-3 min-h-11 w-full rounded-full border border-ink/20 text-sm">
+          Manage or cancel your plan
+        </button>
+      )}
 
       <h2 className="font-display mt-10 text-xl italic">Plans</h2>
       <div className="mt-3">
@@ -285,6 +307,14 @@ export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, 
           </button>
         ))}
       </div>
+
+      <label className="mt-4 flex min-h-12 items-center justify-between gap-4">
+        <span>
+          <span className="block">In loving memory</span>
+          <span className="text-sm text-muted">For a pet who has passed: no streaks, gentler words.</span>
+        </span>
+        <input type="checkbox" checked={memorial} onChange={(e) => onMemorial(e.target.checked)} className="h-5 w-5 shrink-0 accent-[var(--accent)]" />
+      </label>
 
       {link && (
         <>

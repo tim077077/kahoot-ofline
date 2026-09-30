@@ -76,6 +76,8 @@ async function handleEvent(store: Store, event: Stripe.Event) {
     if (!plan || (session.payment_status !== "paid" && session.payment_status !== "no_payment_required")) return;
     const length = plan.interval === "year" ? 366 * DAY_MS : 31 * DAY_MS;
     const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+    const customer = typeof session.customer === "string" ? session.customer : session.customer?.id;
+    if (customer) await store.set(`customer:${accountId}`, customer);
     await activatePlan(store, accountId, { ...plan, until: Date.now() + length + GRACE_MS, subscriptionId });
     await track(store, "purchase");
     if (email) await setAccountEmail(store, accountId, email);

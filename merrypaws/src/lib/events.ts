@@ -13,6 +13,13 @@ export const CLIENT_EVENTS = [
   "highlight_opened",
   "slideshow_played",
   "plans_shown",
+  "daily_done",
+  "streak_milestone",
+  "memory_opened",
+  "pack_invite_sent",
+  "pack_opened",
+  "reaction",
+  "story_share",
   "photo_step",
   "photo_rejected",
   "photo_used_anyway",
@@ -24,7 +31,7 @@ export const CLIENT_EVENTS = [
   "report",
 ] as const;
 
-export const SERVER_EVENTS = ["generation_ok", "generation_failed", "guest_refused", "purchase"] as const;
+export const SERVER_EVENTS = ["generation_ok", "generation_failed", "guest_refused", "purchase", "pack_joined"] as const;
 
 export type EventName = (typeof CLIENT_EVENTS)[number] | (typeof SERVER_EVENTS)[number];
 

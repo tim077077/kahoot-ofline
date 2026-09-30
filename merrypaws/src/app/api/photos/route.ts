@@ -2,7 +2,8 @@ import { LIMITS } from "@/lib/config";
 import { accountIdForToken } from "@/lib/credits";
 import { bearerToken, objectsOr503, storeOr503 } from "@/lib/http";
 import { addPhoto, listPhotos, withUrls } from "@/lib/photos";
-import { currentTier } from "@/lib/plans";
+import { isValidDay, markDay } from "@/lib/daily";
+import { currentTier, isAlbumFull } from "@/lib/plans";
 
 async function context(request: Request) {
   const store = storeOr503();
@@ -49,5 +50,11 @@ export async function POST(request: Request) {
     h: Number(form?.get("h")),
   });
   if (!result.ok) return Response.json({ error: result.error }, { status: 402 });
-  return Response.json({ photo: await withUrls(ctx.objects, ctx.accountId, result.photo) });
+  // Any photo added today counts for today's roll (the first one is the one
+  // the pack sees).
+  const day = form?.get("day");
+  const daily = isValidDay(day)
+    ? await markDay(ctx.store, ctx.accountId, day, { kind: "photo", photoId: result.photo.id }, await isAlbumFull(ctx.store, ctx.accountId))
+    : null;
+  return Response.json({ photo: await withUrls(ctx.objects, ctx.accountId, result.photo), daily });
 }

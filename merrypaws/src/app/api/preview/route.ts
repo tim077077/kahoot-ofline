@@ -1,8 +1,9 @@
 import { LIMITS } from "@/lib/config";
 import { accountIdForToken, releaseFreeTrial, takeFreeTrial, takeMinuteSlot } from "@/lib/credits";
+import { isValidDay, markDay } from "@/lib/daily";
 import { track } from "@/lib/events";
 import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
-import { refreshAllowance, releasePreview, takePreview, type PreviewSource } from "@/lib/plans";
+import { isAlbumFull, refreshAllowance, releasePreview, takePreview, type PreviewSource } from "@/lib/plans";
 import { savePortrait } from "@/lib/portraits";
 import { fetchImageBytes, generateImage } from "@/lib/stager";
 import { buildPortraitPrompt, findStyle } from "@/lib/styles";
@@ -55,11 +56,16 @@ export async function POST(request: Request) {
     const preview = await makePreview(await fetchImageBytes(url));
     const portrait = await savePortrait(store, url, style.id);
     await track(store, "generation_ok");
+    // A portrait keeps the daily roll going too.
+    const day = form?.get("day");
+    const daily =
+      accountId && isValidDay(day) ? await markDay(store, accountId, day, { kind: "portrait" }, await isAlbumFull(store, accountId)) : null;
     return Response.json({
       id: portrait.id,
       style: style.id,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
       mock,
+      daily,
     });
   } catch (err) {
     // One line per failure with a reason, so the logs show what breaks.

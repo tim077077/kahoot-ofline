@@ -5,7 +5,11 @@ export const MASCOT = "Biscuit";
 
 // Membership: what holds the album. Everyone can keep an album; the plan sets
 // how many photos it holds and what comes with it every month.
-export type Tier = "free" | "plus" | "pro";
+//
+// Three paid plans, shown most expensive first (the anchor), with Plus in the
+// middle, highlighted and preselected. Plus is the one we want people on: a
+// portrait every day for less than a coffee a month. See PSYCHOLOGY.md.
+export type Tier = "free" | "starter" | "plus" | "pro";
 export type Interval = "month" | "year";
 
 export type TierInfo = {
@@ -19,6 +23,8 @@ export type TierInfo = {
   // over; HD portrait credits do.
   previewsPerMonth: number;
   hdPerMonth: number;
+  // Streak freezes granted each month (they cover a missed day).
+  freezesPerMonth: number;
   // Every film look, or only the two free ones.
   allLooks: boolean;
   // USD cents. 0 for free.
@@ -33,32 +39,48 @@ export const TIERS: Record<Tier, TierInfo> = {
     photos: 30,
     previewsPerMonth: 0,
     hdPerMonth: 0,
+    freezesPerMonth: 1,
     allLooks: false,
     price: { month: 0, year: 0 },
+  },
+  starter: {
+    id: "starter",
+    name: "Starter",
+    blurb: "A bigger album",
+    photos: 300,
+    previewsPerMonth: 10,
+    hdPerMonth: 5,
+    freezesPerMonth: 2,
+    allLooks: true,
+    price: { month: 299, year: 1999 },
   },
   plus: {
     id: "plus",
     name: "Plus",
-    blurb: "Their whole life, kept",
-    photos: 1000,
-    previewsPerMonth: 20,
-    hdPerMonth: 2,
+    blurb: "A portrait every day",
+    photos: 2000,
+    previewsPerMonth: 45,
+    hdPerMonth: 30,
+    freezesPerMonth: 4,
     allLooks: true,
-    price: { month: 299, year: 1999 },
+    price: { month: 399, year: 2999 },
   },
   pro: {
     id: "pro",
     name: "Pro",
-    blurb: "For the photo-every-day kind of love",
+    blurb: "For the photo-every-hour kind of love",
     photos: 10000,
-    previewsPerMonth: 40,
-    hdPerMonth: 6,
+    previewsPerMonth: 100,
+    hdPerMonth: 60,
+    freezesPerMonth: 4,
     allLooks: true,
-    price: { month: 599, year: 3999 },
+    price: { month: 799, year: 6999 },
   },
 };
 
-export const PAID_TIERS: Tier[] = ["plus", "pro"];
+// Display order: the anchor first, the target in the middle.
+export const PAID_TIERS: Tier[] = ["pro", "plus", "starter"];
+export const TARGET_TIER: Tier = "plus";
 
 // Extra portrait credits, on top of any plan. One credit keeps one portrait
 // in HD and adds a few previews to find the right one.

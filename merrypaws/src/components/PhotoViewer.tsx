@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Plus, ShareNetwork, Trash, X } from "@phosphor-icons/react";
+import { Heart, InstagramLogo, Plus, ShareNetwork, Trash, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Print } from "@/components/Vintage";
 import { ACTIVITIES, activityFor, MAX_TAGS } from "@/lib/activities";
@@ -17,11 +17,12 @@ type Props = {
   onNavigate: (id: string) => void;
   onUpdate: (id: string, patch: Partial<Pick<Photo, "tags" | "caption" | "favorite">>) => void;
   onDelete: (id: string) => void;
+  onStory: (photo: Photo) => void;
 };
 
 // One photo from the album: the print, what's written on the back, and which
 // highlights it belongs to.
-export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate, onUpdate, onDelete }: Props) {
+export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate, onUpdate, onDelete, onStory }: Props) {
   const index = photos.findIndex((p) => p.id === openId);
   const photo = photos[index];
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -116,6 +117,12 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
         </div>
 
         <div className="px-6 pt-6">
+          <button
+            onClick={() => onStory(photo)}
+            className="mb-5 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink active:scale-[0.98]"
+          >
+            <InstagramLogo size={20} /> Share to Instagram Story
+          </button>
           <label htmlFor="caption" className="sr-only">
             Caption
           </label>

@@ -1,11 +1,11 @@
 "use client";
 
-import { FilmStrip, Pause, Play, ShareNetwork, X } from "@phosphor-icons/react";
+import { FilmStrip, InstagramLogo, Pause, Play, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Polaroid, Print, Tape } from "@/components/Vintage";
 import { dateStamp, track, type Photo } from "@/lib/client";
 import { findLook, type LookId } from "@/lib/looks";
-import { makeCollageCard, shareOrSave } from "@/lib/share";
+import { makeCollageCard, shareToInstagramStory } from "@/lib/share";
 
 export type Highlight = { id: string; label: string; caption: string; photos: Photo[] };
 
@@ -46,8 +46,8 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
         photos.slice(0, 5).map((p) => ({ src: p.full, date: p.takenAt })),
         { title: highlight.label, name: petName, filter: findLook(look).filter },
       );
-      const outcome = await shareOrSave(blob, `${highlight.label.toLowerCase().replace(/\W+/g, "-")}.jpg`, `${petName}: ${highlight.label}`);
-      if (outcome !== "cancelled") track("share");
+      const outcome = await shareToInstagramStory(blob, `${petName}: ${highlight.label}`);
+      if (outcome !== "cancelled") track("story_share");
     } catch {
       // Nothing shared; the page stays as it is.
     } finally {
@@ -64,7 +64,7 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
           </button>
           <div className="flex gap-1">
             <button onClick={() => void share()} disabled={sharing} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm disabled:opacity-50">
-              <ShareNetwork size={18} /> {sharing ? "Making the page" : "Share"}
+              <InstagramLogo size={18} /> {sharing ? "Making the page" : "Story"}
             </button>
             <button onClick={() => setPlaying(true)} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-medium text-paper">
               <FilmStrip size={18} /> Play

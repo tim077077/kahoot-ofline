@@ -1,11 +1,13 @@
 "use client";
 
-import { Books, FrameCorners, IdentificationCard, Ticket } from "@phosphor-icons/react";
+import { Books, FrameCorners, IdentificationCard, Ticket, UsersThree } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AddPhotosSheet } from "@/components/AddPhotos";
 import { Album, type Pending } from "@/components/Album";
 import { Collage, type Highlight } from "@/components/Collage";
+import { DailyCard, findMemory, MemoryCard, MilestoneSheet } from "@/components/Daily";
 import { Onboarding } from "@/components/Onboarding";
+import { PackTab } from "@/components/Pack";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { LooksSheet, PlansSheet, YouTab, type Busy, type Purchase, type SheetReason } from "@/components/Plans";
 import { ShareSheet } from "@/components/ShareSheet";
@@ -14,6 +16,8 @@ import { Viewer, type ReportReason } from "@/components/Viewer";
 import { BRAND, TIERS } from "@/lib/config";
 import {
   api,
+  jsonApi,
+  localDay,
   patchPhoto,
   postPreview,
   preparePhoto,
@@ -23,15 +27,22 @@ import {
   track,
   uploadPhoto,
   type Account,
+  type Daily,
+  type DailyResult,
+  type PackCard,
   type Photo,
   type Portrait,
   type Profile,
+  type Reaction,
   type UploadPhase,
 } from "@/lib/client";
+import { makeCollageCard, makePhotoStoryCard, shareToInstagramStory } from "@/lib/share";
 import { findLook, type LookId } from "@/lib/looks";
 import type { StyleId } from "@/lib/styles";
 
-type Tab = "album" | "studio" | "you";
+type Tab = "album" | "pack" | "studio" | "you";
+
+const INVITE_KEY = "pp_invite";
 
 const ERRORS: Record<string, string> = {
   limit_reached: "You've used your free portrait. Credits let you make more, and keep the ones you love in HD.",
@@ -68,8 +79,14 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
   const [picked, setPicked] = useState<File[] | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [daily, setDaily] = useState<Daily | null>(null);
+  const [pack, setPack] = useState<{ code: string; cards: PackCard[] } | null>(null);
+  const [milestone, setMilestone] = useState<number | null>(null);
+  const [dailyBusy, setDailyBusy] = useState(false);
+  const [invitedBy, setInvitedBy] = useState<string | null>(null);
   const tokenRef = useRef<string | null>(null);
   const addInput = useRef<HTMLInputElement>(null);
+  const dailyInput = useRef<HTMLInputElement>(null);
 
   const updateReel = useCallback((fn: (prev: Portrait[]) => Portrait[]) => {
     setReel((prev) => {
@@ -108,17 +125,65 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     setPhotos(((await res.json()) as { photos: Photo[] }).photos);
   }, []);
 
-  // Restore this device's state, pick up an access link (#k=...) and finish a
-  // purchase after returning from checkout.
+  const loadDaily = useCallback(async (tok: string | null) => {
+    if (!tok) return;
+    const res = await api(`/api/daily?day=${localDay()}`, {}, tok).catch(() => null);
+    if (res?.ok) setDaily((await res.json()) as Daily);
+  }, []);
+
+  const loadPack = useCallback(async (tok: string | null) => {
+    if (!tok) return;
+    const res = await api(`/api/pack?day=${localDay()}`, {}, tok).catch(() => null);
+    if (res?.ok) setPack((await res.json()) as { code: string; cards: PackCard[] });
+  }, []);
+
+  const syncProfile = useCallback((tok: string | null, p: Profile | null) => {
+    if (tok && p) void jsonApi("/api/profile", "PUT", { petName: p.petName, kind: p.kind ?? "dog", memorial: Boolean(p.memorial) }, tok).catch(() => {});
+  }, []);
+
+  // A pending invite (from a ?pack= link) is used as soon as there's an account.
+  const joinInvite = useCallback(
+    async (tok: string | null) => {
+      let code: string | null = null;
+      try {
+        code = localStorage.getItem(INVITE_KEY);
+      } catch {
+        code = null;
+      }
+      if (!tok || !code) return;
+      const res = await jsonApi("/api/pack/join", "POST", { code }, tok).catch(() => null);
+      try {
+        localStorage.removeItem(INVITE_KEY);
+      } catch {
+        // Storage blocked: the invite simply isn't retried.
+      }
+      const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
+      if (data?.result === "joined") setToast("You joined a friend's pack. Say hi with a paw.");
+      await loadPack(tok);
+    },
+    [loadPack],
+  );
+
+  // Restore this device's state, pick up an access link (#k=...) or a pack
+  // invite (?pack=...), and finish a purchase after returning from checkout.
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     if (hash.get("k")) storage.setToken(hash.get("k"));
     const query = new URLSearchParams(window.location.search);
     const paid = query.get("paid");
     const paidFor = paid ? query.get("portrait") : null;
+    const invite = query.get("pack");
+    if (invite) {
+      try {
+        localStorage.setItem(INVITE_KEY, invite.toUpperCase());
+      } catch {
+        // Private mode: the friend can still enter the code by hand.
+      }
+    }
     if (query.toString() || window.location.hash) history.replaceState(null, "", window.location.pathname);
 
     void (async () => {
+      if (invite) setInvitedBy(invite);
       const saved = storage.profile();
       setProfile(saved);
       if (saved?.favorite) setStyle(saved.favorite);
@@ -127,7 +192,8 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       tokenRef.current = tok;
       setToken(tok);
       setReady(true);
-      await Promise.all([refresh(tok), loadPhotos(tok)]);
+      await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
+      await joinInvite(tok);
 
       if (!paid) return;
       setTab(paid === "plan" ? "album" : paidFor ? "studio" : "you");
@@ -147,7 +213,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       }
       await refresh(tok);
     })();
-  }, [refresh, loadPhotos, updateReel]);
+  }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite, updateReel]);
 
   useEffect(() => {
     if (!toast) return;
@@ -172,7 +238,85 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     const data = (await res?.json().catch(() => ({}))) as { token?: string } | undefined;
     if (!data?.token) return null;
     applyToken(data.token);
+    void joinInvite(data.token);
     return data.token;
+  }
+
+  function onDaily(result: DailyResult | undefined) {
+    if (!result?.newDay) return;
+    track("daily_done");
+    if (result.milestone && !profile?.memorial) {
+      track("streak_milestone");
+      setMilestone(result.milestone);
+    }
+  }
+
+  async function storyForPhoto(photo: Photo) {
+    try {
+      const isToday = daily?.todayEntry?.photoId === photo.id;
+      const blob = await makePhotoStoryCard(photo.full, {
+        name,
+        caption: photo.caption,
+        date: photo.takenAt,
+        filter: findLook(look).filter,
+        roll: isToday && !profile?.memorial ? daily?.count : undefined,
+      });
+      if ((await shareToInstagramStory(blob, name)) !== "cancelled") track("story_share");
+    } catch {
+      setToast("Couldn't make the story. Try again in a moment.");
+    }
+  }
+
+  async function storyForRoll(count: number) {
+    const roll = photos.filter((p) => daily?.dailyPhotoIds.includes(p.id)).slice(0, 5);
+    if (!roll.length) return;
+    try {
+      const blob = await makeCollageCard(roll.map((p) => ({ src: p.full, date: p.takenAt })), { title: `${count} days`, name, filter: findLook(look).filter });
+      if ((await shareToInstagramStory(blob, `${count} days of ${name}`)) !== "cancelled") track("story_share");
+    } catch {
+      setToast("Couldn't make the story. Try again in a moment.");
+    }
+  }
+
+  async function invite() {
+    const tok = await ensureToken();
+    if (!tok) return;
+    let code = pack?.code;
+    if (!code) {
+      const res = await api(`/api/pack?day=${localDay()}`, {}, tok).catch(() => null);
+      code = res?.ok ? ((await res.json()) as { code: string }).code : undefined;
+    }
+    if (!code) return;
+    const url = `${window.location.origin}/?pack=${code}`;
+    const text = `Join ${name === "Your pet" ? "my pet" : name}'s pack on ${BRAND}: one photo of our pets a day.`;
+    track("pack_invite_sent");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: BRAND, text, url });
+        return;
+      }
+    } catch {
+      return;
+    }
+    await navigator.clipboard?.writeText(`${text} ${url}`).catch(() => {});
+    setToast("Invite link copied. Send it to a friend.");
+  }
+
+  async function reactTo(friend: string, reaction: Reaction) {
+    if (!token || !pack) return;
+    track("reaction");
+    setPack({
+      ...pack,
+      cards: pack.cards.map((c) => {
+        if (c.id !== friend) return c;
+        const counts = { ...c.reactions.counts };
+        if (c.reactions.mine) counts[c.reactions.mine]--;
+        const mine = c.reactions.mine === reaction ? null : reaction;
+        if (mine) counts[mine]++;
+        return { ...c, reactions: { counts, mine } };
+      }),
+    });
+    await jsonApi("/api/pack/react", "POST", { friend, day: localDay(), reaction }, token).catch(() => null);
   }
 
   async function addPhotos(files: File[], tags: string[]) {
@@ -201,9 +345,10 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
         }
         try {
           const prepared = await preparePhoto(item.file);
-          const { photo, error } = await uploadPhoto(prepared, tags, tok!);
+          const { photo, error, daily: dayResult } = await uploadPhoto(prepared, tags, tok!);
           if (photo) {
             added++;
+            onDaily(dayResult);
             setPhotos((p) => [photo, ...p].sort(byTaken));
             finish(item.key, item.url);
           } else if (error === "photo_limit") {
@@ -221,7 +366,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     }
     await Promise.all([worker(), worker(), worker()]);
     if (added) track("photos_added");
-    await refresh(tok);
+    await Promise.all([refresh(tok), loadDaily(tok), loadPack(tok)]);
     if (full) openSheet("photos");
     // Failed prints stay on the page for a moment, then clear.
     setTimeout(() => setPending((p) => p.filter((x) => x.progress !== "failed")), 6000);
@@ -252,9 +397,10 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     form.append("pet", req.pet, "pet.jpg");
     if (req.owner) form.append("owner", req.owner, "owner.jpg");
     form.append("style", req.style);
+    form.append("day", localDay());
     try {
       const { status, body } = await postPreview(form, token, onPhase);
-      const data = body as { id?: string; preview?: string; mock?: boolean; error?: string };
+      const data = body as { id?: string; preview?: string; mock?: boolean; error?: string; daily?: DailyResult };
       if (status >= 400 || !data.id || !data.preview) {
         if (data.error === "limit_reached") openSheet("previews");
         return { ok: false, error: errorText(data.error), code: data.error };
@@ -273,7 +419,9 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       };
       updateReel((prev) => [portrait, ...prev]);
       if (profile) saveProfile({ ...profile, favorite: req.style });
+      onDaily(data.daily);
       void refresh(token);
+      void loadDaily(token);
       return { ok: true, portrait };
     } catch {
       return { ok: false, error: errorText() };
@@ -342,19 +490,31 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     setPhotos([]);
     setAccount(null);
     setProfile(null);
+    setDaily(null);
+    setPack(null);
     setTab("album");
+  }
+
+  async function manage() {
+    const res = token ? await jsonApi("/api/billing", "POST", {}, token).catch(() => null) : null;
+    const data = (await res?.json().catch(() => ({}))) as { url?: string } | undefined;
+    if (data?.url) window.location.assign(data.url);
+    else setToast("Manage it in your App Store or Google Play subscriptions, or reply to your receipt email.");
   }
 
   if (!ready) return <div className="min-h-[100dvh]" />;
   if (!profile?.onboarded) {
     return (
       <Onboarding
+        invitedBy={invitedBy}
         onPhotos={(files) => void addPhotos(files, [])}
         uploaded={batch.done}
         total={batch.total}
         onDone={(p, next) => {
           track("onboarding_done");
-          saveProfile({ petName: p.petName, kind: p.kind, favorite: "royal-court", onboarded: true, look: "summer" });
+          const saved: Profile = { petName: p.petName, kind: p.kind, memorial: p.memorial, favorite: "royal-court", onboarded: true, look: "summer" };
+          saveProfile(saved);
+          syncProfile(tokenRef.current, saved);
           setTab(next === "portrait" ? "studio" : "album");
         }}
       />
@@ -362,8 +522,12 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
   }
 
   const name = starName(profile.petName);
+  const today = localDay();
+  const memory = findMemory(photos, today);
+  const todayPhoto = photos.find((p) => p.id === daily?.todayEntry?.photoId) ?? null;
   const tabs: { id: Tab; label: string; Icon: typeof Books }[] = [
     { id: "album", label: "Album", Icon: Books },
+    { id: "pack", label: "Pack", Icon: UsersThree },
     { id: "studio", label: "Portraits", Icon: FrameCorners },
     { id: "you", label: "Membership", Icon: IdentificationCard },
   ];
@@ -395,6 +559,66 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
             }}
             onOpenPortraits={() => reel[0] && setOpenPortrait(reel[0].id)}
             onPlans={() => setTab("you")}
+            dailyPhotoIds={daily?.dailyPhotoIds}
+            top={
+              <>
+                {!profile.memorial && photos.length > 0 && (
+                  <DailyCard
+                    name={name}
+                    daily={daily}
+                    today={today}
+                    todayPhoto={todayPhoto}
+                    look={look}
+                    busy={dailyBusy}
+                    onAdd={() => dailyInput.current?.click()}
+                    onStory={() => todayPhoto && void storyForPhoto(todayPhoto)}
+                    onPack={() => setTab("pack")}
+                    onMakeRoom={() => openSheet("photos")}
+                  />
+                )}
+                {memory && (
+                  <MemoryCard
+                    memory={memory}
+                    look={look}
+                    onOpen={() => {
+                      track("memory_opened");
+                      setOpenPhoto(memory.photo.id);
+                    }}
+                  />
+                )}
+              </>
+            }
+          />
+        )}
+        {tab === "pack" && (
+          <PackTab
+            cards={pack?.cards ?? null}
+            code={pack?.code ?? null}
+            look={look}
+            name={name}
+            onInvite={() => void invite()}
+            onJoin={async (code) => {
+              const tok = await ensureToken();
+              if (!tok) return "Couldn't reach the server.";
+              const res = await jsonApi("/api/pack/join", "POST", { code }, tok).catch(() => null);
+              const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
+              await loadPack(tok);
+              return (
+                {
+                  joined: "You're in each other's pack now.",
+                  already: "You're already in this pack.",
+                  self: "That's your own code.",
+                  full: "That pack is full.",
+                }[data?.result ?? ""] ?? "That code didn't match a pack."
+              );
+            }}
+            onReact={(friend, r) => void reactTo(friend, r)}
+            onToggleShare={async (shared) => {
+              if (!token) return;
+              await jsonApi("/api/daily", "PATCH", { day: today, shared }, token).catch(() => null);
+              await loadPack(token);
+            }}
+            onAddToday={() => dailyInput.current?.click()}
           />
         )}
         {/* Kept mounted so the chosen photo survives a trip to another tab. */}
@@ -425,10 +649,19 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
             busy={busy}
             onBuy={(p) => void buy(p)}
             onProfile={(patch) => {
-              saveProfile({ ...profile, ...patch });
+              const next = { ...profile, ...patch };
+              saveProfile(next);
+              syncProfile(token, next);
               if (patch.petName !== undefined) setToast("Saved.");
             }}
             onDeleteData={deleteData}
+            onManage={() => void manage()}
+            memorial={Boolean(profile.memorial)}
+            onMemorial={(memorial) => {
+              const next = { ...profile, memorial };
+              saveProfile(next);
+              syncProfile(token, next);
+            }}
           />
         )}
       </main>
@@ -447,12 +680,31 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
         }}
       />
 
+      <input
+        ref={dailyInput}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        data-testid="daily-input"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          setDailyBusy(true);
+          await addPhotos([file], []);
+          setDailyBusy(false);
+        }}
+      />
+
       <nav className="paper fixed inset-x-0 bottom-0 z-30 border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="Sections">
-        <div className="mx-auto grid max-w-lg grid-cols-3">
+        <div className="mx-auto grid max-w-lg grid-cols-4">
           {tabs.map(({ id, label, Icon }) => (
             <button
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => {
+                if (id === "pack") track("pack_opened");
+                setTab(id);
+              }}
               aria-current={tab === id ? "page" : undefined}
               className={`flex min-h-15 flex-col items-center justify-center gap-0.5 text-xs ${tab === id ? "font-medium text-accent" : "text-muted"}`}
             >
@@ -503,6 +755,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
             void deletePhoto(id);
             if (highlight) setHighlight({ ...highlight, photos: highlight.photos.filter((p) => p.id !== id) });
           }}
+          onStory={(p) => void storyForPhoto(p)}
         />
       )}
 
@@ -556,6 +809,23 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       )}
 
       {sharing && <ShareSheet portrait={sharing} onClose={() => setSharing(null)} />}
+
+      {milestone && (
+        <MilestoneSheet
+          count={milestone}
+          name={name}
+          photos={photos.filter((p) => daily?.dailyPhotoIds.includes(p.id))}
+          look={look}
+          onClose={() => setMilestone(null)}
+          onStory={() => void storyForRoll(milestone)}
+          onSee={() => {
+            const roll = photos.filter((p) => daily?.dailyPhotoIds.includes(p.id));
+            setMilestone(null);
+            setTab("album");
+            if (roll.length) setHighlight({ id: "roll", label: "Photo a day", caption: "One a day, every day", photos: roll });
+          }}
+        />
+      )}
 
       {toast && (
         <div role="status" className="rise fixed inset-x-4 bottom-24 z-[60] mx-auto max-w-md rounded-2xl bg-ink px-5 py-3.5 text-paper shadow-lg">

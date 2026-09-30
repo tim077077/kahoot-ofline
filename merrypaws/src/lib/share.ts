@@ -100,6 +100,115 @@ export async function makeShareCard(src: string, text: CardText, format: ShareFo
   );
 }
 
+// A single photo as an Instagram story: a taped print on cream paper with its
+// date stamp and caption. The top and bottom 250px stay clear for Instagram's
+// own buttons.
+export async function makePhotoStoryCard(
+  src: string,
+  text: { name: string; caption?: string; date: string; filter: string; roll?: number },
+): Promise<Blob> {
+  const display = family("--font-bodoni", "serif");
+  const script = family("--font-pinyon", "cursive");
+  const hand = family("--font-hand", "cursive");
+  const sans = family("--font-jost", "sans-serif");
+  await Promise.all([
+    document.fonts.load(`110px ${script}`),
+    document.fonts.load(`italic 38px ${display}`),
+    document.fonts.load(`40px ${hand}`),
+    document.fonts.load(`600 30px ${sans}`),
+  ]).catch(() => {});
+  const img = await loadImage(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  // The print, a little crooked, taped at the top.
+  const w = 800;
+  const h = Math.min(1000, Math.round((w * img.height) / img.width));
+  const pad = 30;
+  ctx.save();
+  ctx.translate(540, 300 + h / 2);
+  ctx.rotate((-2 * Math.PI) / 180);
+  ctx.shadowColor = "rgba(58, 34, 20, 0.3)";
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 18;
+  ctx.fillStyle = "#fbf8f2";
+  ctx.fillRect(-w / 2 - pad, -h / 2 - pad, w + pad * 2, h + pad * 2 + 90);
+  ctx.shadowColor = "transparent";
+  ctx.shadowOffsetY = 0;
+  const scale = Math.max(w / img.width, h / img.height);
+  const sw = w / scale;
+  const sh = h / scale;
+  ctx.filter = text.filter;
+  ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, -w / 2, -h / 2, w, h);
+  ctx.filter = "none";
+  const d = new Date(text.date);
+  ctx.font = `600 30px ${sans}`;
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#ff9a3c";
+  ctx.shadowColor = "rgba(255, 110, 20, 0.8)";
+  ctx.shadowBlur = 8;
+  ctx.fillText(`'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`, w / 2 - 22, h / 2 - 22);
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  if (text.caption) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#3a2a20";
+    ctx.font = `40px ${hand}`;
+    ctx.fillText(text.caption.slice(0, 34), 0, h / 2 + 70);
+  }
+  ctx.fillStyle = "rgba(226, 208, 168, 0.88)";
+  ctx.rotate((5 * Math.PI) / 180);
+  ctx.fillRect(-90, -h / 2 - pad - 26, 180, 52);
+  ctx.restore();
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = INK;
+  ctx.font = `120px ${script}`;
+  const nameY = Math.min(1540, 300 + h + 250);
+  ctx.fillText(text.name, 540, nameY);
+  if (text.roll) {
+    ctx.font = `italic 38px ${display}`;
+    ctx.fillStyle = MUTED;
+    ctx.fillText(`day ${text.roll} of the photo-a-day roll`, 540, nameY + 64);
+  }
+  ctx.font = `500 26px ${sans}`;
+  ctx.fillStyle = MUTED;
+  if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "4px";
+  ctx.fillText(`MADE WITH ${BRAND.toUpperCase()}`, 540, 1690);
+
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", 0.92),
+  );
+}
+
+type StoriesBridge = { share: (opts: { backgroundImage: string; appId?: string }) => Promise<unknown> };
+
+// Straight into Instagram Stories. In the store app a small native plugin
+// (see docs/INSTAGRAM.md) opens Instagram with the image already on the
+// canvas. On the web Instagram allows no such link, so the share sheet opens
+// with the image and Instagram is one tap away.
+export async function shareToInstagramStory(blob: Blob, title: string) {
+  const bridge = (globalThis as unknown as { Capacitor?: { Plugins?: { InstagramStories?: StoriesBridge } } }).Capacitor?.Plugins?.InstagramStories;
+  if (bridge) {
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsDataURL(blob);
+    });
+    try {
+      await bridge.share({ backgroundImage: dataUrl, appId: process.env.NEXT_PUBLIC_META_APP_ID });
+      return "shared" as const;
+    } catch {
+      // Instagram not installed: fall back to the share sheet.
+    }
+  }
+  return shareOrSave(blob, "story.jpg", title);
+}
+
 // Native share sheet with the file when the platform supports it, otherwise
 // a download.
 export async function shareOrSave(blob: Blob, filename: string, title: string) {

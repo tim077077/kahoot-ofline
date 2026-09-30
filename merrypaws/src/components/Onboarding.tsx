@@ -15,16 +15,18 @@ type Props = {
   onPhotos: (files: File[], petName: string) => void;
   uploaded: number;
   total: number;
-  onDone: (profile: { petName: string; kind: PetKind }, next: "album" | "portrait") => void;
+  onDone: (profile: { petName: string; kind: PetKind; memorial: boolean }, next: "album" | "portrait") => void;
+  invitedBy?: string | null;
 };
 
 // Four short scenes: the promise, the star, their photos, and the first page
 // of the album made from them. The last scene is the aha: their own dog, in a
 // vintage album, before any account, form or price.
-export function Onboarding({ onPhotos, uploaded, total, onDone }: Props) {
+export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy }: Props) {
   const [step, setStep] = useState<Step>(0);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<PetKind>("dog");
+  const [memorial, setMemorial] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
 
@@ -32,7 +34,7 @@ export function Onboarding({ onPhotos, uploaded, total, onDone }: Props) {
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
 
   const star = starName(name);
-  const done = (next: "album" | "portrait") => onDone({ petName: name.trim(), kind }, next);
+  const done = (next: "album" | "portrait") => onDone({ petName: name.trim(), kind, memorial }, next);
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
@@ -61,6 +63,7 @@ export function Onboarding({ onPhotos, uploaded, total, onDone }: Props) {
           <p className="mx-auto mt-3 max-w-[31ch] text-center text-muted">
             Keep their photos like prints in an old family album, sorted into little collages of the moments you love.
           </p>
+          {invitedBy && <p className="font-hand mt-3 text-center text-lg leading-normal">a friend invited you to their pack</p>}
           <Footer>
             <Primary onClick={() => setStep(1)}>Begin</Primary>
           </Footer>
@@ -100,6 +103,10 @@ export function Onboarding({ onPhotos, uploaded, total, onDone }: Props) {
               </button>
             ))}
           </div>
+          <label className="mx-auto mt-6 flex max-w-xs items-center justify-center gap-2 text-sm text-muted">
+            <input type="checkbox" checked={memorial} onChange={(e) => setMemorial(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+            This album is in loving memory
+          </label>
           <Footer>
             <Primary onClick={() => setStep(2)}>{name.trim() ? `Continue with ${name.trim()}` : "Continue"}</Primary>
           </Footer>
@@ -141,11 +148,16 @@ export function Onboarding({ onPhotos, uploaded, total, onDone }: Props) {
       {step === 3 && (
         <>
           <p className="font-script mt-4 text-center text-[3rem] leading-[1.1]">{star}</p>
-          <p className="font-hand text-center text-lg leading-normal text-muted">chapter one</p>
+          <p className="font-hand text-center text-lg leading-normal text-muted">{memorial ? "in loving memory" : "chapter one"}</p>
           <FirstPage previews={previews} />
           <p className="relative z-10 mt-4 text-center text-sm text-muted" aria-live="polite">
             {uploaded < total ? `Putting them in the album, ${uploaded} of ${total}` : `All ${total} are in ${star === "Your pet" ? "the" : `${star}'s`} album`}
           </p>
+          {!memorial && uploaded >= total && total > 0 && (
+            <p className="rise mt-2 text-center">
+              <span className="dymo" data-tone="red">Day 1 of the photo-a-day roll</span>
+            </p>
+          )}
           <Footer>
             <Primary onClick={() => done("album")}>Open {star === "Your pet" ? "the" : `${star}'s`} album</Primary>
             <button onClick={() => done("portrait")} className="mt-2 min-h-12 w-full text-muted underline underline-offset-4">

@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createAccount, getCredits } from "@/lib/credits";
 import { isUnlocked, savePortrait } from "@/lib/portraits";
+import { TIERS } from "@/lib/config";
 import { currentTier, getPlan, previewsLeft, refreshAllowance } from "@/lib/plans";
 import { MemoryStore } from "@/lib/store";
 import { POST } from "./route";
@@ -83,11 +84,11 @@ describe("stripe webhook", () => {
     expect(await currentTier(store, account.id)).toBe("plus");
     expect((await getPlan(store, account.id))?.subscriptionId).toBe("sub_123");
 
-    // The first request of the cycle refills 20 previews and 2 HD credits, once.
+    // The first request of the cycle refills the plan's previews and HD credits, once.
     expect(await refreshAllowance(store, account.id)).toBe(true);
     expect(await refreshAllowance(store, account.id)).toBe(false);
-    expect(await previewsLeft(store, account.id)).toBe(20);
-    expect(await getCredits(store, account.id)).toBe(2);
+    expect(await previewsLeft(store, account.id)).toBe(TIERS.plus.previewsPerMonth);
+    expect(await getCredits(store, account.id)).toBe(TIERS.plus.hdPerMonth);
 
     const periodEnd = Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60;
     await POST(
@@ -117,6 +118,6 @@ describe("stripe webhook", () => {
     );
     expect(await currentTier(store, account.id)).toBe("free");
     // Credits already granted stay with the member.
-    expect(await getCredits(store, account.id)).toBe(2);
+    expect(await getCredits(store, account.id)).toBe(TIERS.plus.hdPerMonth);
   });
 });

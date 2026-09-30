@@ -19,7 +19,39 @@ const REEL_KEY = "pp_reel";
 const MAX_REEL = 40;
 
 export type PetKind = "dog" | "cat" | "other";
-export type Profile = { petName: string; kind?: PetKind; favorite: StyleId; onboarded: boolean; look?: LookId };
+export type Profile = {
+  petName: string;
+  kind?: PetKind;
+  favorite: StyleId;
+  onboarded: boolean;
+  look?: LookId;
+  // An album for a pet who has passed: no streaks, gentler words.
+  memorial?: boolean;
+};
+
+export type DayCell = { day: string; state: "done" | "frozen" | "paused" | "empty" };
+export type Daily = {
+  count: number;
+  best: number;
+  doneToday: boolean;
+  paused: boolean;
+  freezes: number;
+  outcome: "none" | "paused" | "frozen" | "broken";
+  days: DayCell[];
+  dailyPhotoIds: string[];
+  todayEntry: { kind: "photo" | "portrait"; photoId?: string; shared: boolean } | null;
+};
+export type DailyResult = { count: number; best: number; milestone: number | null; newDay: boolean } | null;
+
+export type Reaction = "paw" | "heart" | "laugh";
+export type PackCard = {
+  id: string;
+  me: boolean;
+  profile: { petName: string; kind: PetKind; memorial: boolean };
+  streak: number;
+  today: { thumb: string; full: string; caption: string; shared: boolean } | null;
+  reactions: { counts: Record<Reaction, number>; mine: Reaction | null };
+};
 
 // What the server says about this member.
 export type Account = {
@@ -170,11 +202,17 @@ export async function preparePhoto(file: File) {
   return out;
 }
 
+// The phone's own calendar day: streaks follow the member's midnight.
+export function localDay(date = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 export async function uploadPhoto(
   prepared: Awaited<ReturnType<typeof preparePhoto>>,
   tags: string[],
   token: string,
-): Promise<{ photo?: Photo; error?: string }> {
+): Promise<{ photo?: Photo; error?: string; daily?: DailyResult }> {
   const form = new FormData();
   form.append("image", prepared.image, "photo.jpg");
   form.append("thumb", prepared.thumb, "thumb.jpg");
@@ -182,10 +220,11 @@ export async function uploadPhoto(
   form.append("w", String(prepared.w));
   form.append("h", String(prepared.h));
   form.append("tags", JSON.stringify(tags));
+  form.append("day", localDay());
   const res = await api("/api/photos", { method: "POST", body: form }, token).catch(() => null);
   if (!res) return { error: "network" };
-  const data = (await res.json().catch(() => ({}))) as { photo?: Photo; error?: string };
-  return res.ok ? { photo: data.photo } : { error: data.error ?? "generic" };
+  const data = (await res.json().catch(() => ({}))) as { photo?: Photo; error?: string; daily?: DailyResult };
+  return res.ok ? { photo: data.photo, daily: data.daily } : { error: data.error ?? "generic" };
 }
 
 export async function patchPhoto(id: string, patch: Partial<Pick<Photo, "tags" | "caption" | "favorite">>, token: string) {
@@ -203,4 +242,8 @@ export async function removePhoto(id: string, token: string) {
 export function dateStamp(iso: string) {
   const d = new Date(iso);
   return `'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`;
+}
+
+export function jsonApi(path: string, method: string, body: unknown, token: string | null) {
+  return api(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, token);
 }

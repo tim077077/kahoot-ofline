@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { getObjects, ObjectsNotConfiguredError, type ObjectStore } from "./objects";
 import { getStore, StoreNotConfiguredError, type Store } from "./store";
 
@@ -37,4 +38,17 @@ export function objectsOr503(): ObjectStore | Response {
     if (err instanceof ObjectsNotConfiguredError) return Response.json({ error: "not_configured" }, { status: 503 });
     throw err;
   }
+}
+
+// The store plus the signed-in account, or the error response to return.
+export async function memberOr401(request: Request): Promise<{ store: Store; accountId: string } | Response> {
+  const store = storeOr503();
+  if (store instanceof Response) return store;
+  const header = request.headers.get("authorization");
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  const accountId = token && token.length >= 16 && token.length <= 128
+    ? await store.get(`tok:${createHash("sha256").update(token).digest("hex")}`)
+    : null;
+  if (!accountId) return Response.json({ error: "no_account" }, { status: 401 });
+  return { store, accountId };
 }

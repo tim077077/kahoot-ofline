@@ -1,6 +1,7 @@
 "use client";
 
 import { FilmStrip, Heart, Plus } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 import type { Highlight } from "@/components/Collage";
 import { Mascot } from "@/components/Mascot";
 import { MonthHeading, Print, Stack } from "@/components/Vintage";
@@ -24,11 +25,17 @@ type Props = {
   onOpenHighlight: (h: Highlight) => void;
   onOpenPortraits: () => void;
   onPlans: () => void;
+  // The photo-of-the-day card and today's memory, above the highlights.
+  top?: ReactNode;
+  dailyPhotoIds?: string[];
 };
 
 // Favourites first, then every activity by how much of their life it fills.
-export function buildHighlights(photos: Photo[]): Highlight[] {
+export function buildHighlights(photos: Photo[], dailyIds: string[] = []): Highlight[] {
   const out: Highlight[] = [];
+  const daily = new Set(dailyIds);
+  const roll = photos.filter((p) => daily.has(p.id));
+  if (roll.length >= 2) out.push({ id: "roll", label: "Photo a day", caption: "One a day, every day", photos: roll });
   const favourites = photos.filter((p) => p.favorite);
   if (favourites.length) out.push({ id: "favourites", label: "Favourites", caption: "The ones we love most", photos: favourites });
   const byTag = new Map<string, Photo[]>();
@@ -61,7 +68,7 @@ const TURNS = [-1.5, 1.2, -0.6, 0.8, -1, 1.6];
 export function Album(props: Props) {
   const { photos, pending, portraits, look, account } = props;
   const name = starName(props.petName);
-  const highlights = buildHighlights(photos);
+  const highlights = buildHighlights(photos, props.dailyPhotoIds);
   const since = photos.length ? new Date(photos.at(-1)!.takenAt).getFullYear() : null;
 
   if (photos.length === 0 && pending.length === 0) {
@@ -95,6 +102,8 @@ export function Album(props: Props) {
           <FilmStrip size={18} /> {findLook(look).label}
         </button>
       </div>
+
+      {props.top}
 
       <div className="mt-7 flex snap-x scroll-px-5 gap-4 overflow-x-auto px-5 pb-2" role="list" aria-label="Highlights">
         {portraits.length > 0 && (

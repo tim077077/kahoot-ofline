@@ -97,3 +97,9 @@ export async function previewsLeft(store: Store, accountId: string) {
   const pack = Number((await store.get(`previews:${accountId}`)) ?? 0);
   return Math.max(0, plan) + Math.max(0, pack);
 }
+
+// A free album at its limit: the daily roll pauses instead of breaking.
+export async function isAlbumFull(store: Store, accountId: string) {
+  const tier = await currentTier(store, accountId);
+  return tier === "free" && (await store.hlen(`photos:${accountId}`)) >= TIERS.free.photos;
+}

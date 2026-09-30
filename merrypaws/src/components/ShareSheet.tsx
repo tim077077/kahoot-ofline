@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Sheet } from "@/components/Sheet";
 import { downloadUrl, starName, track, type Portrait } from "@/lib/client";
-import { makeShareCard, shareOrSave, type ShareFormat } from "@/lib/share";
+import { makeShareCard, shareOrSave, shareToInstagramStory, type ShareFormat } from "@/lib/share";
 import { findStyle } from "@/lib/styles";
 
 const FORMATS: { id: ShareFormat; label: string; hint: string; ratio: string }[] = [
-  { id: "story", label: "Story", hint: "9:16, for stories and TikTok", ratio: "aspect-[9/16] w-9" },
+  { id: "story", label: "Instagram Story", hint: "9:16, opens straight into your story", ratio: "aspect-[9/16] w-9" },
   { id: "post", label: "Post", hint: "4:5, for the feed", ratio: "aspect-[4/5] w-12" },
 ];
 
@@ -24,9 +24,13 @@ export function ShareSheet({ portrait, onClose }: { portrait: Portrait; onClose:
       // Kept portraits share in full quality; previews keep their watermark.
       const src = portrait.unlocked ? downloadUrl(portrait.id) : portrait.preview;
       const blob = await makeShareCard(src, { name, title: s.title, year: s.year, memorial: portrait.memorial }, format);
-      const outcome = await shareOrSave(blob, `${name.toLowerCase().replace(/\W+/g, "-")}-${format}.jpg`, `${name} in ${s.title}`);
+      const title = `${name} in ${s.title}`;
+      const outcome =
+        format === "story"
+          ? await shareToInstagramStory(blob, title)
+          : await shareOrSave(blob, `${name.toLowerCase().replace(/\W+/g, "-")}-${format}.jpg`, title);
       if (outcome !== "cancelled") {
-        track("share");
+        track(format === "story" ? "story_share" : "share");
         onClose();
       }
     } catch {

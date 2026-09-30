@@ -6,7 +6,18 @@ A vintage album for your pet:
 - They're sorted into highlights (walks, naps, birthdays), and each highlight becomes a scrapbook collage and a little film.
 - Turn any photo into a vintage portrait.
 
-Membership holds the album; extra portrait credits are one-off packs. The numbers and the reasoning behind them are in [PRICING.md](PRICING.md).
+It's built as a daily habit people share with friends:
+
+- a photo-a-day roll with gentle streaks
+- "A year ago today" memories
+- the Pack, where friends see each other's pet photo of the day
+- a one-tap Instagram Story on everything
+
+Membership holds the album; extra portrait credits are one-off packs.
+
+- The numbers are in [PRICING.md](PRICING.md).
+- The behavioural design and its guardrails are in [PSYCHOLOGY.md](PSYCHOLOGY.md).
+- Instagram Stories setup for the store app is in [docs/INSTAGRAM.md](docs/INSTAGRAM.md).
 
 The app is mobile-first and built to be wrapped as an iOS/Android app with Capacitor (see "Going to the stores"). The folder is still named `merrypaws` from the first version.
 
@@ -21,6 +32,17 @@ The app is mobile-first and built to be wrapped as an iOS/Android app with Capac
 
 ## The app
 
+- **Photo of the day** (top of the album):
+  - The day's prompt, a film-strip streak, freezes that cover a missed day, and one button.
+  - Once today's photo is in: "Story" and "The pack".
+  - Milestones at 3, 7, 14, 30, 50, 100, 200 and 365 days.
+  - "In loving memory" albums have no streak at all.
+- **A year ago today**: memories from the same day in earlier years, or a month ago while the album is young.
+- **Pack**:
+  - Friends' pet photo of the day, with paw, heart and laugh reactions.
+  - Today only, no endless feed.
+  - Invite by link (`?pack=CODE`) or code.
+  - Only the photo of the day is shared, and "Friends can see it" turns it off.
 - **Album**:
   - The star's name in script and a handwritten count ("9 memories since 2024").
   - Highlights as little stacks of prints with label-maker tags.
@@ -36,7 +58,9 @@ The app is mobile-first and built to be wrapped as an iOS/Android app with Capac
 - **Portraits**: the portrait studio. The star's photo can come from the album. There are 6 eras, "Add me too" and "In loving memory". A darkroom loader shows honest progress, then the reveal. See "Prompts".
 - **Membership**:
   - a member card (plan, renewal, HD credits, photo usage)
-  - Plus and Pro plans (monthly or yearly)
+  - **Manage or cancel your plan**
+  - Starter, Plus and Pro, with Pro first as the anchor and Plus highlighted in the middle
+  - "In loving memory"
   - extra portrait packs
   - the pet's name and kind
   - an access link for another phone
@@ -123,6 +147,20 @@ FAL_KEY=... npm run lab -- --yes
 
   A failed renewal simply lapses 3 days after the period ends.
 
+### Daily roll and the Pack
+
+- `GET /api/daily?day=` settles the streak for the phone's local day: it spends freezes, pauses while a free album is full, or breaks.
+  - It returns the count, freezes, the last 14 days and the day's entry.
+  - `PATCH /api/daily` shows or hides a day's photo from the pack.
+- Adding a photo, or making a portrait, marks the day (`day` form field).
+- `PUT /api/profile` sets the pet's name, kind and memorial flag that friends see.
+- The Pack:
+  - `GET /api/pack?day=` returns my card plus friends' cards and my invite code.
+  - `POST /api/pack/join` joins with a code.
+  - `POST /api/pack/react` toggles a reaction.
+  - `DELETE /api/pack/[id]` leaves.
+- `POST /api/billing` opens Stripe's billing page, so web subscribers can manage or cancel.
+
 ### Funnel, moderation, stats
 
 - `POST /api/event` records funnel counters (onboarding steps, photos added, highlights opened, paywall shown, purchase, share).
@@ -167,12 +205,14 @@ npm run build
    - Set `NEXT_PUBLIC_API_BASE` to the deployed URL.
    - Allow CORS on `/api/*`.
 2. **In-app purchases with RevenueCat.** Stripe isn't allowed for digital goods in store apps.
-   - Plus and Pro become auto-renewing subscriptions; the three packs become consumables.
+   - Starter, Plus and Pro become auto-renewing subscriptions; the three packs become consumables.
    - A RevenueCat webhook calls the same `activatePlan` / `endPlan` and `addCredits` / `addPackPreviews` functions the Stripe webhook uses.
    - Add **Restore purchases**.
    - Keep a 7-day trial on Plus yearly as a lever.
    - TrustMRR verifies RevenueCat revenue.
 3. **Native touches**, so Apple doesn't reject it as a wrapped website:
+   - one daily push with the prompt (at a time the member picks)
+   - Instagram Stories straight from the app ([docs/INSTAGRAM.md](docs/INSTAGRAM.md))
    - the native photo picker (multi-select)
    - save to Photos
    - the native share sheet
