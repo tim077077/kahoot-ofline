@@ -1,6 +1,6 @@
 import { accessSync, constants } from "node:fs";
-import { getClaude, hasClaudeKey } from "@/lib/claude";
-import { CLAUDE_MODEL } from "@/lib/config";
+import { aiModel, aiProvider, getGemini } from "@/lib/ai";
+import { getClaude } from "@/lib/claude";
 import { storeOr503 } from "@/lib/http";
 import { instagramConfigured, instagramWhoAmI, InstagramError } from "@/lib/instagram";
 import { dataDir, ensureDir } from "@/lib/local";
@@ -18,17 +18,28 @@ const ago = (iso: string) => {
   return min < 1 ? "just now" : min < 60 ? `${min} min ago` : min < 1440 ? `${Math.round(min / 60)} h ago` : `${Math.round(min / 1440)} days ago`;
 };
 
-async function claudeCheck(): Promise<Check> {
-  const base = { id: "claude", label: "Claude (copies formats, writes slides, analyses)" };
-  if (!hasClaudeKey()) return { ...base, state: "off", detail: "Demo mode: no ANTHROPIC_API_KEY, so every AI result is example output.", fix: "Add ANTHROPIC_API_KEY to slides/.env.local and restart." };
+async function aiCheck(): Promise<Check> {
+  const provider = aiProvider();
+  const base = { id: "claude", label: provider === "gemini" ? "AI: Gemini (copies formats, writes slides, analyses)" : "AI: Claude (copies formats, writes slides, analyses)" };
+  if (!provider) {
+    return { ...base, state: "off", detail: "Demo mode: no AI key, so every AI result is example output.", fix: "Add ANTHROPIC_API_KEY (or GEMINI_API_KEY) to slides/.env.local and restart." };
+  }
+  const model = aiModel(provider);
   try {
-    await getClaude().models.retrieve(CLAUDE_MODEL, {}, { timeout: 8000, maxRetries: 0 });
-    return { ...base, state: "ok", detail: `Key works, model ${CLAUDE_MODEL}.` };
+    if (provider === "gemini") await getGemini().models.get({ model, config: { httpOptions: { timeout: 8000 } } });
+    else await getClaude().models.retrieve(model, {}, { timeout: 8000, maxRetries: 0 });
+    return { ...base, state: "ok", detail: `Key works, model ${model}.` };
   } catch (err) {
     const status = (err as { status?: number }).status;
-    if (status === 401) return { ...base, state: "error", detail: "The API key was rejected.", fix: "Make a new key at console.anthropic.com and update .env.local." };
-    if (status === 404) return { ...base, state: "error", detail: `Model ${CLAUDE_MODEL} not available on this key.`, fix: "Remove CLAUDE_MODEL from .env.local to use the default." };
-    return { ...base, state: "warn", detail: "Couldn't reach the Anthropic API just now.", fix: "Check your internet connection, then Re-check." };
+    const keyEnv = provider === "gemini" ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY";
+    const keySite = provider === "gemini" ? "aistudio.google.com" : "console.anthropic.com";
+    const modelEnv = provider === "gemini" ? "GEMINI_MODEL" : "CLAUDE_MODEL";
+    // Gemini answers a bad key with 400 (API_KEY_INVALID) or 403.
+    if (status === 401 || (provider === "gemini" && (status === 400 || status === 403))) {
+      return { ...base, state: "error", detail: "The API key was rejected.", fix: `Make a new key at ${keySite} and update ${keyEnv} in .env.local.` };
+    }
+    if (status === 404) return { ...base, state: "error", detail: `Model ${model} not available on this key.`, fix: `Remove ${modelEnv} from .env.local to use the default.` };
+    return { ...base, state: "warn", detail: `Couldn't reach the ${provider === "gemini" ? "Gemini" : "Anthropic"} API just now.`, fix: "Check your internet connection, then Re-check." };
   }
 }
 
@@ -96,7 +107,7 @@ function storageCheck(): Check {
 export async function GET() {
   const store = storeOr503();
   if (store instanceof Response) return store;
-  const checks = await Promise.all([claudeCheck(), instagramCheck(), finderCheck(store), draftsCheck(store), extensionCheck(store)]);
+  const checks = await Promise.all([aiCheck(), instagramCheck(), finderCheck(store), draftsCheck(store), extensionCheck(store)]);
   const posts = listPosts();
   const count = (s: string) => posts.filter((p) => p.status === s).length;
   return Response.json({

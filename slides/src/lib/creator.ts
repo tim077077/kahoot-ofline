@@ -1,8 +1,6 @@
-import type Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { Screenshot } from "./analyze";
-import { BASE_REQUEST, ClaudeError, getClaude, hasClaudeKey } from "./claude";
+import { assertDemoAllowed, hasAiKey, structured, type AiPart } from "./ai";
 import { CURATED_SPECS, sanitizeStyle, SpecSchema, type TemplateSpec } from "./spec";
 
 // "Copy a creator": read one account's best-performing slideshows at once and
@@ -27,7 +25,7 @@ export type CreatorInsights = z.infer<typeof InsightsSchema> & {
   postsRead: number;
 };
 
-const CreatorSchema = z.object({ spec: SpecSchema, insights: InsightsSchema });
+export const CreatorSchema = z.object({ spec: SpecSchema, insights: InsightsSchema });
 
 // One post as Claude sees it: a header with its numbers, then its slides.
 export type CreatorSample = { label: string; caption?: string; images: Screenshot[] };
@@ -74,7 +72,7 @@ function mockResult(input: CreatorInput): { spec: TemplateSpec; insights: Creato
       platform: input.platform,
       username: input.username,
       postsRead: input.postsRead,
-      summary: "Demo mode: ANTHROPIC_API_KEY isn't set, so this is example output, not a real read of the account.",
+      summary: "Demo mode: no AI key is set, so this is example output, not a real read of the account.",
       hooks: ["things nobody tells you about ___", "I tried ___ for 30 days", "stop doing ___ (do this instead)"],
       whatWorks: ["Example: the hook names a specific audience", "Example: one idea per slide, under 15 words"],
       topics: ["example topic"],
@@ -98,12 +96,12 @@ export function pickImages(samples: CreatorSample[], budget = MAX_IMAGES): Creat
 }
 
 export async function analyzeCreator(input: CreatorInput): Promise<{ spec: TemplateSpec; insights: CreatorInsights; mock: boolean }> {
-  if (!hasClaudeKey()) {
-    if (process.env.VERCEL) throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
+  if (!hasAiKey()) {
+    assertDemoAllowed();
     return { ...mockResult(input), mock: true };
   }
 
-  const content: Anthropic.Beta.BetaContentBlockParam[] = [
+  const content: AiPart[] = [
     {
       type: "text",
       text: [`Creator: @${input.username} on ${input.platform === "instagram" ? "Instagram" : "TikTok"}.`, ...input.stats].join("\n"),
@@ -116,24 +114,21 @@ export async function analyzeCreator(input: CreatorInput): Promise<{ spec: Templ
     for (const img of sample.images) {
       if (chars + img.data.length > MAX_IMAGE_CHARS) break;
       chars += img.data.length;
-      content.push({ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.data } });
+      content.push({ type: "image", mediaType: img.mediaType, data: img.data });
     }
   }
   content.push({ type: "text", text: "Describe this creator's format as a template, and what makes it work." });
 
-  // Many images and a longer answer: stream so the request can't time out.
-  const stream = getClaude().beta.messages.stream({
-    ...BASE_REQUEST,
-    thinking: { type: "adaptive" },
-    output_config: { effort: "medium", format: betaZodOutputFormat(CreatorSchema) },
+  const { spec, insights } = await structured({
     system: SYSTEM,
-    messages: [{ role: "user", content }],
+    content,
+    schema: CreatorSchema,
+    effort: "medium",
+    thinking: true,
+    // Many images and a longer answer: stream so the request can't time out.
+    stream: true,
+    what: "this account",
   });
-  const response = await stream.finalMessage();
-
-  if (response.stop_reason === "refusal") throw new ClaudeError("The model declined this account", "refused");
-  if (!response.parsed_output) throw new ClaudeError("No template in the response", "failed");
-  const { spec, insights } = response.parsed_output;
 
   return {
     spec: {

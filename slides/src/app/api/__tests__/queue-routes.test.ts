@@ -24,6 +24,8 @@ beforeEach(() => {
   store = new MemoryStore();
   (globalThis as unknown as { __appStore: MemoryStore }).__appStore = store;
   delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GOOGLE_API_KEY;
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 

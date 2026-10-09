@@ -1,6 +1,6 @@
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { BASE_REQUEST, ClaudeError, getClaude, hasClaudeKey } from "./claude";
+import { assertDemoAllowed, hasAiKey, structured } from "./ai";
+import { ClaudeError } from "./claude";
 
 export const SlideshowSchema = z.object({
   slides: z.array(z.string()),
@@ -53,28 +53,26 @@ function userPrompt({ name, formula, exampleSlides, topic, promote, slideCount }
 function mockSlideshow({ exampleSlides, slideCount }: WriteRequest): Slideshow {
   return {
     slides: exampleSlides.slice(0, slideCount),
-    caption: "Demo mode: set ANTHROPIC_API_KEY to write about your own topic.",
+    caption: "Demo mode: set ANTHROPIC_API_KEY or GEMINI_API_KEY to write about your own topic.",
     hashtags: ["demo", "slideshow"],
   };
 }
 
 export async function writeSlideshow(req: WriteRequest): Promise<{ slideshow: Slideshow; mock: boolean }> {
-  if (!hasClaudeKey()) {
-    if (process.env.VERCEL) throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
+  if (!hasAiKey()) {
+    assertDemoAllowed();
     return { slideshow: mockSlideshow(req), mock: true };
   }
 
-  const response = await getClaude().beta.messages.parse({
-    ...BASE_REQUEST,
-    // Short creative copy doesn't need deep reasoning.
-    output_config: { effort: "low", format: betaZodOutputFormat(SlideshowSchema) },
+  const parsed = await structured({
     system: SYSTEM,
-    messages: [{ role: "user", content: userPrompt(req) }],
+    content: [{ type: "text", text: userPrompt(req) }],
+    schema: SlideshowSchema,
+    // Short creative copy doesn't need deep reasoning.
+    effort: "low",
+    what: "this topic",
   });
-
-  if (response.stop_reason === "refusal") throw new ClaudeError("The model declined this topic", "refused");
-  const parsed = response.parsed_output;
-  if (!parsed || parsed.slides.length === 0) throw new ClaudeError("No slideshow in the response", "failed");
+  if (parsed.slides.length === 0) throw new ClaudeError("No slideshow in the response", "failed");
 
   return {
     slideshow: {

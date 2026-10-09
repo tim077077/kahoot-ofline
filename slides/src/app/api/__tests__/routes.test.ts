@@ -9,6 +9,8 @@ import { POST as write } from "../write/route";
 // validation, limits and response shapes without calling the API.
 beforeEach(() => {
   delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GOOGLE_API_KEY;
   (globalThis as unknown as { __appStore: MemoryStore }).__appStore = new MemoryStore();
 });
 

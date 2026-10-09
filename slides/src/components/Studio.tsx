@@ -606,7 +606,7 @@ export function Studio() {
               {error}
             </p>
           )}
-          {mock && <p className="text-xs text-warn">Demo mode: ANTHROPIC_API_KEY isn&apos;t set, so this is example output.</p>}
+          {mock && <p className="text-xs text-warn">Demo mode: no AI key is set, so this is example output.</p>}
         </section>
 
         {/* 2. Big preview */}

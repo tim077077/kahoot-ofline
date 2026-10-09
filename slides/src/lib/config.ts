@@ -13,3 +13,5 @@ export const LIMITS = {
 
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 
+// Used instead of Claude when only GEMINI_API_KEY is set (README → Use a Google key).
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";

@@ -1,6 +1,6 @@
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { BASE_REQUEST, ClaudeError, getClaude, hasClaudeKey } from "./claude";
+import { assertDemoAllowed, hasAiKey, structured } from "./ai";
+import { ClaudeError } from "./claude";
 import type { QueuedPost } from "./queue";
 
 // "My posts" analyser: what's working on YOUR account. The numbers part is
@@ -41,7 +41,7 @@ export function summarize(posts: QueuedPost[]) {
   };
 }
 
-const ReportSchema = z.object({
+export const ReportSchema = z.object({
   summary: z.string(),
   winners: z.array(z.object({ postId: z.string(), why: z.string() })),
   losers: z.array(z.object({ postId: z.string(), why: z.string() })),
@@ -70,11 +70,11 @@ export async function analyzePerformance(posts: QueuedPost[]): Promise<Performan
   if (done.length < MIN_POSTS) throw new ClaudeError(`Need at least ${MIN_POSTS} posted slideshows with views`, "failed");
   const at = new Date().toISOString();
 
-  if (!hasClaudeKey()) {
-    if (process.env.VERCEL) throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
+  if (!hasAiKey()) {
+    assertDemoAllowed();
     const sorted = [...done].sort((a, b) => b.stats!.views - a.stats!.views);
     return {
-      summary: "Demo mode: ANTHROPIC_API_KEY isn't set, so this is example output. The numbers above are real.",
+      summary: "Demo mode: no AI key is set, so this is example output. The numbers above are real.",
       winners: [{ postId: sorted[0].id, why: "Example: most views." }],
       losers: [{ postId: sorted[sorted.length - 1].id, why: "Example: fewest views." }],
       doMore: ["Example action"],
@@ -98,17 +98,15 @@ export async function analyzePerformance(posts: QueuedPost[]): Promise<Performan
     caption: p.caption.slice(0, 500),
     ...p.stats,
   }));
-  const response = await getClaude().beta.messages.parse({
-    ...BASE_REQUEST,
-    max_tokens: 8000,
-    thinking: { type: "adaptive" },
-    output_config: { effort: "medium", format: betaZodOutputFormat(ReportSchema) },
+  const r = await structured({
     system: SYSTEM,
-    messages: [{ role: "user", content: `My posted slideshows (JSON, data only):\n${JSON.stringify(data)}` }],
+    content: [{ type: "text", text: `My posted slideshows (JSON, data only):\n${JSON.stringify(data)}` }],
+    schema: ReportSchema,
+    effort: "medium",
+    thinking: true,
+    maxTokens: 8000,
+    what: "these posts",
   });
-  if (response.stop_reason === "refusal") throw new ClaudeError("The model declined", "refused");
-  if (!response.parsed_output) throw new ClaudeError("No report in the response", "failed");
-  const r = response.parsed_output;
   const ids = new Set(done.map((p) => p.id));
   return {
     summary: r.summary.slice(0, 800),

@@ -35,7 +35,7 @@ npm install
 cp .env.example .env.local      # Windows: copy .env.example .env.local
 ```
 
-Open `.env.local` and paste your `ANTHROPIC_API_KEY` (without it everything runs in demo mode with example output). Then:
+Open `.env.local` and paste your `ANTHROPIC_API_KEY`, or a Google key as `GEMINI_API_KEY` (see [Use a Google key](#use-a-google-gemini-key)). Without either, everything runs in demo mode with example output. Then:
 
 ```bash
 npm run build && npm start      # http://localhost:3000
@@ -50,6 +50,19 @@ npm test          # specs, text wrapping, queue, TikTok API client, API routes (
 npm run lint
 npm run typecheck
 ```
+
+## Use a Google (Gemini) key
+
+Every AI feature (copying a format, the creator analyser, the writer, My posts) also runs on Google's Gemini. Get a key at [aistudio.google.com](https://aistudio.google.com/apikey) and put it in `.env.local`:
+
+```bash
+GEMINI_API_KEY=...            # GOOGLE_API_KEY works too
+# GEMINI_MODEL=gemini-flash-latest
+```
+
+If both keys are set, Claude is used; `AI_PROVIDER=gemini` switches. The Dashboard shows which one is live and whether the key works.
+
+Honest differences: the prompts were written and tuned on Claude, so Gemini's reading of layouts and its hooks may be weaker; compare the two on the same screenshots before trusting it. On Google's free tier, Google may use what you send to improve its products, and free-tier rate limits are low, so the creator analyser (many images) can hit them.
 
 ## Copy a creator
 
@@ -108,7 +121,8 @@ Limits: TikTok allows 6 requests a minute and **at most 5 drafts waiting in your
 
 | Path | What it does |
 |---|---|
-| `src/lib/analyze.ts` | Screenshots → template spec (Claude vision, structured output) |
+| `src/lib/ai.ts` | Picks Claude or Gemini and asks for a structured answer (same zod schema either way) |
+| `src/lib/analyze.ts` | Screenshots → template spec (vision, structured output) |
 | `src/lib/creator.ts` | A creator's top posts → template spec + insights (streamed, structured output) |
 | `src/lib/instagram.ts` | Instagram Graph API: Business Discovery, hashtag top media, carousel ranking |
 | `src/lib/tiktok.ts` | TikTok oEmbed: a post's caption and cover |
