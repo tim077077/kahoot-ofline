@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "SlideDrop Poster",
+  "version": "2.0.0",
+  "description": "Posts SlideDrop's queued photo carousels to TikTok from your logged-in tiktok.com tab.",
+  "icons": { "128": "icon128.png" },
+  "permissions": ["declarativeNetRequestWithHostAccess"],
+  "background": { "service_worker": "bg.js" },
+  "host_permissions": [
+    "https://*.tiktokcdn-eu.com/*",
+    "https://*.tiktokcdn.com/*",
+    "https://*.byteimg.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.tiktok.com/*"],
+      "js": ["tiktok-inject.js", "panel.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.tiktok.com/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

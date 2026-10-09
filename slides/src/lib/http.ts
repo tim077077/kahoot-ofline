@@ -20,3 +20,13 @@ export function storeOr503(): Store | Response {
     throw err;
   }
 }
+
+// Requests that change data must carry this header. A web page on another
+// site can't add custom headers to a request to localhost without a CORS
+// preflight (which SlideDrop never approves), so this blocks cross-site
+// requests to your local tool. The studio and the extension both send it.
+export const APP_HEADER = "x-slidedrop";
+
+export function forbidCrossSite(request: Request): Response | null {
+  return request.headers.get(APP_HEADER) === "1" ? null : Response.json({ error: "forbidden" }, { status: 403 });
+}

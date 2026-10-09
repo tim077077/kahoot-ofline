@@ -33,7 +33,7 @@ export async function analyzeScreenshots(
   context: AnalyzeContext = {},
 ): Promise<{ spec: TemplateSpec; mock: boolean }> {
   if (!hasClaudeKey()) {
-    if (process.env.NODE_ENV === "production") throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
+    if (process.env.VERCEL) throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
     return { spec: mockSpec(), mock: true };
   }
 

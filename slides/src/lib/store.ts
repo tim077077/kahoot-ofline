@@ -1,6 +1,8 @@
 // Tiny key-value store. Production uses Upstash Redis over its REST API (free
-// tier, one-click on Vercel). Local dev falls back to an in-memory map so the
-// app runs with zero setup.
+// tier, one-click on Vercel). On your own computer it's a JSON file in .data/
+// (see local.ts), so nothing to set up and nothing lost on restart.
+
+import { dataDir, readJson, writeAtomic } from "./local";
 
 export interface Store {
   get(key: string): Promise<string | null>;
@@ -50,7 +52,7 @@ class UpstashStore implements Store {
 }
 
 export class MemoryStore implements Store {
-  private data = new Map<string, { value: string; expiresAt?: number }>();
+  protected data = new Map<string, { value: string; expiresAt?: number }>();
 
   private live(key: string) {
     const entry = this.data.get(key);
@@ -88,6 +90,42 @@ export class MemoryStore implements Store {
   }
 }
 
+// The store as a JSON file, rewritten after every change. Fine for one person
+// on one computer; that's what SlideDrop is.
+export class FileStore extends MemoryStore {
+  constructor(private file: string) {
+    super();
+    const saved = readJson<Record<string, { value: string; expiresAt?: number }>>(file, {});
+    for (const [key, entry] of Object.entries(saved)) this.data.set(key, entry);
+  }
+
+  private persist() {
+    writeAtomic(this.file, JSON.stringify(Object.fromEntries(this.data)));
+  }
+
+  override async set(key: string, value: string, opts: { ex?: number; nx?: boolean } = {}) {
+    const ok = await super.set(key, value, opts);
+    if (ok) this.persist();
+    return ok;
+  }
+
+  override async incrby(key: string, by: number) {
+    const n = await super.incrby(key, by);
+    this.persist();
+    return n;
+  }
+
+  override async expire(key: string, seconds: number) {
+    await super.expire(key, seconds);
+    this.persist();
+  }
+
+  override async del(key: string) {
+    await super.del(key);
+    this.persist();
+  }
+}
+
 export class StoreNotConfiguredError extends Error {
   constructor() {
     super("Storage is not configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.");
@@ -105,11 +143,11 @@ export function getStore(): Store {
 
   if (url && token) {
     globalForStore.__appStore = new UpstashStore(url, token);
-  } else if (process.env.NODE_ENV === "production") {
-    // An in-memory store on serverless would silently reset the usage caps.
+  } else if (process.env.VERCEL) {
+    // A file on serverless would silently reset the usage caps.
     throw new StoreNotConfiguredError();
   } else {
-    globalForStore.__appStore = new MemoryStore();
+    globalForStore.__appStore = new FileStore(`${dataDir()}/store.json`);
   }
   return globalForStore.__appStore;
 }

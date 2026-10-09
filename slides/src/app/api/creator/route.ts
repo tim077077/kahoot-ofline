@@ -10,6 +10,7 @@ import {
   fetchInstagramProfile,
   IMAGE_HOST_SUFFIXES,
   InstagramError,
+  instagramFailure,
   instagramConfigured,
   parseInstagramHandle,
   topPosts,
@@ -48,15 +49,8 @@ async function gatherInstagram(handle: string): Promise<Gathered | Response> {
     profile = await fetchInstagramProfile(username);
   } catch (err) {
     if (!(err instanceof InstagramError)) throw err;
-    const map = {
-      not_configured: ["instagram_not_configured", 503],
-      not_found: ["creator_not_found", 404],
-      rate_limited: ["instagram_busy", 429],
-      token_expired: ["instagram_token_expired", 503],
-      failed: ["instagram_failed", 502],
-    } as const;
     if (err.code === "failed") console.error("instagram failed", err.message);
-    const [error, status] = map[err.code];
+    const [error, status] = instagramFailure(err);
     return fail(error, status);
   }
 

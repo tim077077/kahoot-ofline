@@ -3,30 +3,13 @@
 import { strToU8, zipSync } from "fflate";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { canvasToBlob, download, loadFonts, loadJson, saveJson, shrinkImage } from "@/lib/browser";
-import { BRAND, LIMITS } from "@/lib/config";
+import { LIMITS } from "@/lib/config";
 import { renderSlide, SLIDE_H, SLIDE_W, type Fonts } from "@/lib/render";
+import { appFetch, ERRORS, errorText, LIBRARY_KEY } from "@/lib/client";
+import { Nav } from "./Nav";
 import { CURATED_SPECS, type SlideStyle, type TemplateSpec } from "@/lib/spec";
 
-const LIBRARY_KEY = "slidedrop_library";
 
-const ERRORS: Record<string, string> = {
-  limit_reached: "Daily AI limit reached. Raise AI_PER_IP_PER_DAY in .env.local if this is your own machine.",
-  refused: "Claude declined that. Try different screenshots or a different topic.",
-  generation_failed: "The AI call failed and didn't count against your limit. Try again.",
-  bad_request: "Something's missing: add a link or screenshots, or pick a format and type a topic.",
-  bad_link: "That doesn't look like a TikTok link. Copy it from TikTok's Share → Copy link.",
-  link_unavailable: "TikTok didn't return that post. It may be private or deleted. Use screenshots instead.",
-  link_no_cover: "Got the caption but not the cover image. Add a screenshot of at least the first slide.",
-  bad_handle: "That doesn't look like a username. Type it like @name, or paste the profile link.",
-  instagram_not_configured: "Reading Instagram by name needs your Meta token: set IG_USER_ID and IG_ACCESS_TOKEN (README → Copy a creator).",
-  instagram_token_expired: "Your Instagram token expired (they last 60 days). Make a new one: README → Copy a creator.",
-  instagram_busy: "Instagram's rate limit kicked in. Wait an hour and try again.",
-  instagram_failed: "Instagram didn't answer properly. Try again in a minute.",
-  creator_not_found: "Instagram only shares business and creator accounts. This one is personal, private, age-restricted or doesn't exist.",
-  tiktok_needs_posts: "TikTok doesn't let apps list someone's posts. Paste links to 3–10 of their best slideshows, or add a screenshot of their profile grid.",
-  creator_no_images: "Couldn't get any slide images from that account. Add a few screenshots of their slideshows.",
-  generic: "Something went wrong. Please try again.",
-};
 
 type Background = { bitmap: ImageBitmap; url: string };
 type Draft = { spec: TemplateSpec; slides: string[]; caption: string };
@@ -40,6 +23,12 @@ const STYLE_OPTIONS: { key: keyof SlideStyle; label: string; values: string[] }[
   { key: "size", label: "Size", values: ["small", "medium", "large"] },
   { key: "background", label: "Background", values: ["photo", "gradient", "solid", "notes"] },
 ];
+
+// TikTok photo titles max out at 90 characters; the hook slide makes the title.
+function postTitle(slides: string[]) {
+  const hook = (slides[0] ?? "").replace(/\s+/g, " ").trim();
+  return [...hook].slice(0, 90).join("") || "New slideshow";
+}
 
 function startDraft(spec: TemplateSpec): Draft {
   return { spec, slides: spec.exampleSlides.slice(0, spec.slideCount), caption: "" };
@@ -79,7 +68,12 @@ export function Studio() {
 
   useEffect(() => {
     void (async () => {
-      setLibrary(loadJson<TemplateSpec[]>(LIBRARY_KEY, []));
+      const saved = loadJson<TemplateSpec[]>(LIBRARY_KEY, []);
+      setLibrary(saved);
+      // /studio?spec=<id>: opened from the viral finder after copying a format.
+      const wanted = new URLSearchParams(window.location.search).get("spec");
+      const found = wanted ? saved.find((f) => f.id === wanted) : undefined;
+      if (found) setDraft(startDraft(found));
       setFonts(await loadFonts());
     })();
   }, []);
@@ -317,6 +311,9 @@ export function Studio() {
         files[`slide-${String(i + 1).padStart(2, "0")}.png`] = new Uint8Array(await blob.arrayBuffer());
       }
       if (draft.caption) files["caption.txt"] = strToU8(draft.caption);
+      // title.txt + slide-NN.png + caption.txt is the folder format the
+      // SlideDrop Poster extension's "post a folder" mode reads.
+      files["title.txt"] = strToU8(postTitle(slides));
       const zip = zipSync(files, { level: 0 });
       const slug = spec.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "slides";
       download(new Blob([zip.slice().buffer], { type: "application/zip" }), `${slug}.zip`);
@@ -325,10 +322,12 @@ export function Studio() {
     }
   }
 
-  // Demo posting: see src/lib/posting.ts for the official TikTok draft route.
-  async function sendToDrafts() {
+  // Into the post queue. From the dashboard it goes to TikTok drafts, the
+  // extension, or you post it by hand. With auto-drafts on, it's sent now.
+  async function addToQueue() {
     setBusy("export");
     setError(null);
+    setNotice(null);
     try {
       const canvas = document.createElement("canvas");
       canvas.width = SLIDE_W;
@@ -340,11 +339,21 @@ export function Studio() {
         draw(ctx, i);
         form.append("slide", await canvasToBlob(canvas, "image/jpeg", 0.92), `slide-${i + 1}.jpg`);
       }
+      form.append("title", postTitle(slides));
       form.append("caption", draft.caption);
-      const res = await fetch("/api/post", { method: "POST", body: form });
-      const data = (await res.json().catch(() => ({}))) as { message?: string };
-      if (res.ok) setNotice(data.message ?? "Sent.");
-      else setError(ERRORS.generic);
+      form.append("format", spec.name);
+      form.append("slideTexts", JSON.stringify(slides));
+      const res = await appFetch("/api/posts", { method: "POST", body: form }).catch(() => null);
+      const data = ((await res?.json().catch(() => null)) ?? {}) as { post?: { status: string; error?: string }; error?: string };
+      if (!res?.ok || !data.post) {
+        setError(errorText(data.error));
+        return;
+      }
+      if (data.post.status === "sending") setNotice("Queued and sent to your TikTok drafts. Open the TikTok app, add a sound, post.");
+      else if (data.post.status === "failed") setError(`Queued, but sending to drafts failed: ${data.post.error ?? "unknown"}. Retry from the Dashboard.`);
+      else setNotice("Added to the post queue. Send it from the Dashboard: TikTok drafts, the extension, or by hand.");
+    } catch {
+      setError(ERRORS.generic);
     } finally {
       setBusy(null);
     }
@@ -401,15 +410,7 @@ export function Studio() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-line bg-card">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
-          <span className="text-xl font-extrabold tracking-tight">{BRAND}</span>
-          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">studio</span>
-          <span className="ml-auto hidden truncate text-sm text-muted sm:block">
-            Format: <b className="text-ink">{spec.name}</b>
-          </span>
-        </div>
-      </header>
+      <Nav current="studio" right={<>Format: <b className="text-ink">{spec.name}</b></>} />
 
       <main className="mx-auto grid w-full max-w-7xl flex-1 gap-6 px-4 py-6 lg:grid-cols-[360px_1fr_300px]">
         {/* 1. Format + content */}
@@ -768,11 +769,11 @@ export function Studio() {
               {busy === "export" ? "Exporting…" : "Download slides (.zip)"}
             </button>
             <button
-              onClick={() => void sendToDrafts()}
+              onClick={() => void addToQueue()}
               disabled={busy !== null || !fonts}
               className="w-full rounded-xl border border-ink/15 py-2.5 text-sm font-semibold disabled:opacity-40"
             >
-              Send to TikTok drafts (demo)
+              📤 Add to post queue
             </button>
             <button
               onClick={() => void navigator.clipboard.writeText(draft.caption)}

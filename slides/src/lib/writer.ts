@@ -60,7 +60,7 @@ function mockSlideshow({ exampleSlides, slideCount }: WriteRequest): Slideshow {
 
 export async function writeSlideshow(req: WriteRequest): Promise<{ slideshow: Slideshow; mock: boolean }> {
   if (!hasClaudeKey()) {
-    if (process.env.NODE_ENV === "production") throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
+    if (process.env.VERCEL) throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
     return { slideshow: mockSlideshow(req), mock: true };
   }
 

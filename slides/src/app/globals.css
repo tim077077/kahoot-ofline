@@ -11,6 +11,10 @@
   --accent-soft: #efe8fd;
   --warn: #9a3412;
   --warn-soft: #fff1e6;
+  --ok: #166534;
+  --ok-soft: #e7f6ec;
+  --bad: #b91c1c;
+  --bad-soft: #fdecec;
 }
 
 @theme inline {
@@ -24,6 +28,10 @@
   --color-accent-soft: var(--accent-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
   --font-sans: var(--font-montserrat);
   --font-display: var(--font-fraunces);
 }

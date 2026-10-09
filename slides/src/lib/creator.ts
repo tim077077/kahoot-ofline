@@ -99,7 +99,7 @@ export function pickImages(samples: CreatorSample[], budget = MAX_IMAGES): Creat
 
 export async function analyzeCreator(input: CreatorInput): Promise<{ spec: TemplateSpec; insights: CreatorInsights; mock: boolean }> {
   if (!hasClaudeKey()) {
-    if (process.env.NODE_ENV === "production") throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
+    if (process.env.VERCEL) throw new ClaudeError("ANTHROPIC_API_KEY is not set", "failed");
     return { ...mockResult(input), mock: true };
   }
 
