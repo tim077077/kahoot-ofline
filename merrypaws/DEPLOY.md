@@ -59,8 +59,10 @@ Every push to the branch deploys again by itself.
 4. Bucket → **Settings → CORS policy**, so the app can show and draw the photos:
 
    ```json
-   [{ "AllowedOrigins": ["https://paw-pictures.<you>.workers.dev", "https://yourdomain.com"], "AllowedMethods": ["GET"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400 }]
+   [{ "AllowedOrigins": ["*"], "AllowedMethods": ["GET"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400 }]
    ```
+
+   Paste it exactly: R2 rejects placeholder origins like `<you>`. `*` is safe here because the bucket stays private and every photo link is signed and expires; this only lets the browser read a link it was already given. To tighten it later, replace `*` with your real address (for example `https://paw-pictures.timoteiculda07.workers.dev`, shown under **Workers & Pages → Subdomain**).
 
 5. Bucket → **Settings → Object lifecycle rules → Add rule**: prefix `portraits/`, delete objects after 30 days. Finished portraits can only be unlocked for 30 days, so they shouldn't be kept longer. Don't add a rule for the whole bucket: that would delete album photos.
 
