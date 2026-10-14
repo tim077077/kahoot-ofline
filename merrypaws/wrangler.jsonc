@@ -11,6 +11,11 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Shrinks and watermarks previews outside the Worker's CPU budget, so the
+  // free plan's 10 ms per request is enough. 5,000 a month free.
+  "images": {
+    "binding": "IMAGES"
+  },
   // Every hour on the minute: send the daily reminders that are due.
   "triggers": {
     "crons": ["0 * * * *"]

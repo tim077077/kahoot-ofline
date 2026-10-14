@@ -4,16 +4,16 @@ Everything runs on Cloudflare: the app, the hourly reminder timer and photo stor
 
 **What it costs:**
 
-- Cloudflare Workers Paid: $5 a month. The free plan allows only 10 ms of CPU per request, and making a preview takes about 200 ms.
+- Cloudflare, Upstash, R2 and Resend: $0. Their free plans cover a friends test and the first thousands of users.
 - Google: about $0.037 per portrait try, billed as you go.
-- Upstash, R2 and Resend: free tiers cover a friends test.
-- A domain: about $10 a year, needed for emails.
+- A domain: about $10 a year, needed so the backup emails reach people.
+- Later, not now: Apple's $99 a year only when you put the app on the App Store, and Cloudflare Workers Paid ($5 a month) once you pass 5,000 previews a month or 100,000 requests a day.
 
 When you're done, open `https://your-site/api/health` on your phone. Every line should say `true`.
 
 ## 1. The site: Cloudflare Workers
 
-1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com). Under **Workers & Pages → Plans**, pick **Workers Paid** ($5/mo).
+1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com). The free plan is enough. Previews are watermarked by Cloudflare's Images service (5,000 a month free), so they fit the free plan's 10 ms of CPU per request.
 2. **Workers & Pages → Create → Import a repository** and connect GitHub. Pick the repo. Then set:
 
    | Setting | Value |
@@ -103,6 +103,8 @@ On iPhone, reminders only work after the site is added to the Home Screen. The a
 **Payments can wait.** Leave `STRIPE_*` empty for the friends test: the plans show "Payments aren't switched on yet." Add Stripe test keys when you're ready; the webhook URL is `https://your-site/api/webhook`, and its events are listed in `.env.example`.
 
 Deploy again (build variables only apply to a new build), then check `/api/health`.
+
+**Then make one portrait and look at it.** The preview must have soft paw prints all over it. Cloudflare's local test tool can't draw them, so this is the first real check. No paws? Add the secret `WATERMARK_ENGINE` = `js` and switch to Workers Paid ($5/mo); the app then draws the paws itself.
 
 ## 8. Before anyone else sees it: the portrait test
 

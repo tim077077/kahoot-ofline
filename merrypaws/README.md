@@ -225,7 +225,7 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
 5. **Privacy policy and terms.** Photos are private, used only for the album and requested portraits, never for training.
    - Portrait photos go to Google's Gemini API. On a paid (billing enabled) key Google doesn't use them to train models; it keeps them for a limited time for abuse checks. Say so in the policy.
    - Finished portraits sit in R2 under `portraits/`. The R2 lifecycle rule in DEPLOY.md deletes them after 30 days.
-6. **Hosting.** Cloudflare Workers Paid ($5/mo) once you launch. See PRICING.md for every running cost.
+6. **Hosting.** Cloudflare's free plan to start; Workers Paid ($5/mo) past 5,000 previews a month. See PRICING.md for every running cost.
 
 ## Going to the stores
 

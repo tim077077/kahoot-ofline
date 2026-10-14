@@ -118,12 +118,13 @@ So 1,000 photos cost about **$0.01 a month** to keep. Storage is almost free; th
 
 | Item | Cost |
 |---|---|
-| Apple developer | $99/yr (about $8/mo); Google's $25 is already paid |
-| Cloudflare Workers Paid | $5/mo. Hosts the app, the hourly reminder job and R2. The free plan's 10 ms of CPU per request is too little for making previews |
+| Cloudflare Workers (the app, the hourly reminder job) | free up to 100,000 requests a day; previews are watermarked by Cloudflare Images, free for 5,000 a month. Then Workers Paid at $5/mo |
 | Upstash Redis and Cloudflare R2 | free tiers cover the first thousands of users |
 | Google Gemini API | pay as you go, no monthly fee (image models have no free tier) |
+| A domain (for backup emails) | about $10/yr |
+| Apple developer | $99/yr, only once the app goes on the App Store; Google's $25 is already paid |
 
-That's about **$13 a month**. Break-even is about 5 Plus monthly members, or 9 yearly ones, at typical use.
+The web app costs about **$1 a month** in fixed costs (the domain). With the App Store and Workers Paid it's about $14: break-even is about 5 Plus monthly members, or 10 yearly ones, at typical use.
 
 ## Levers if conversion is low
 

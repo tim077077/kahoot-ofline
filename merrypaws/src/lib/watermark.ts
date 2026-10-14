@@ -1,8 +1,13 @@
-import * as jpeg from "jpeg-js";
 import { decode as decodePng } from "fast-png";
+import * as jpeg from "jpeg-js";
+import type { ImagesBinding } from "@cloudflare/workers-types/experimental/index.ts";
+import { TILE_PNG_BASE64 } from "./watermarkTile";
 
-// Pure JavaScript (no native image library) so previews are made the same way
-// on Node and on Cloudflare Workers. A 1K portrait takes a few hundred ms.
+// The watermarked preview: shrunk to 640px and covered in a repeating paw
+// tile. On Cloudflare it's made by the Images binding, outside the Worker's
+// CPU budget (the free plan allows 10 ms a request; doing it in JavaScript
+// takes about 200 ms). Locally and in tests the same tile is drawn in plain
+// JavaScript, so both look the same.
 
 const PREVIEW_EDGE = 640;
 
@@ -65,60 +70,64 @@ function shrink(img: Rgba, edge: number): Rgba {
   return { width, height, data: out };
 }
 
-// A paw print drawn with shapes, not text: fonts vary between hosts, shapes
-// render the same everywhere. Pad, then four toes, in paw units.
-const PAW = [
-  { cx: 0, cy: 14, rx: 15, ry: 12 },
-  { cx: -16, cy: -6, rx: 6, ry: 8 },
-  { cx: -6, cy: -16, rx: 6, ry: 8 },
-  { cx: 6, cy: -16, rx: 6, ry: 8 },
-  { cx: 16, cy: -6, rx: 6, ry: 8 },
-];
-
-function blend(img: Rgba, i: number, value: number, alpha: number) {
-  for (let k = 0; k < 3; k++) img.data[i + k] = img.data[i + k] * (1 - alpha) + value * alpha;
+let tile: Rgba | null = null;
+function pawTile(): Rgba {
+  if (!tile) {
+    const png = decodePng(Buffer.from(TILE_PNG_BASE64, "base64"));
+    tile = { width: png.width, height: png.height, data: new Uint8ClampedArray(png.data) };
+  }
+  return tile;
 }
 
-function drawPaw(img: Rgba, px: number, py: number, scale: number) {
-  const angle = (-20 * Math.PI) / 180;
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const reach = 34 * scale;
-  for (let y = Math.max(0, Math.floor(py - reach)); y < Math.min(img.height, Math.ceil(py + reach)); y++) {
-    for (let x = Math.max(0, Math.floor(px - reach)); x < Math.min(img.width, Math.ceil(px + reach)); x++) {
-      // Back into paw units: undo the translate, rotate and scale.
-      const dx = (x + 0.5 - px) / scale;
-      const dy = (y + 0.5 - py) / scale;
-      const ux = dx * cos + dy * sin;
-      const uy = -dx * sin + dy * cos;
-      // Distance to the nearest shape edge, in pixels (negative inside).
-      let d = Infinity;
-      for (const e of PAW) {
-        const v = Math.hypot((ux - e.cx) / e.rx, (uy - e.cy) / e.ry);
-        d = Math.min(d, (v - 1) * Math.min(e.rx, e.ry) * scale);
-      }
+// The tile repeated from the top-left corner, blended "over" the image.
+function overlay(img: Rgba) {
+  const t = pawTile();
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      const j = ((y % t.height) * t.width + (x % t.width)) * 4;
+      const alpha = t.data[j + 3] / 255;
+      if (alpha === 0) continue;
       const i = (y * img.width + x) * 4;
-      const fill = Math.min(1, Math.max(0, 0.5 - d));
-      if (fill > 0) blend(img, i, 255, 0.3 * fill);
-      const edge = Math.min(1, Math.max(0, 1.25 - Math.abs(d)));
-      if (edge > 0) blend(img, i, 0, 0.1 * edge);
+      for (let k = 0; k < 3; k++) img.data[i + k] = img.data[i + k] * (1 - alpha) + t.data[j + k] * alpha;
     }
   }
 }
 
-// Sparse and soft: enough that nobody prints the preview, light enough that a
-// shared preview still looks like a portrait. The 640px size does the rest.
-function overlay(img: Rgba) {
-  const step = 210;
-  for (let y = step * 0.4, row = 0; y < img.height + step; y += step * 0.8, row++) {
-    for (let x = row % 2 ? step / 2 : step * 0.15; x < img.width + step; x += step) drawPaw(img, x, y, 1.25);
+// The Workers and DOM ReadableStream types differ only on paper.
+type ImageStream = Parameters<ImagesBinding["input"]>[0];
+const stream = (bytes: Uint8Array) => new Blob([bytes as BlobPart]).stream() as unknown as ImageStream;
+
+// Cloudflare's Images binding, when running on Cloudflare.
+async function imagesBinding(): Promise<ImagesBinding | undefined> {
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    return getCloudflareContext().env.IMAGES;
+  } catch {
+    return undefined;
   }
+}
+
+async function previewWithImages(images: ImagesBinding, full: Uint8Array): Promise<Buffer> {
+  const result = await images
+    .input(stream(full))
+    .transform({ width: PREVIEW_EDGE, height: PREVIEW_EDGE, fit: "scale-down" })
+    .draw(stream(Buffer.from(TILE_PNG_BASE64, "base64")), { repeat: true, top: 0, left: 0 })
+    .output({ format: "image/jpeg", quality: 72 });
+  return Buffer.from(await result.response().arrayBuffer());
+}
+
+function previewInJs(full: Uint8Array): Buffer {
+  const small = shrink(decode(full), PREVIEW_EDGE);
+  overlay(small);
+  return Buffer.from(jpeg.encode({ width: small.width, height: small.height, data: small.data }, 72).data);
 }
 
 // Small, watermarked JPEG. This is all a visitor sees before paying; the
 // full-resolution image never leaves the server until the portrait is unlocked.
+// WATERMARK_ENGINE=js skips the Images binding (needs Workers Paid for the CPU
+// time). Wrangler's local Images stand-in ignores draw(), so check the paws
+// on the first real deploy.
 export async function makePreview(full: Uint8Array): Promise<Buffer> {
-  const small = shrink(decode(full), PREVIEW_EDGE);
-  overlay(small);
-  return Buffer.from(jpeg.encode({ width: small.width, height: small.height, data: small.data }, 72).data);
+  const images = process.env.WATERMARK_ENGINE === "js" ? undefined : await imagesBinding();
+  return images ? previewWithImages(images, full) : previewInJs(full);
 }
