@@ -8,13 +8,21 @@ import { MASCOT } from "@/lib/config";
 import { downloadUrl, starName, track, type Photo, type Portrait, type UploadPhase } from "@/lib/client";
 import { prepareUpload } from "@/lib/image";
 import { checkPhoto, PROBLEM_TEXT, type PhotoProblem } from "@/lib/photoCheck";
-import { findStyle, STYLES, type Style, type StyleId } from "@/lib/styles";
+import { CANVASES, cleanIdea, findStyle, IDEA_MAX, STYLES, type CanvasId, type Style, type StyleId } from "@/lib/styles";
 
 type Upload = { blob: Blob; url: string };
 type Step = "photo" | "style" | "develop" | "reveal";
 
 export type ShootResult = { ok: true; portrait: Portrait } | { ok: false; error: string; code?: string };
-export type ShootRequest = { pet: Blob; owner: Blob | null; style: StyleId; memorial: boolean };
+export type ShootRequest = { pet: Blob; owner: Blob | null; style: StyleId; memorial: boolean; name?: string; canvas?: CanvasId; idea?: string };
+
+// Starting points for "Your own scene", so the box is never a blank page.
+const IDEA_STARTERS = [
+  "an astronaut floating above the Earth",
+  "a knight in shining armour in a castle hall",
+  "a cosy watercolour, napping in a field of sunflowers",
+  "a chef in a tiny white hat, baking croissants",
+];
 
 type Props = {
   petName: string;
@@ -38,6 +46,8 @@ export function Studio(props: Props) {
   const [pet, setPet] = useState<Upload | null>(null);
   const [owner, setOwner] = useState<Upload | null>(null);
   const [memorial, setMemorial] = useState(false);
+  const [canvas, setCanvas] = useState<CanvasId>("sage");
+  const [idea, setIdea] = useState("");
   const [error, setError] = useState<{ text: string; code?: string } | null>(null);
   const [result, setResult] = useState<Portrait | null>(null);
   const [phase, setPhase] = useState<UploadPhase | { kind: "drying" }>({ kind: "loading", progress: 0 });
@@ -52,7 +62,19 @@ export function Studio(props: Props) {
     setError(null);
     setPhase({ kind: "loading", progress: 0 });
     setStep("develop");
-    const res = await props.shoot({ pet: pet.blob, owner: owner?.blob ?? null, style: props.style, memorial }, setPhase);
+    const kind = findStyle(props.style)?.kind;
+    const res = await props.shoot(
+      {
+        pet: pet.blob,
+        owner: owner?.blob ?? null,
+        style: props.style,
+        memorial,
+        name: kind === "illustration" ? props.petName : undefined,
+        canvas: kind === "illustration" ? canvas : undefined,
+        idea: kind === "idea" ? idea : undefined,
+      },
+      setPhase,
+    );
     if (!res.ok) {
       setError({ text: res.error, code: res.code });
       setStep("style");
@@ -102,6 +124,7 @@ export function Studio(props: Props) {
 
   const selected = findStyle(props.style)!;
   const star = starName(props.petName);
+  const needsIdea = selected.kind === "idea" && !cleanIdea(idea);
 
   return (
     <section className="px-5 pb-10 pt-2">
@@ -129,11 +152,16 @@ export function Studio(props: Props) {
         <span className="font-display italic text-ink">{selected.title}.</span> {selected.blurb}
       </p>
 
+      {selected.kind === "illustration" && <CanvasPicker value={canvas} onChange={setCanvas} />}
+      {selected.kind === "idea" && <IdeaBox value={idea} onChange={setIdea} star={star} />}
+
       <div className="mt-8 divide-y divide-line border-y border-line">
         <label className="flex min-h-16 items-center justify-between gap-4 py-3">
           <span>
             <span className="block font-medium">Their name</span>
-            <span className="text-sm text-muted">Written on the title card</span>
+            <span className="text-sm text-muted">
+              {selected.kind === "illustration" ? "Painted on the portrait itself" : "Written on the title card"}
+            </span>
           </span>
           <input
             value={props.petName}
@@ -165,7 +193,7 @@ export function Studio(props: Props) {
 
       <button
         onClick={() => void develop()}
-        disabled={!pet}
+        disabled={!pet || needsIdea}
         className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink transition active:scale-[0.98] disabled:opacity-40"
       >
         Develop the portrait
@@ -195,6 +223,65 @@ function EraCard({ style, sample, selected, onSelect }: { style: Style; sample: 
       <p className="font-display mt-2 text-[1.05rem] leading-tight">{style.title}</p>
       <p className="font-display text-sm italic text-muted">{style.year}</p>
     </button>
+  );
+}
+
+function CanvasPicker({ value, onChange }: { value: CanvasId; onChange: (id: CanvasId) => void }) {
+  return (
+    <div className="mt-5">
+      <p className="font-medium">Background colour</p>
+      <div className="mt-3 flex flex-wrap gap-3" role="radiogroup" aria-label="Background colour">
+        {CANVASES.map((c) => (
+          <button
+            key={c.id}
+            role="radio"
+            aria-checked={value === c.id}
+            aria-label={c.label}
+            onClick={() => onChange(c.id)}
+            className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${value === c.id ? "border-accent ring-2 ring-accent ring-offset-2 ring-offset-paper" : "border-line"}`}
+            style={{ background: c.hex }}
+          >
+            {value === c.id && <Check size={16} weight="bold" color={c.ink === "deep charcoal" ? "#2b2b2b" : "#fff"} />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IdeaBox({ value, onChange, star }: { value: string; onChange: (v: string) => void; star: string }) {
+  return (
+    <div className="mt-5">
+      <label htmlFor="idea" className="font-medium">
+        Describe the scene
+      </label>
+      <p className="text-sm text-muted">
+        One or two sentences. We keep {star === "Your pet" ? "your pet" : star} looking exactly like themselves and handle the light, style and details.
+      </p>
+      <textarea
+        id="idea"
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, IDEA_MAX))}
+        rows={3}
+        maxLength={IDEA_MAX}
+        placeholder="As a pirate captain on a ship at sunset"
+        className="mt-3 w-full resize-none rounded-2xl border border-line bg-card px-4 py-3 text-base outline-none focus:border-accent"
+      />
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        {IDEA_STARTERS.map((idea) => (
+          <button
+            key={idea}
+            onClick={() => onChange(idea)}
+            className="min-h-9 rounded-full border border-line px-3 text-sm text-muted transition hover:text-ink"
+          >
+            {idea}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-muted tabular-nums">
+          {value.length}/{IDEA_MAX}
+        </span>
+      </div>
+    </div>
   );
 }
 

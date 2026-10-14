@@ -32,6 +32,14 @@ const LOOK: Record<StyleId, { bg: string; filter: string; overlay?: string }> = 
     bg: "radial-gradient(circle at 20% 25%, #f4c66a 0 3px, transparent 4px), radial-gradient(circle at 78% 18%, #f4c66a 0 4px, transparent 5px), radial-gradient(circle at 70% 60%, #f7d98f 0 3px, transparent 4px), radial-gradient(circle at 15% 70%, #f7d98f 0 2px, transparent 3px), radial-gradient(90% 80% at 50% 40%, #8e2a22 0%, #3a0f0c 100%)",
     filter: "saturate(1.1)",
   },
+  "painted-pet": {
+    bg: "#9fb39a",
+    filter: "saturate(1.05)",
+  },
+  "your-scene": {
+    bg: "radial-gradient(circle at 22% 20%, #fff7d6 0 2px, transparent 3px), radial-gradient(circle at 75% 30%, #fff7d6 0 3px, transparent 4px), radial-gradient(circle at 60% 12%, #fff7d6 0 2px, transparent 3px), linear-gradient(180deg, #2c3a6b 0%, #7a5a9a 55%, #e3a27c 100%)",
+    filter: "saturate(1.05)",
+  },
 };
 
 type Props = { style: Style; sample: string | null; className?: string; mascotSize?: number };

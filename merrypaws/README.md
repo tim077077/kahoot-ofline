@@ -63,7 +63,7 @@ The app is mobile-first and built to be wrapped as an iOS/Android app with Capac
   - A scrapbook page: instant photos and deckled prints at angles, masking tape, date stamps and handwritten captions.
   - **Play** turns it into a short film: a title card, each photo with a slow push-in and a light leak, then THE END.
   - **Share** makes a 9:16 scrapbook page for stories.
-- **Portraits**: the portrait studio. The star's photo can come from the album. There are 6 eras, "Add me too" and "In loving memory". A darkroom loader shows honest progress, then the reveal. See "Prompts".
+- **Portraits**: the portrait studio. The star's photo can come from the album. There are 6 eras, a painted portrait with the name lettered on (6 background colours), "Your own scene" (the owner describes it), "Add me too" and "In loving memory". A darkroom loader shows honest progress, then the reveal. See "Prompts".
 - **Membership**:
   - a member card (plan, renewal, HD credits, photo usage)
   - **Manage or cancel your plan**
@@ -105,6 +105,11 @@ Each era in `src/lib/styles.ts` is a structured prompt, in this order:
 2. Identity rules: the same individual animal, markings on the correct side, the person unbeautified.
 3. Wardrobe, set and pose (pet alone, or pet plus owner), light, camera, palette, texture and mood.
 4. Output rules and era-specific things to avoid.
+
+Two styles differ:
+
+- **The Painted Portrait** (`painted-pet`): a modern illustration on a flat background colour, with the pet's name lettered at the top. The name is cleaned to letters only and spelled out letter by letter in the prompt, because image models misspell names. Expect the odd misspelling anyway; it's the reason to check the preview before paying.
+- **Your Own Scene** (`your-scene`): the owner writes one or two sentences (8-240 characters). We clean it (no quotes, brackets or control characters), quote it as data, and wrap it in our identity, safety and output rules: eyes and muzzle visible, family-friendly, no real people, brands or famous characters. A Gemini safety refusal returns `refused` and the preview is refunded.
 
 There are no trademarks, and a test enforces it.
 

@@ -70,6 +70,8 @@ const ERRORS: Record<string, string> = {
   limit_reached: "You've used your free portrait. Credits let you make more, and keep the ones you love in HD.",
   slow_down: "That's a lot of portraits in a minute. Give it a moment and try again.",
   generation_failed: "The print didn't come out. Nothing was charged, so try again.",
+  refused: "That scene couldn't be painted. Nothing was charged. Try describing it another way.",
+  bad_idea: "Describe the scene in a sentence or two first.",
   bad_request: "That photo couldn't be used. Try a JPG or PNG under 4 MB.",
   not_configured: "That isn't switched on yet.",
   expired: "That portrait has expired. Make a new one.",
@@ -458,6 +460,9 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     if (req.owner) form.append("owner", req.owner, "owner.jpg");
     form.append("style", req.style);
     form.append("day", localDay());
+    if (req.name) form.append("name", req.name);
+    if (req.canvas) form.append("canvas", req.canvas);
+    if (req.idea) form.append("idea", req.idea);
     try {
       const { status, body } = await postPreview(form, token, onPhase);
       const data = body as { id?: string; preview?: string; mock?: boolean; error?: string; daily?: DailyResult };

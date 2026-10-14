@@ -7,7 +7,7 @@ import { isAlbumFull, refreshAllowance, releasePreview, takePreview, type Previe
 import { savePortrait } from "@/lib/portraits";
 import { getObjects } from "@/lib/objects";
 import { generateImage } from "@/lib/stager";
-import { buildPortraitPrompt, findStyle } from "@/lib/styles";
+import { buildPortraitPrompt, cleanIdea, cleanName, findCanvas, findStyle } from "@/lib/styles";
 import { makePreview } from "@/lib/watermark";
 
 // Image models usually answer in 10-30s; leave headroom.
@@ -29,6 +29,9 @@ export async function POST(request: Request) {
   const style = findStyle(form?.get("style"));
   if (!style || !validImage(pet)) return Response.json({ error: "bad_request" }, { status: 400 });
   if (owner != null && !validImage(owner)) return Response.json({ error: "bad_request" }, { status: 400 });
+  // The painted portrait letters the name on; "your own scene" needs a scene.
+  const extras = { name: cleanName(form?.get("name")), canvas: findCanvas(form?.get("canvas")).id, idea: cleanIdea(form?.get("idea")) ?? undefined };
+  if (style.kind === "idea" && !extras.idea) return Response.json({ error: "bad_idea" }, { status: 400 });
 
   const accountId = await accountIdForToken(store, bearerToken(request));
   const guest = guestOf(request);
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
 
   try {
     const images = owner ? [pet, owner] : [pet];
-    const full = await generateImage(images, buildPortraitPrompt(style, Boolean(owner)));
+    const full = await generateImage(images, buildPortraitPrompt(style, Boolean(owner), extras));
     const preview = await makePreview(full.bytes);
     const portrait = await savePortrait(store, getObjects(), full, style.id);
     await track(store, "generation_ok");
@@ -71,10 +74,11 @@ export async function POST(request: Request) {
   } catch (err) {
     // One line per failure with a reason, so the logs show what breaks.
     const reason = err instanceof Error ? err.message : String(err);
-    console.error(JSON.stringify({ event: "generation_failed", style: style.id, withOwner: Boolean(owner), reason }));
+    console.error(JSON.stringify({ event: "generation_failed", style: style.id, withOwner: Boolean(owner), reason, ideaLength: extras.idea?.length }));
     await track(store, "generation_failed");
     if (source === "free") await releaseFreeTrial(store, guest);
     else if (accountId) await releasePreview(store, accountId, source);
-    return Response.json({ error: "generation_failed" }, { status: 502 });
+    // A safety refusal is usually the owner's scene; say so, so they reword it.
+    return Response.json({ error: reason.startsWith("refused") ? "refused" : "generation_failed" }, { status: 502 });
   }
 }
