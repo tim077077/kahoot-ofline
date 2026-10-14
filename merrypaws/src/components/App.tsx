@@ -374,12 +374,14 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     await jsonApi("/api/pack/react", "POST", { friend, day: localDay(), reaction }, token).catch(() => null);
   }
 
-  async function addPhotos(files: File[], tags: string[]) {
+  // Returns the files that didn't make it, so the caller can offer a retry.
+  async function addPhotos(files: File[], tags: string[]): Promise<File[]> {
     const tok = await ensureToken();
     if (!tok) {
       setToast("Couldn't reach the album. Check your connection and try again.");
-      return;
+      return files;
     }
+    const failed: File[] = [];
     const items = files.map((file, i) => ({ file, key: `${Date.now()}-${i}`, url: URL.createObjectURL(file) }));
     setPending((p) => [...items.map((it) => ({ key: it.key, url: it.url, progress: "waiting" as const })), ...p]);
     setBatch({ total: items.length, done: 0 });
@@ -410,10 +412,12 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
             full = true;
             finish(item.key, item.url);
           } else {
+            failed.push(item.file);
             setPending((p) => p.map((x) => (x.key === item.key ? { ...x, progress: "failed" } : x)));
             setBatch((b) => ({ ...b, done: b.done + 1 }));
           }
         } catch {
+          failed.push(item.file);
           setPending((p) => p.map((x) => (x.key === item.key ? { ...x, progress: "failed" } : x)));
           setBatch((b) => ({ ...b, done: b.done + 1 }));
         }
@@ -425,6 +429,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     if (full) openSheet("photos");
     // Failed prints stay on the page for a moment, then clear.
     setTimeout(() => setPending((p) => p.filter((x) => x.progress !== "failed")), 6000);
+    return failed;
   }
 
   async function changePhoto(id: string, patch: Partial<Pick<Photo, "tags" | "caption" | "favorite">>) {
@@ -587,7 +592,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       <Onboarding
         onSignIn={() => setBackup("signin")}
         invitedBy={invitedBy}
-        onPhotos={(files) => void addPhotos(files, [])}
+        onPhotos={(files) => addPhotos(files, [])}
         uploaded={batch.done}
         total={batch.total}
         onDone={(p, next) => {

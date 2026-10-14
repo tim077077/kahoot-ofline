@@ -123,7 +123,7 @@ export function Album(props: Props) {
         {highlights.length === 0 && (
           <p role="listitem" className="flex min-h-24 flex-1 items-center gap-3 rounded-2xl bg-card p-4 text-sm text-muted">
             <Heart size={22} className="shrink-0 text-accent" />
-            Open a photo and tag what {name === "Your pet" ? "they" : name} were up to. Walks, naps, birthdays: each becomes a collage here.
+            Open a photo and tag what {name === "Your pet" ? "they were" : `${name} was`} up to. Walks, naps, birthdays: each becomes a collage here.
           </p>
         )}
       </div>

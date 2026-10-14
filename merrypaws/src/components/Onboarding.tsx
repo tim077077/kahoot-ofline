@@ -16,7 +16,8 @@ const STEPS = 4;
 const MAX_FIRST_PHOTOS = 12;
 
 type Props = {
-  onPhotos: (files: File[], petName: string) => void;
+  // Resolves with the files that didn't upload.
+  onPhotos: (files: File[], petName: string) => Promise<File[]>;
   uploaded: number;
   total: number;
   onDone: (profile: { petName: string; kind: PetKind; memorial: boolean }, next: "album" | "portrait") => void;
@@ -34,6 +35,10 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
   const [kind, setKind] = useState<PetKind>("dog");
   const [memorial, setMemorial] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
+  // How many were picked, and which didn't make it once the upload settles
+  // (null while it's still going).
+  const [chosen, setChosen] = useState(0);
+  const [failed, setFailed] = useState<File[] | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => track(["intro_seen", "onboarding_name", "onboarding_photos", "onboarding_page"][step]), [step]);
@@ -41,6 +46,13 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
 
   const star = starName(name);
   const done = (next: "album" | "portrait") => onDone({ petName: name.trim(), kind, memorial }, next);
+
+  async function upload(files: File[]) {
+    setFailed(null);
+    setFailed(await onPhotos(files, name.trim()));
+  }
+  const inAlbum = chosen - (failed?.length ?? 0);
+  const allIn = failed !== null && failed.length === 0 && chosen > 0;
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
@@ -147,7 +159,8 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
               e.target.value = "";
               if (!files.length) return;
               setPreviews(files.map((f) => URL.createObjectURL(f)));
-              onPhotos(files, name.trim());
+              setChosen(files.length);
+              void upload(files);
               setStep(3);
             }}
           />
@@ -160,9 +173,22 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
           <p className="font-hand text-center text-lg leading-normal text-muted">{memorial ? "in loving memory" : "chapter one"}</p>
           <FirstPage previews={previews} />
           <p className="relative z-10 mt-4 text-center text-sm text-muted" aria-live="polite">
-            {uploaded < total ? `Putting them in the album, ${uploaded} of ${total}` : `All ${total} are in ${star === "Your pet" ? "the" : `${star}'s`} album`}
+            {failed === null
+              ? `Putting them in the album, ${Math.min(uploaded, chosen)} of ${total || chosen}`
+              : failed.length === 0
+                ? `All ${chosen} are in ${star === "Your pet" ? "the" : `${star}'s`} album`
+                : inAlbum === 0
+                  ? "Couldn't reach the album. Check your connection."
+                  : `${inAlbum} of ${chosen} are in. ${failed.length} didn't make it.`}
           </p>
-          {!memorial && uploaded >= total && total > 0 && (
+          {failed !== null && failed.length > 0 && (
+            <p className="relative z-10 mt-2 text-center">
+              <button onClick={() => void upload(failed)} className="min-h-11 rounded-full border border-ink/20 px-5 text-sm font-medium">
+                Try again
+              </button>
+            </p>
+          )}
+          {!memorial && allIn && (
             <p className="rise mt-2 text-center">
               <span className="dymo" data-tone="red">Day 1 of the photo-a-day roll</span>
             </p>
