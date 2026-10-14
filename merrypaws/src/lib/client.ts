@@ -9,7 +9,7 @@ import type { StyleId } from "./styles";
 // details from onboarding, and the reel of portraits made on this phone.
 
 // Empty on the web (same origin). The mobile app build points this at the
-// deployed backend, e.g. https://your-app.vercel.app
+// deployed backend, e.g. https://paw-pictures.you.workers.dev
 export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
 
 const TOKEN_KEY = "pp_token";

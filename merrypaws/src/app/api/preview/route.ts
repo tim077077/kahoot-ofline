@@ -5,7 +5,8 @@ import { track } from "@/lib/events";
 import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
 import { isAlbumFull, refreshAllowance, releasePreview, takePreview, type PreviewSource } from "@/lib/plans";
 import { savePortrait } from "@/lib/portraits";
-import { fetchImageBytes, generateImage } from "@/lib/stager";
+import { getObjects } from "@/lib/objects";
+import { generateImage } from "@/lib/stager";
 import { buildPortraitPrompt, findStyle } from "@/lib/styles";
 import { makePreview } from "@/lib/watermark";
 
@@ -52,9 +53,9 @@ export async function POST(request: Request) {
 
   try {
     const images = owner ? [pet, owner] : [pet];
-    const { url, mock } = await generateImage(images, buildPortraitPrompt(style, Boolean(owner)));
-    const preview = await makePreview(await fetchImageBytes(url));
-    const portrait = await savePortrait(store, url, style.id);
+    const full = await generateImage(images, buildPortraitPrompt(style, Boolean(owner)));
+    const preview = await makePreview(full.bytes);
+    const portrait = await savePortrait(store, getObjects(), full, style.id);
     await track(store, "generation_ok");
     // A portrait keeps the daily roll going too.
     const day = form?.get("day");
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       id: portrait.id,
       style: style.id,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
-      mock,
+      mock: full.mock,
       daily,
     });
   } catch (err) {

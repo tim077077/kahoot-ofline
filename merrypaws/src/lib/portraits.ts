@@ -4,12 +4,23 @@ import { takeCredit } from "./credits";
 import type { StyleId } from "./styles";
 import type { Store } from "./store";
 
-export type Portrait = { id: string; fullUrl: string; style: StyleId; createdAt: string };
+import type { ObjectStore } from "./objects";
+
+// The full-size image lives in the object store; the record only points at it.
+export type Portrait = { id: string; fullKey: string; mimeType: string; style: StyleId; createdAt: string };
 
 const TTL = LIMITS.portraitTtlDays * 24 * 60 * 60;
 
-export async function savePortrait(store: Store, fullUrl: string, style: StyleId): Promise<Portrait> {
-  const portrait: Portrait = { id: randomUUID(), fullUrl, style, createdAt: new Date().toISOString() };
+export async function savePortrait(
+  store: Store,
+  objects: ObjectStore,
+  full: { bytes: Uint8Array; mimeType: string },
+  style: StyleId,
+): Promise<Portrait> {
+  const id = randomUUID();
+  const fullKey = `portraits/${id}.${full.mimeType === "image/png" ? "png" : "jpg"}`;
+  await objects.put(fullKey, full.bytes, full.mimeType);
+  const portrait: Portrait = { id, fullKey, mimeType: full.mimeType, style, createdAt: new Date().toISOString() };
   await store.set(`portrait:${portrait.id}`, JSON.stringify(portrait), { ex: TTL });
   return portrait;
 }

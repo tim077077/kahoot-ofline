@@ -61,7 +61,8 @@ export const TIERS: Record<Tier, TierInfo> = {
     name: "Plus",
     blurb: "A portrait every day",
     photos: 2000,
-    previewsPerMonth: 45,
+    // One try a day, and every one of them can be kept in HD.
+    previewsPerMonth: 30,
     hdPerMonth: 30,
     freezesPerMonth: 4,
     allLooks: true,
@@ -72,7 +73,7 @@ export const TIERS: Record<Tier, TierInfo> = {
     name: "Pro",
     blurb: "For the photo-every-hour kind of love",
     photos: 10000,
-    previewsPerMonth: 100,
+    previewsPerMonth: 60,
     hdPerMonth: 60,
     freezesPerMonth: 4,
     allLooks: true,
@@ -104,10 +105,16 @@ export function formatUsd(cents: number): string {
   return `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
 }
 
+// What one portrait try costs us: Gemini Nano Banana 2.1 at 1K is $0.0336 an
+// image, plus about $0.003 for the photo and prompt going in. HD unlocks cost
+// nothing (the image already exists). plans.test.ts fails if any plan or pack
+// could lose money at this price, even with a 30% store fee and every try used.
+export const COST_PER_TRY_USD = 0.037;
+
 export const LIMITS = {
   // One free (watermarked) portrait per device, ever. The per-IP daily cap is
   // the backstop for people who clear app data to farm more, and the global
-  // cap is your worst-case daily spend (each preview costs about $0.04).
+  // cap is your worst-case daily spend (each preview costs COST_PER_TRY_USD).
   freePerDevice: Number(process.env.FREE_PER_DEVICE ?? 1),
   freePerIpPerDay: Number(process.env.FREE_PER_IP_PER_DAY ?? 3),
   freeGlobalPerDay: Number(process.env.FREE_GLOBAL_DAILY_CAP ?? 300),
@@ -120,12 +127,11 @@ export const LIMITS = {
   portraitTtlDays: 30,
 };
 
-// The image model, through fal.ai (one key, many models). The fallback runs
-// only when the main model errors or times out; it costs more per image, so
-// it should be rare. Both are Gemini-family edit models with the same inputs.
-export const FAL_MODEL = process.env.FAL_MODEL || "fal-ai/nano-banana/edit";
-export const FAL_FALLBACK_MODEL =
-  process.env.FAL_FALLBACK_MODEL === undefined ? "fal-ai/gemini-3-pro-image-preview/edit" : process.env.FAL_FALLBACK_MODEL;
+// The image model, called directly on Google's Gemini API (GEMINI_API_KEY).
+// The fallback runs only when the main model errors or times out.
+export const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-nano-banana-2.1";
+export const GEMINI_FALLBACK_MODEL =
+  process.env.GEMINI_FALLBACK_MODEL === undefined ? "gemini-3.1-flash-image" : process.env.GEMINI_FALLBACK_MODEL;
 
 export function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");

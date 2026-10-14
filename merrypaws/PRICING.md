@@ -1,6 +1,6 @@
 # Pricing: what the plans cost, and why
 
-Researched September 2026. Prices are USD and change often, so re-check them before launch.
+Researched September 2026; image costs and limits updated October 2026. Prices are USD and change often, so re-check them before launch.
 
 ## The model
 
@@ -17,7 +17,7 @@ Three paid plans, shown most expensive first (the anchor), with **Plus** in the 
 |---|---|---|---|---|
 | Price | $0 | $2.99/mo or $19.99/yr | **$3.99/mo or $29.99/yr** | $7.99/mo or $69.99/yr |
 | HD portraits every month | none | 5 | **30 (one a day)** | 60 |
-| Portrait tries every month | first one free | 10 | **45** | 100 |
+| Portrait tries every month | first one free | 10 | **30** | 60 |
 | Album photos | 50 | 300 | **2,000** | 10,000 |
 | Film looks | 2 | all 6 | **all 6** | all 6 |
 | Streak freezes a month | 1 | 2 | **4** | 4 |
@@ -80,45 +80,50 @@ Social and habit features are free for everyone. Friends bring friends, and a fr
 
 | Item | Cost |
 |---|---|
-| Store fee (Apple Small Business Program, Google) | 15%; Stripe on the web is about 3% + $0.30 |
-| One portrait preview (Nano Banana through fal) | about $0.04 |
-| Fallback model (only when the main one fails) | $0.15 |
+| Store fee | 15% with Apple's Small Business Program and on Google; 30% for Apple without it. Stripe on the web is about 3% + $0.30 |
+| One portrait try (Gemini Nano Banana 2.1 at 1K, straight from Google) | $0.0336 output + about $0.003 input = **$0.037** |
+| Fallback model (Nano Banana 2, only when the main one fails) | about $0.07 |
 | One album photo (2048px print + thumbnail) | about 0.65 MB |
 | Cloudflare R2 storage | $0.015 per GB-month, free egress, first 10 GB free |
+
+Why Google directly and not fal.ai: it's the same model with no reseller in between, and fal's default model (Gemini 2.5 Flash Image) is being shut down by Google. Sources: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing), [Gemini models](https://ai.google.dev/gemini-api/docs/models).
 
 So 1,000 photos cost about **$0.01 a month** to keep. Storage is almost free; the photo limit separates the plans, it doesn't protect our costs.
 
 **Cost to us:**
 
-- Unlocking an HD portrait costs nothing extra: the image already exists.
-- Worst case assumes every try is used every month.
-- Typical case: Starter about 5 tries, Plus about 16 (a portrait every other day or so), Pro about 30.
+- Only tries cost money. Unlocking an HD portrait costs nothing extra: the image already exists.
+- Every plan has at least as many tries as HD portraits, so every HD portrait is covered.
+- Worst case assumes every try is used every month. Typical: Starter about 5 tries, Plus about 16, Pro about 30.
 
-| Plan | We keep after 15% | Worst-case cost | Worst-case margin | Typical margin |
-|---|---|---|---|---|
-| Starter monthly | $2.54/mo | $0.40 | $2.14 (84%) | $2.34 (92%) |
-| Starter yearly | $1.42/mo | $0.40 | $1.02 (72%) | $1.22 (86%) |
-| **Plus monthly** | $3.39/mo | $1.82 | $1.57 (46%) | $2.73 (81%) |
-| **Plus yearly** | $2.12/mo | $1.82 | $0.30 (14%) | $1.46 (69%) |
-| Pro monthly | $6.79/mo | $4.10 | $2.69 (40%) | $5.49 (81%) |
-| Pro yearly | $4.96/mo | $4.10 | $0.86 (17%) | $3.66 (74%) |
-| 3 portraits | $2.54 | $0.36 | $2.18 (86%) | |
-| 10 portraits | $5.94 | $1.20 | $4.74 (80%) | |
-| 25 portraits | $11.04 | $3.00 | $8.04 (73%) | |
+| Plan | We keep after 15% | Worst-case cost | Worst case at 15% | Worst case at 30% | Typical at 15% |
+|---|---|---|---|---|---|
+| Starter monthly | $2.54/mo | $0.37 | $2.17 (85%) | $1.72 (82%) | 93% |
+| Starter yearly | $1.42/mo | $0.37 | $1.05 (74%) | $0.80 (68%) | 87% |
+| **Plus monthly** | $3.39/mo | $1.11 | $2.28 (67%) | $1.68 (60%) | 83% |
+| **Plus yearly** | $2.12/mo | $1.11 | $1.01 (48%) | $0.64 (37%) | 72% |
+| Pro monthly | $6.79/mo | $2.22 | $4.57 (67%) | $3.37 (60%) | 84% |
+| Pro yearly | $4.96/mo | $2.22 | $2.74 (55%) | $1.86 (46%) | 78% |
+| 3 portraits (9 tries) | $2.54 | $0.33 | $2.21 (87%) | | |
+| 10 portraits (30 tries) | $5.94 | $1.11 | $4.83 (81%) | | |
+| 25 portraits (75 tries) | $11.04 | $2.77 | $8.27 (75%) | | |
 
-**The honest risk: Plus yearly.** "A portrait every day" at $29.99 a year leaves almost no margin for someone who uses all 45 tries every month. Watch the real usage. If heavy users are common, cut tries to 35 or move yearly to $34.99; both are one line in `src/lib/config.ts`.
+**No plan can lose money.** Plus used to give 45 tries and Pro 100. At 45 tries, a heavy Plus yearly member left 22% at a 15% store fee and lost money at 30%. Now Plus is a try a day (30) and Pro is 60. `src/lib/plans.test.ts` fails the build if any plan or pack drops under a 35% worst-case margin at a 30% store fee, so a future price or limit change can't quietly bring the loss back.
 
-**Free users** cost about $0.04 each: one preview, plus storage for 50 photos. The global daily cap (300 free previews) limits the worst day to $12.
+**Join Apple's Small Business Program** (free, for under $1M a year). It takes Apple's cut from 30% to 15%, which is the biggest single cost on every plan.
+
+**Free users** cost about $0.037 each: one try, plus storage for 50 photos. The global daily cap (300 free tries) limits the worst day to about $11.
 
 ## Fixed costs, and break-even
 
 | Item | Cost |
 |---|---|
 | Apple developer | $99/yr (about $8/mo); Google's $25 is already paid |
-| Vercel | Hobby is non-commercial. Once you charge, Pro is $20/mo (or move the API to Cloudflare Workers) |
+| Cloudflare Workers Paid | $5/mo. Hosts the app, the hourly reminder job and R2. The free plan's 10 ms of CPU per request is too little for making previews |
 | Upstash Redis and Cloudflare R2 | free tiers cover the first thousands of users |
+| Google Gemini API | pay as you go, no monthly fee (image models have no free tier) |
 
-That's about **$30 a month**. Break-even is roughly 11 Plus monthly members, or 21 yearly ones, at typical use.
+That's about **$13 a month**. Break-even is about 5 Plus monthly members, or 9 yearly ones, at typical use.
 
 ## Levers if conversion is low
 

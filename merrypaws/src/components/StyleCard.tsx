@@ -1,8 +1,8 @@
 import { Mascot } from "@/components/Mascot";
 import type { Style, StyleId } from "@/lib/styles";
 
-// Each era's look, applied to Biscuit on a period backdrop. Honest sample art
-// until you drop real example stills into public/styles/<id>.jpg.
+// Fallback art for an era without an example portrait in public/styles (see
+// src/lib/samples.ts): Biscuit on a period backdrop.
 const LOOK: Record<StyleId, { bg: string; filter: string; overlay?: string }> = {
   "royal-court": {
     bg: "radial-gradient(90% 70% at 50% 35%, #6b4526 0%, #2a1a10 70%, #140c07 100%)",

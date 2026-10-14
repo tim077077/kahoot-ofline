@@ -6,6 +6,7 @@ import { TIERS } from "@/lib/config";
 import { currentTier, getPlan, previewsLeft, refreshAllowance } from "@/lib/plans";
 import { MemoryStore } from "@/lib/store";
 import { POST } from "./route";
+import { fakeImage, MemoryObjects } from "@/test/memoryObjects";
 
 const SECRET = "whsec_test_secret";
 let store: MemoryStore;
@@ -49,7 +50,7 @@ function checkoutEvent(id: string, metadata: Record<string, string>, paymentStat
 describe("stripe webhook", () => {
   it("adds credits and unlocks the portrait the buyer paid from, once", async () => {
     const { account } = await createAccount(store);
-    const portrait = await savePortrait(store, "https://v3.fal.media/files/x.jpg", "royal-court");
+    const portrait = await savePortrait(store, new MemoryObjects(), fakeImage, "royal-court");
     const event = checkoutEvent("evt_1", { accountId: account.id, kind: "pack", pack: "p3", unlockId: portrait.id });
 
     expect((await POST(signedRequest(event))).status).toBe(200);

@@ -49,7 +49,7 @@ describe("the daily roll", () => {
   });
 });
 
-const objects: ObjectStore = { put: async () => {}, del: async () => {}, url: async (k) => `https://bucket.test/${k}` };
+const objects: ObjectStore = { put: async () => {}, get: async () => null, del: async () => {}, url: async (k) => `https://bucket.test/${k}` };
 
 describe("the pack", () => {
   it("joins by invite code, shows today's photo and counts reactions", async () => {

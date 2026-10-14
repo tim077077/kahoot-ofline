@@ -1,5 +1,5 @@
 // Tiny key-value store. Production uses Upstash Redis over its REST API (free
-// tier, one-click on Vercel). Local dev falls back to an in-memory map so the
+// tier, works from any host). Local dev falls back to an in-memory map so the
 // app runs with zero setup.
 
 export interface Store {
@@ -153,7 +153,7 @@ const globalForStore = globalThis as unknown as { __appStore?: Store };
 export function getStore(): Store {
   if (globalForStore.__appStore) return globalForStore.__appStore;
 
-  // Vercel's Upstash integration names the variables KV_REST_API_*.
+  // Some Upstash integrations name the variables KV_REST_API_*.
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 

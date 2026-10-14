@@ -9,30 +9,35 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit",
-    "lab": "npx --yes tsx scripts/prompt-lab.ts"
+    "lab": "npx --yes tsx scripts/prompt-lab.ts",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
-    "@fal-ai/client": "^1.10.1",
+    "@google/genai": "^2.29.1",
+    "@opennextjs/cloudflare": "^1.20.11",
     "@phosphor-icons/react": "^2.1.10",
     "aws4fetch": "^1.0.20",
-    "next": "16.3.7",
+    "fast-png": "^8.0.0",
+    "jpeg-js": "^0.4.4",
+    "next": "^16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.5",
-    "stripe": "^22.6.2",
-    "web-push": "^3.6.7"
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/jpeg-js": "^0.3.0",
     "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/web-push": "^3.6.4",
     "eslint": "^9",
-    "eslint-config-next": "16.3.7",
+    "eslint-config-next": "^16.3.8",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.2",
+    "wrangler": "^4.151.0"
   }
 }

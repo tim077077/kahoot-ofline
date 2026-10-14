@@ -11,6 +11,7 @@ import path from "node:path";
 
 export interface ObjectStore {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
+  get(key: string): Promise<Buffer | null>;
   del(key: string): Promise<void>;
   // A URL the phone can load directly, valid for `seconds`.
   url(key: string, seconds: number): Promise<string>;
@@ -40,6 +41,13 @@ class S3Store implements ObjectStore {
       headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=31536000, immutable" },
     });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  }
+
+  async get(key: string) {
+    const res = await this.client.fetch(this.objectUrl(key));
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
   }
 
   async del(key: string) {
@@ -76,6 +84,10 @@ class DiskStore implements ObjectStore {
 
   async read(key: string) {
     return readFile(this.file(key));
+  }
+
+  async get(key: string) {
+    return this.read(key).catch(() => null);
   }
 
   async url(key: string, seconds: number) {

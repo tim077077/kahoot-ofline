@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The whole app (pages, API and the hourly reminder job) is one Worker.
+  // Build with `npm run cf:build`, deploy with `npm run cf:deploy`. DEPLOY.md
+  // has every step.
+  "name": "paw-pictures",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Every hour on the minute: send the daily reminders that are due.
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

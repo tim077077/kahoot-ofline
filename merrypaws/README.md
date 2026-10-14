@@ -112,11 +112,11 @@ Before every prompt or model change:
 
 ```bash
 # ~20 real pet photos in prompt-lab/photos/, optionally one person in prompt-lab/owner.jpg
-FAL_KEY=... npm run lab -- --yes
+GEMINI_API_KEY=... npm run lab -- --yes
 # then open prompt-lab/out/index.html and ask of every cell: is that the same animal?
 ```
 
-**Why fal.ai:** it's a gateway, not the model. One key covers many models, and there's an automatic fallback. The main model is Nano Banana edit, about $0.04 an image. Compare Nano Banana 2, FLUX Kontext and Seedream with the prompt lab.
+**Why Google directly:** the model is Google's (Nano Banana 2.1, `gemini-nano-banana-2.1`), so a gateway like fal only adds a markup and a second company holding the photos. It's $0.0336 an image at 1K plus about $0.003 of input. If the main model errors, Nano Banana 2 (`gemini-3.1-flash-image`) runs instead. Both are set in `src/lib/config.ts` or with `GEMINI_IMAGE_MODEL` / `GEMINI_FALLBACK_MODEL`; compare models with the prompt lab's `--model`.
 
 ## Backend
 
@@ -218,13 +218,14 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
 
 ## Before launch (in this order)
 
-1. **Put it online** with [DEPLOY.md](DEPLOY.md): Vercel, Upstash, R2, fal, Resend, VAPID keys and an hourly timer. Check `/api/health`.
+1. **Put it online** with [DEPLOY.md](DEPLOY.md): Cloudflare (Workers + R2 + the hourly timer), Upstash, a Google Gemini key, Resend and VAPID keys. Check `/api/health`.
 2. **Portrait quality.** Run the prompt lab on 20 real pets (`npm run lab -- --sample` gets 20 random dogs to start).
-3. **Real example stills** for the era cards, in `public/styles/<era-id>.jpg`.
+3. **Your own example stills** for the era cards. The ones in `public/styles/<era-id>.jpg` are stand-ins of a made-up dog; swap in the best results from the prompt lab, ideally of a real pet with permission.
 4. **Name.** "Paw Pictures" and "Biscuit" are placeholders in `src/lib/config.ts`.
 5. **Privacy policy and terms.** Photos are private, used only for the album and requested portraits, never for training.
-   - Portrait uploads go through fal's file storage. Check fal's retention before promising a deletion window.
-6. **Hosting.** Vercel Hobby is non-commercial. Move to Pro ($20/mo) once you charge.
+   - Portrait photos go to Google's Gemini API. On a paid (billing enabled) key Google doesn't use them to train models; it keeps them for a limited time for abuse checks. Say so in the policy.
+   - Finished portraits sit in R2 under `portraits/`. The R2 lifecycle rule in DEPLOY.md deletes them after 30 days.
+6. **Hosting.** Cloudflare Workers Paid ($5/mo) once you launch. See PRICING.md for every running cost.
 
 ## Going to the stores
 

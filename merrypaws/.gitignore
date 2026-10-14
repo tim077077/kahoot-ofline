@@ -34,8 +34,8 @@ yarn-error.log*
 .env*
 !.env.example
 
-# vercel
-.vercel
+
+
 
 # typescript
 *.tsbuildinfo
@@ -47,3 +47,8 @@ next-env.d.ts
 /prompt-lab/owner.jpg
 /prompt-lab/out
 /.data
+
+# cloudflare
+/.open-next
+/.wrangler
+/.dev.vars*

@@ -1,60 +1,70 @@
-import { createFalClient } from "@fal-ai/client";
-import { FAL_FALLBACK_MODEL, FAL_MODEL } from "./config";
+import { FinishReason, GoogleGenAI } from "@google/genai";
+import { GEMINI_FALLBACK_MODEL, GEMINI_IMAGE_MODEL } from "./config";
 
 export class GenerationError extends Error {}
 
-// Returns the URL of the generated image. Without FAL_KEY in development it
-// echoes the first input back (as a data URL) so the whole flow can be tested
-// for free.
-export type Generated = { url: string; mock: boolean; model?: string };
+// The image itself, straight from Google's Gemini API (no middleman). Without
+// a key in development it echoes the first input back, so the whole flow can
+// be tested for free.
+export type Generated = { bytes: Buffer; mimeType: string; mock: boolean; model?: string };
 
-// Tries the main model, then the fallback. Returns the URL of the image.
+export const geminiKey = () => process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+
+let client: GoogleGenAI | null = null;
+function gemini() {
+  client ??= new GoogleGenAI({ apiKey: geminiKey(), httpOptions: { timeout: 50_000 } });
+  return client;
+}
+
+const BLOCKED = new Set<string>([
+  FinishReason.SAFETY,
+  FinishReason.BLOCKLIST,
+  FinishReason.PROHIBITED_CONTENT,
+  FinishReason.SPII,
+  FinishReason.IMAGE_SAFETY,
+]);
+
+// Tries the main model, then the fallback. A safety refusal isn't retried:
+// the fallback would refuse the same photo and cost a second call.
 export async function generateImage(images: Blob[], prompt: string): Promise<Generated> {
-  const key = process.env.FAL_KEY;
-  if (!key) {
-    if (process.env.NODE_ENV === "production") throw new GenerationError("FAL_KEY is not set");
+  if (!geminiKey()) {
+    if (process.env.NODE_ENV === "production") throw new GenerationError("GEMINI_API_KEY is not set");
     const first = images[0];
-    const bytes = Buffer.from(await first.arrayBuffer()).toString("base64");
-    return { url: `data:${first.type || "image/jpeg"};base64,${bytes}`, mock: true };
+    return { bytes: Buffer.from(await first.arrayBuffer()), mimeType: first.type || "image/jpeg", mock: true };
   }
 
-  const fal = createFalClient({ credentials: key });
-  const imageUrls = await Promise.all(images.map((img) => fal.storage.upload(img)));
-  const models = [FAL_MODEL, FAL_FALLBACK_MODEL].filter((m, idx, all): m is string => Boolean(m) && all.indexOf(m) === idx);
+  const parts = [
+    ...(await Promise.all(
+      images.map(async (img) => ({
+        inlineData: { mimeType: img.type || "image/jpeg", data: Buffer.from(await img.arrayBuffer()).toString("base64") },
+      })),
+    )),
+    { text: prompt },
+  ];
+  const models = [GEMINI_IMAGE_MODEL, GEMINI_FALLBACK_MODEL].filter((m, idx, all): m is string => Boolean(m) && all.indexOf(m) === idx);
 
   let lastError: unknown;
   for (const model of models) {
     try {
-      const result = await fal.subscribe(model, {
-        input: { prompt, image_urls: imageUrls, num_images: 1, output_format: "jpeg", aspect_ratio: "4:5" },
+      const res = await gemini().models.generateContent({
+        model,
+        contents: [{ role: "user", parts }],
+        // 1K is plenty for a phone and a print up to about 4x5 inches, and the
+        // cheapest size.
+        config: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "4:5", imageSize: "1K" } },
       });
-      const data = result.data as { images?: { url: string }[] };
-      const url = data.images?.[0]?.url;
-      if (!url) throw new GenerationError(`${model} returned no image`);
-      return { url, mock: false, model };
+      const candidate = res.candidates?.[0];
+      if (res.promptFeedback?.blockReason || (candidate?.finishReason && BLOCKED.has(candidate.finishReason))) {
+        throw new GenerationError(`refused: ${res.promptFeedback?.blockReason ?? candidate?.finishReason}`);
+      }
+      const image = candidate?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
+      if (!image?.data) throw new GenerationError(`${model} returned no image (${candidate?.finishReason ?? "empty"})`);
+      return { bytes: Buffer.from(image.data, "base64"), mimeType: image.mimeType || "image/png", mock: false, model };
     } catch (err) {
       lastError = err;
       console.error(JSON.stringify({ event: "model_failed", model, reason: err instanceof Error ? err.message : String(err) }));
+      if (err instanceof GenerationError && err.message.startsWith("refused")) break;
     }
   }
   throw lastError instanceof Error ? lastError : new GenerationError("Every model failed");
-}
-
-// Only fal's CDN (or our own dev data URLs) is ever fetched server-side.
-export function isAllowedImageUrl(raw: string): boolean {
-  if (raw.startsWith("data:image/")) return process.env.NODE_ENV !== "production";
-  try {
-    const url = new URL(raw);
-    const host = url.hostname;
-    return url.protocol === "https:" && (host === "fal.media" || host.endsWith(".fal.media") || host.endsWith(".fal.ai"));
-  } catch {
-    return false;
-  }
-}
-
-export async function fetchImageBytes(raw: string): Promise<Buffer> {
-  if (!isAllowedImageUrl(raw)) throw new GenerationError("Refusing to fetch image from this host");
-  const res = await fetch(raw, { cache: "no-store" });
-  if (!res.ok) throw new GenerationError(`Image fetch failed: ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
 }

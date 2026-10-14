@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!portrait) return Response.json({ error: "expired" }, { status: 404 });
   await store.set(
     `report:${id}`,
-    JSON.stringify({ reason, style: portrait.style, fullUrl: portrait.fullUrl, at: new Date().toISOString() }),
+    JSON.stringify({ reason, style: portrait.style, fullKey: portrait.fullKey, at: new Date().toISOString() }),
     { ex: 90 * 24 * 60 * 60 },
   );
   console.warn("portrait reported", id, reason);

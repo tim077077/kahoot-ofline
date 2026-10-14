@@ -6,15 +6,15 @@
 //      photo of a person in prompt-lab/owner.jpg to test "Add me too".
 //      No photos yet? `npm run lab -- --sample` downloads 20 random dogs from
 //      dog.ceo to start with. Real photos from friends are the better test.
-//   2. FAL_KEY=... npm run lab -- --yes            (all eras, main model)
-//      FAL_KEY=... npm run lab -- --yes --model fal-ai/gemini-3-pro-image-preview/edit
-//      FAL_KEY=... npm run lab -- --yes --styles royal-court,film-noir
+//   2. GEMINI_API_KEY=... npm run lab -- --yes            (all eras, main model)
+//      GEMINI_API_KEY=... npm run lab -- --yes --model gemini-3.1-flash-image
+//      GEMINI_API_KEY=... npm run lab -- --yes --styles royal-court,film-noir
 //   3. Open prompt-lab/out/index.html. Each row is one pet: the original, then
 //      every era. Ask one question per cell: "is that the same animal?"
 //
 // It costs money (the script prints an estimate and needs --yes).
 
-import { createFalClient } from "@fal-ai/client";
+import { GoogleGenAI } from "@google/genai";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -27,9 +27,10 @@ const flag = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 
-const model = flag("model") ?? process.env.FAL_MODEL ?? "fal-ai/nano-banana/edit";
+const model = flag("model") ?? process.env.GEMINI_IMAGE_MODEL ?? "gemini-nano-banana-2.1";
 const styles = flag("styles") ? STYLES.filter((s) => flag("styles")!.split(",").includes(s.id)) : STYLES;
-const pricePerImage = Number(flag("price") ?? 0.04);
+// Nano Banana 2.1 at 1K: $0.0336 per image plus about $0.003 of input.
+const pricePerImage = Number(flag("price") ?? 0.037);
 
 // 20 random dogs from the free dog.ceo API, so the lab can run on day one.
 async function downloadSamples() {
@@ -48,8 +49,8 @@ async function downloadSamples() {
 
 async function main() {
   if (args.includes("--sample")) return downloadSamples();
-  const key = process.env.FAL_KEY;
-  if (!key) throw new Error("Set FAL_KEY first.");
+  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!key) throw new Error("Set GEMINI_API_KEY first (https://aistudio.google.com/apikey).");
   const photos = (await readdir(path.join(ROOT, "photos"))).filter((f) => /\.(jpe?g|png|webp)$/i.test(f)).sort();
   if (photos.length === 0) throw new Error("Put some pet photos in prompt-lab/photos/ first.");
   const ownerPath = path.join(ROOT, "owner.jpg");
@@ -69,15 +70,15 @@ async function main() {
     return;
   }
 
-  const fal = createFalClient({ credentials: key });
-  const upload = async (file: string) => {
+  const ai = new GoogleGenAI({ apiKey: key });
+  const load = async (file: string) => {
     const bytes = await readFile(file);
-    const type = file.endsWith(".png") ? "image/png" : file.endsWith(".webp") ? "image/webp" : "image/jpeg";
-    return fal.storage.upload(new Blob([bytes], { type }));
+    const mimeType = file.endsWith(".png") ? "image/png" : file.endsWith(".webp") ? "image/webp" : "image/jpeg";
+    return { inlineData: { mimeType, data: bytes.toString("base64") } };
   };
-  const petUrls = new Map<string, string>();
-  for (const photo of photos) petUrls.set(photo, await upload(path.join(ROOT, "photos", photo)));
-  const ownerUrl = withOwner ? await upload(ownerPath) : null;
+  const pets = new Map<string, Awaited<ReturnType<typeof load>>>();
+  for (const photo of photos) pets.set(photo, await load(path.join(ROOT, "photos", photo)));
+  const ownerPart = withOwner ? await load(ownerPath) : null;
 
   const outDir = path.join(ROOT, "out");
   await mkdir(outDir, { recursive: true });
@@ -90,18 +91,19 @@ async function main() {
       const job = jobs[next++];
       const name = `${path.parse(job.photo).name}__${job.style.id}${job.owner ? "__owner" : ""}.jpg`;
       try {
-        const result = await fal.subscribe(model, {
-          input: {
-            prompt: buildPortraitPrompt(job.style, job.owner),
-            image_urls: job.owner ? [petUrls.get(job.photo)!, ownerUrl!] : [petUrls.get(job.photo)!],
-            num_images: 1,
-            output_format: "jpeg",
-            aspect_ratio: "4:5",
-          },
+        const res = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [pets.get(job.photo)!, ...(job.owner ? [ownerPart!] : []), { text: buildPortraitPrompt(job.style, job.owner) }],
+            },
+          ],
+          config: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "4:5", imageSize: "1K" } },
         });
-        const url = (result.data as { images?: { url: string }[] }).images?.[0]?.url;
-        if (!url) throw new Error("no image returned");
-        await writeFile(path.join(outDir, name), Buffer.from(await (await fetch(url)).arrayBuffer()));
+        const image = res.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
+        if (!image?.data) throw new Error(`no image returned (${res.candidates?.[0]?.finishReason ?? "empty"})`);
+        await writeFile(path.join(outDir, name), Buffer.from(image.data, "base64"));
         results.set(name, name);
         console.log("ok  ", name);
       } catch (err) {
