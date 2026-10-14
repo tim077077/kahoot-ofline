@@ -1,6 +1,8 @@
 import { issueToken, linkEmail, normalizeEmail, verifyCode } from "@/lib/auth";
 import { accountIdForToken } from "@/lib/credits";
 import { bearerToken, storeOr503 } from "@/lib/http";
+import { sendBackedUp } from "@/lib/mailer";
+import { getProfile } from "@/lib/pack";
 
 // Check the code. Backup: the email is now this album's way back in.
 // Sign-in: this phone gets its own token for the album.
@@ -21,6 +23,8 @@ export async function POST(request: Request) {
       return Response.json({ error: "wrong_code" }, { status: 400 });
     }
     if (!(await linkEmail(store, result.accountId, email))) return Response.json({ error: "email_in_use" }, { status: 409 });
+    // Proof it worked, in their inbox. Never fails the backup itself.
+    await sendBackedUp(email, (await getProfile(store, result.accountId)).petName);
     return Response.json({ backedUp: true, email });
   }
   return Response.json({ token: await issueToken(store, result.accountId), email });

@@ -2,7 +2,10 @@
 // Trigger from wrangler.jsonc, which calls the reminder route the same way an
 // outside scheduler would.
 
-// @ts-expect-error: built by `opennextjs-cloudflare build`
+// Built by `opennextjs-cloudflare build`, so it may or may not exist when
+// type-checking; ts-ignore (not ts-expect-error) passes either way.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import { default as handler } from "./.open-next/worker.js";
 
 type Env = { CRON_SECRET?: string; NEXT_PUBLIC_SITE_URL?: string };

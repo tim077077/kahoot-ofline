@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!result.ok) return Response.json({ error: result.error }, { status: result.error === "slow_down" ? 429 : 409 });
   if (!result.code) return Response.json({ sent: true });
   try {
-    const { dev } = await sendCode(email, result.code);
+    const { dev } = await sendCode(email, result.code, purpose);
     return Response.json({ sent: true, ...(dev ? { devCode: dev } : {}) });
   } catch (err) {
     if (err instanceof MailNotConfiguredError) return Response.json({ error: "email_not_configured" }, { status: 503 });
