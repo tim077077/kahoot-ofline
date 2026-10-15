@@ -44,12 +44,6 @@ export function judge(m: PhotoMetrics): PhotoProblem | null {
   return null;
 }
 
-export const PROBLEM_TEXT: Record<PhotoProblem, string> = {
-  small: "This photo is quite small, so the portrait may come out soft.",
-  dark: "This photo is very dark, so their colours and markings may get lost.",
-  blurry: "This photo looks blurry, so the portrait may not look like them.",
-};
-
 // Browser only: measure a picked image.
 export async function checkPhoto(file: Blob): Promise<{ problem: PhotoProblem | null; metrics: PhotoMetrics }> {
   const bitmap = await createImageBitmap(file);

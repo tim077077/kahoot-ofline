@@ -101,4 +101,3 @@ export async function sendTestReminder(token: string) {
 }
 
 export const HOURS = [7, 8, 9, 12, 17, 18, 19, 20, 21];
-export const hourLabel = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString("en", { hour: "numeric" });

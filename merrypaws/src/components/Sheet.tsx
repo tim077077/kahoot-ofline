@@ -2,9 +2,11 @@
 
 import { X } from "@phosphor-icons/react";
 import { useEffect } from "react";
+import { useT } from "@/i18n/react";
 
 // A bottom sheet on paper. Tap outside, the close button or Escape dismisses.
 export function Sheet({ label, onClose, children }: { label: string; onClose: () => void; children: React.ReactNode }) {
+  const t = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -22,7 +24,7 @@ export function Sheet({ label, onClose, children }: { label: string; onClose: ()
       >
         <div className="mx-auto h-1 w-10 rounded-full bg-sand" aria-hidden />
         <div className="flex justify-end">
-          <button onClick={onClose} aria-label="Close" className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full">
+          <button onClick={onClose} aria-label={t("common.close")} className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full">
             <X size={22} />
           </button>
         </div>

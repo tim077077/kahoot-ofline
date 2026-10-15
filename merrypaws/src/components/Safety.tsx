@@ -3,36 +3,31 @@
 import { BellRinging, CheckCircle, EnvelopeSimple, ShieldCheck } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Sheet } from "@/components/Sheet";
+import { hourText, named } from "@/i18n/app";
+import { useT, type T } from "@/i18n/react";
 import { jsonApi } from "@/lib/client";
-import { disableReminder, enableReminder, HOURS, hourLabel, pushSupport, sendTestReminder } from "@/lib/reminders";
+import { disableReminder, enableReminder, HOURS, pushSupport, sendTestReminder } from "@/lib/reminders";
 
 // Keeping the album safe (an email to get it back on a new phone) and the
 // daily reminder. Both are quiet, optional and one tap to undo.
 
-const AUTH_ERRORS: Record<string, string> = {
-  bad_email: "That email doesn't look right.",
-  slow_down: "That's a few codes in a row. Wait a few minutes, then try again.",
-  email_in_use: "That email already keeps another album. Sign in with it instead.",
-  email_not_configured: "Email isn't switched on yet. Copy your access link for now.",
-  send_failed: "The email didn't send. Try again in a moment.",
-  wrong_code: "That code didn't match. Check the newest email.",
-  expired: "That code has expired. Ask for a new one.",
-  no_account: "Add a photo first, then you can back up the album.",
-};
+const AUTH_ERRORS = ["bad_email", "slow_down", "email_in_use", "email_not_configured", "send_failed", "wrong_code", "expired", "no_account"] as const;
 
-const authError = (code?: string) => AUTH_ERRORS[code ?? ""] ?? "Something went wrong. Try again in a moment.";
+const authError = (t: T, code?: string) =>
+  (AUTH_ERRORS as readonly string[]).includes(code ?? "") ? t(`safety.errors.${code as (typeof AUTH_ERRORS)[number]}`) : t("safety.errors.generic");
 
 export type BackupMode = "backup" | "signin";
 
-export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, onSignedIn }: {
+export function BackupSheet({ mode, token, petName, warning, onClose, onBackedUp, onSignedIn }: {
   mode: BackupMode;
   token: string | null;
-  name: string;
+  petName: string;
   warning?: string | null;
   onClose: () => void;
   onBackedUp: (email: string) => void;
   onSignedIn: (token: string) => Promise<void>;
 }) {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");
@@ -43,10 +38,10 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
   async function askForCode() {
     setBusy(true);
     setError(null);
-    const res = await jsonApi("/api/auth/code", "POST", { email, purpose: mode }, token).catch(() => null);
+    const res = await jsonApi("/api/auth/code", "POST", { email, purpose: mode, locale: t.locale }, token).catch(() => null);
     const data = (await res?.json().catch(() => ({}))) as { error?: string; devCode?: string } | undefined;
     setBusy(false);
-    if (!res?.ok) return setError(authError(data?.error));
+    if (!res?.ok) return setError(authError(t, data?.error));
     setDevCode(data?.devCode ?? null);
     setStep("code");
   }
@@ -58,14 +53,14 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
     const data = (await res?.json().catch(() => ({}))) as { error?: string; token?: string; email?: string } | undefined;
     if (!res?.ok) {
       setBusy(false);
-      return setError(authError(data?.error));
+      return setError(authError(t, data?.error));
     }
     if (data?.token) await onSignedIn(data.token);
     else if (data?.email) onBackedUp(data.email);
     setBusy(false);
   }
 
-  const title = mode === "backup" ? `Keep ${name === "Your pet" ? "the" : `${name}'s`} album safe` : "Sign in to your album";
+  const title = mode === "backup" ? named(t, "safety.keepSafe", petName) : t("safety.signInTitle");
   return (
     <Sheet label={title} onClose={onClose}>
       <div className="pb-2">
@@ -79,13 +74,11 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
             }}
           >
             <p className="mt-2 text-muted">
-              {mode === "backup"
-                ? "Add your email and you can get the album back on a new phone. No password, no newsletters."
-                : "Use the email you backed up with. We'll send a 6-digit code."}
+              {mode === "backup" ? t("safety.backupBody") : t("safety.signInBody")}
             </p>
             {warning && <p className="mt-3 rounded-xl bg-sand px-4 py-3 text-sm">{warning}</p>}
             <label htmlFor="backup-email" className="sr-only">
-              Email
+              {t("safety.email")}
             </label>
             <input
               id="backup-email"
@@ -94,11 +87,11 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("safety.emailPlaceholder")}
               className="mt-5 min-h-13 w-full rounded-full border border-line bg-card px-5 outline-none focus:border-accent"
             />
             <button type="submit" disabled={busy || !email.includes("@")} className="mt-3 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink disabled:opacity-50">
-              <EnvelopeSimple size={20} /> {busy ? "Sending" : "Email me a code"}
+              <EnvelopeSimple size={20} /> {busy ? t("safety.sending") : t("safety.emailMe")}
             </button>
           </form>
         ) : (
@@ -108,13 +101,10 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
               void checkCode();
             }}
           >
-            <p className="mt-2 text-muted">
-              {mode === "signin" ? "If that email keeps an album, a code is on its way to " : "We sent a code to "}
-              <span className="text-ink">{email}</span>. It works for 15 minutes.
-            </p>
-            {devCode && <p className="mt-3 rounded-xl bg-sand px-4 py-3 text-sm">Local test mode, no email sent. Your code is {devCode}.</p>}
+            <p className="mt-2 text-muted">{t(mode === "signin" ? "safety.sentSignIn" : "safety.sentBackup", { email })}</p>
+            {devCode && <p className="mt-3 rounded-xl bg-sand px-4 py-3 text-sm">{t("safety.devCode", { code: devCode })}</p>}
             <label htmlFor="backup-code" className="sr-only">
-              6-digit code
+              {t("safety.codeLabel")}
             </label>
             <input
               id="backup-code"
@@ -126,10 +116,10 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
               className="mt-5 min-h-13 w-full rounded-full border border-line bg-card px-5 text-center text-2xl tracking-[0.4em] outline-none focus:border-accent"
             />
             <button type="submit" disabled={busy || code.length !== 6} className="mt-3 min-h-13 w-full rounded-full bg-accent font-medium text-accent-ink disabled:opacity-50">
-              {busy ? "Checking" : mode === "backup" ? "Keep it safe" : "Open my album"}
+              {busy ? t("safety.checking") : mode === "backup" ? t("safety.keepIt") : t("safety.openMine")}
             </button>
             <button type="button" onClick={() => setStep("email")} className="mt-2 min-h-11 w-full text-sm text-muted">
-              Use a different email
+              {t("safety.otherEmail")}
             </button>
           </form>
         )}
@@ -140,17 +130,18 @@ export function BackupSheet({ mode, token, name, warning, onClose, onBackedUp, o
 }
 
 // A card in the album, once there's something worth losing.
-export function BackupNudge({ name, onAdd, onLater }: { name: string; onAdd: () => void; onLater: () => void }) {
+export function BackupNudge({ petName, onAdd, onLater }: { petName: string; onAdd: () => void; onLater: () => void }) {
+  const t = useT();
   return (
-    <section className="mx-5 mt-4 rounded-2xl border border-dashed border-ink/25 p-4" aria-label="Back up the album">
-      <p className="font-display text-xl italic">Keep {name === "Your pet" ? "this" : `${name}'s`} album safe</p>
-      <p className="mt-1 text-sm text-muted">Right now it lives on this phone. Add your email so a new phone can open it too.</p>
+    <section className="mx-5 mt-4 rounded-2xl border border-dashed border-ink/25 p-4" aria-label={t("safety.nudgeLabel")}>
+      <p className="font-display text-xl italic">{named(t, "safety.nudgeTitle", petName)}</p>
+      <p className="mt-1 text-sm text-muted">{t("safety.nudgeBody")}</p>
       <div className="mt-3 flex gap-2">
         <button onClick={onAdd} className="min-h-11 flex-1 rounded-full bg-ink px-4 text-sm font-medium text-paper">
-          Add my email
+          {t("safety.addEmail")}
         </button>
         <button onClick={onLater} className="min-h-11 px-4 text-sm text-muted">
-          Later
+          {t("common.later")}
         </button>
       </div>
     </section>
@@ -158,15 +149,16 @@ export function BackupNudge({ name, onAdd, onLater }: { name: string; onAdd: () 
 }
 
 function HourPicker({ hour, onChange, id }: { hour: number; onChange: (h: number) => void; id: string }) {
+  const t = useT();
   return (
     <>
       <label htmlFor={id} className="sr-only">
-        Reminder time
+        {t("safety.reminderTime")}
       </label>
       <select id={id} value={hour} onChange={(e) => onChange(Number(e.target.value))} className="min-h-11 rounded-full border border-line bg-card px-4 outline-none focus:border-accent">
         {HOURS.map((h) => (
           <option key={h} value={h}>
-            {hourLabel(h)}
+            {hourText(t.locale, h)}
           </option>
         ))}
       </select>
@@ -177,6 +169,7 @@ function HourPicker({ hour, onChange, id }: { hour: number; onChange: (h: number
 // Offered right after a photo of the day, when the habit is fresh. Asks for
 // notification permission only when the member taps "Remind me".
 export function ReminderCard({ token, onOn, onDismiss }: { token: string; onOn: (hour: number) => void; onDismiss: () => void }) {
+  const t = useT();
   const [hour, setHour] = useState(18);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -184,20 +177,18 @@ export function ReminderCard({ token, onOn, onDismiss }: { token: string; onOn: 
   if (support === "unsupported") return null;
 
   return (
-    <section className="mx-5 mt-4 rounded-2xl bg-card p-4" aria-label="Daily reminder">
+    <section className="mx-5 mt-4 rounded-2xl bg-card p-4" aria-label={t("safety.reminderLabel")}>
       <div className="flex items-start gap-3">
         <BellRinging size={24} className="mt-0.5 shrink-0 text-accent" />
         <div className="min-w-0 flex-1">
-          <p className="font-medium">A nudge tomorrow?</p>
+          <p className="font-medium">{t("safety.nudgeTomorrow")}</p>
           {support === "ios-install" ? (
-            <p className="mt-1 text-sm text-muted">
-              On iPhone, reminders work once the album is on your Home Screen: tap Share, then &ldquo;Add to Home Screen&rdquo;, and open it from there.
-            </p>
+            <p className="mt-1 text-sm text-muted">{t("safety.iosCard")}</p>
           ) : support === "denied" ? (
-            <p className="mt-1 text-sm text-muted">Notifications are blocked for this site. Allow them in your browser settings to get a reminder.</p>
+            <p className="mt-1 text-sm text-muted">{t("safety.blockedCard")}</p>
           ) : (
             <>
-              <p className="mt-1 text-sm text-muted">One reminder a day, only if today&apos;s photo isn&apos;t in yet. Nothing else.</p>
+              <p className="mt-1 text-sm text-muted">{t("safety.oneADay")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <HourPicker id="reminder-hour" hour={hour} onChange={setHour} />
                 <button
@@ -207,18 +198,18 @@ export function ReminderCard({ token, onOn, onDismiss }: { token: string; onOn: 
                     const result = await enableReminder(token, hour);
                     setBusy(false);
                     if (result === "on") onOn(hour);
-                    else setMsg(result === "denied" ? "No problem, no reminders." : "That didn't work. Try again from Membership.");
+                    else setMsg(result === "denied" ? t("safety.noProblem") : t("safety.didntWorkMembership"));
                   }}
                   className="min-h-11 rounded-full bg-ink px-5 text-sm font-medium text-paper disabled:opacity-60"
                 >
-                  {busy ? "Setting" : "Remind me"}
+                  {busy ? t("safety.setting") : t("safety.remindMe")}
                 </button>
               </div>
             </>
           )}
           {msg && <p className="mt-2 text-sm text-muted">{msg}</p>}
           <button onClick={onDismiss} className="mt-2 min-h-10 text-sm text-muted underline underline-offset-4">
-            {support === "ok" ? "No thanks" : "Got it"}
+            {support === "ok" ? t("common.noThanks") : t("common.gotIt")}
           </button>
         </div>
       </div>
@@ -238,6 +229,7 @@ export function SafetySection({ email, token, hour, memorial, copied, onBackup, 
   onCopyLink: () => void;
   onHour: (hour: number | null) => void;
 }) {
+  const t = useT();
   const [pick, setPick] = useState(hour ?? 18);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -245,42 +237,42 @@ export function SafetySection({ email, token, hour, memorial, copied, onBackup, 
 
   return (
     <>
-      <h2 className="font-display mt-10 text-xl italic">Keep it safe</h2>
+      <h2 className="font-display mt-10 text-xl italic">{t("safety.keepItSafe")}</h2>
       {email ? (
         <p className="mt-3 flex items-center gap-2">
-          <CheckCircle size={20} weight="fill" className="shrink-0 text-accent" /> Backed up to <span className="truncate">{email}</span>
+          <CheckCircle size={20} weight="fill" className="shrink-0 text-accent" /> {t("safety.backedUpTo")} <span className="truncate">{email}</span>
         </p>
       ) : (
         <>
-          <p className="mt-2 text-sm text-muted">The album lives on this phone until you add an email.</p>
+          <p className="mt-2 text-sm text-muted">{t("safety.onThisPhone")}</p>
           {token && (
             <button onClick={onBackup} className="mt-3 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-ink font-medium text-paper">
-              <EnvelopeSimple size={20} /> Back up with email
+              <EnvelopeSimple size={20} /> {t("safety.backUp")}
             </button>
           )}
         </>
       )}
       <div className="mt-2 flex flex-wrap justify-center gap-x-5">
         <button onClick={onSignIn} className="min-h-11 text-sm text-muted underline underline-offset-4">
-          Sign in to another album
+          {t("safety.signInOther")}
         </button>
         {token && (
           <button onClick={onCopyLink} className="min-h-11 text-sm text-muted underline underline-offset-4">
-            {copied ? "Access link copied" : "Copy my access link"}
+            {copied ? t("safety.linkCopied") : t("safety.copyLink")}
           </button>
         )}
       </div>
 
       {!memorial && token && support !== "unsupported" && (
         <>
-          <h2 className="font-display mt-10 text-xl italic">Daily reminder</h2>
+          <h2 className="font-display mt-10 text-xl italic">{t("safety.reminderLabel")}</h2>
           {support === "ios-install" ? (
-            <p className="mt-2 text-sm text-muted">On iPhone, add the album to your Home Screen (Share, then &ldquo;Add to Home Screen&rdquo;) and open it from there to turn this on.</p>
+            <p className="mt-2 text-sm text-muted">{t("safety.iosSettings")}</p>
           ) : support === "denied" ? (
-            <p className="mt-2 text-sm text-muted">Notifications are blocked for this site. Allow them in your browser settings first.</p>
+            <p className="mt-2 text-sm text-muted">{t("safety.blockedSettings")}</p>
           ) : (
             <>
-              <p className="mt-2 text-sm text-muted">One a day, only if today&apos;s photo isn&apos;t in yet.</p>
+              <p className="mt-2 text-sm text-muted">{t("safety.oneADayShort")}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <HourPicker id="settings-hour" hour={pick} onChange={setPick} />
                 {hour === null || hour !== pick ? (
@@ -291,29 +283,29 @@ export function SafetySection({ email, token, hour, memorial, copied, onBackup, 
                       const result = await enableReminder(token, pick);
                       setBusy(false);
                       if (result === "on") onHour(pick);
-                      setNote(result === "on" ? `Reminders at ${hourLabel(pick)}.` : result === "denied" ? "Notifications weren't allowed." : "That didn't work. Try again.");
+                      setNote(result === "on" ? t("safety.remindersAt", { time: hourText(t.locale, pick) }) : result === "denied" ? t("safety.notAllowed") : t("safety.didntWork"));
                     }}
                     className="min-h-11 rounded-full bg-ink px-5 text-sm font-medium text-paper disabled:opacity-60"
                   >
-                    {hour === null ? "Turn on" : "Change time"}
+                    {hour === null ? t("safety.turnOn") : t("safety.changeTime")}
                   </button>
                 ) : (
                   <>
                     <button
-                      onClick={async () => setNote((await sendTestReminder(token)) ? "Sent. It should arrive in a few seconds." : "Couldn't send one right now.")}
+                      onClick={async () => setNote((await sendTestReminder(token)) ? t("safety.testSent") : t("safety.testFailed"))}
                       className="min-h-11 rounded-full border border-ink/20 px-4 text-sm"
                     >
-                      Send one now
+                      {t("safety.sendNow")}
                     </button>
                     <button
                       onClick={async () => {
                         await disableReminder(token);
                         onHour(null);
-                        setNote("Reminders are off.");
+                        setNote(t("safety.off"));
                       }}
                       className="min-h-11 px-3 text-sm text-muted underline underline-offset-4"
                     >
-                      Turn off
+                      {t("safety.turnOff")}
                     </button>
                   </>
                 )}

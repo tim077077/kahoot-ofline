@@ -2,31 +2,32 @@
 
 import { useState } from "react";
 import { Sheet } from "@/components/Sheet";
-import { ACTIVITIES, activityFor, MAX_TAGS } from "@/lib/activities";
+import { activityText, named } from "@/i18n/app";
+import { useT } from "@/i18n/react";
+import { ACTIVITIES, MAX_TAGS } from "@/lib/activities";
 
 // After picking photos: one optional question, so the batch lands in the
 // right highlights. Photos from one outing usually share an activity.
-export function AddPhotosSheet({ count, name, recent, onAdd, onClose }: {
+export function AddPhotosSheet({ count, petName, recent, onAdd, onClose }: {
   count: number;
-  name: string;
+  petName: string;
   recent: string[];
   onAdd: (tags: string[]) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [tags, setTags] = useState<string[]>([]);
   const [custom, setCustom] = useState("");
-  const custom_tags = recent.filter((t) => !ACTIVITIES.some((a) => a.id === t));
+  const custom_tags = recent.filter((tag) => !ACTIVITIES.some((a) => a.id === tag));
   const toggle = (tag: string) =>
-    setTags((t) => (t.includes(tag) ? t.filter((x) => x !== tag) : t.length < MAX_TAGS ? [...t, tag] : t));
+    setTags((list) => (list.includes(tag) ? list.filter((x) => x !== tag) : list.length < MAX_TAGS ? [...list, tag] : list));
 
   return (
-    <Sheet label="Add photos" onClose={onClose}>
-      <h2 className="font-display text-[1.8rem] leading-tight">What was {name === "Your pet" ? "your pet" : name} up to?</h2>
-      <p className="mt-1 text-muted">
-        Optional. {count} {count === 1 ? "photo" : "photos"} will go into these highlights.
-      </p>
+    <Sheet label={t("addPhotos.label")} onClose={onClose}>
+      <h2 className="font-display text-[1.8rem] leading-tight">{named(t, "addPhotos.title", petName)}</h2>
+      <p className="mt-1 text-muted">{t.tp("addPhotos.hint", count)}</p>
       <div className="mt-5 flex flex-wrap gap-2">
-        {[...ACTIVITIES.map((a) => a.id), ...custom_tags, ...tags.filter((t) => !ACTIVITIES.some((a) => a.id === t) && !custom_tags.includes(t))].map((tag) => {
+        {[...ACTIVITIES.map((a) => a.id), ...custom_tags, ...tags.filter((tag) => !ACTIVITIES.some((a) => a.id === tag) && !custom_tags.includes(tag))].map((tag) => {
           const on = tags.includes(tag);
           return (
             <button
@@ -35,7 +36,7 @@ export function AddPhotosSheet({ count, name, recent, onAdd, onClose }: {
               aria-pressed={on}
               className={on ? "dymo min-h-10" : "min-h-10 rounded-[3px] border border-dashed border-ink/30 px-2.5 text-[0.78rem] font-bold uppercase tracking-[0.14em] text-muted"}
             >
-              {activityFor(tag).label}
+              {activityText(t, tag).label}
             </button>
           );
         })}
@@ -50,13 +51,13 @@ export function AddPhotosSheet({ count, name, recent, onAdd, onClose }: {
         }}
       >
         <label htmlFor="batch-tag" className="sr-only">
-          Your own highlight
+          {t("addPhotos.ownHighlight")}
         </label>
         <input
           id="batch-tag"
           value={custom}
           onChange={(e) => setCustom(e.target.value.slice(0, 24))}
-          placeholder="Your own, like Lake trip 2024"
+          placeholder={t("addPhotos.ownPlaceholder")}
           className="min-h-11 flex-1 rounded-full border border-line bg-card px-4 text-sm outline-none focus:border-accent"
         />
       </form>
@@ -64,7 +65,7 @@ export function AddPhotosSheet({ count, name, recent, onAdd, onClose }: {
         onClick={() => onAdd(tags)}
         className="mt-6 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink active:scale-[0.98]"
       >
-        Add {count} {count === 1 ? "photo" : "photos"}
+        {t.tp("addPhotos.add", count)}
       </button>
     </Sheet>
   );

@@ -1,4 +1,5 @@
 import type { CodePurpose } from "./auth";
+import { namedS, type ServerT } from "@/i18n/server";
 import { BRAND, siteUrl } from "./config";
 
 // Branded emails, in the app's cream-and-burgundy album look.
@@ -35,12 +36,12 @@ function button(href: string, label: string): string {
 </td></tr></table>`;
 }
 
-type Layout = { preheader: string; heading: string; body: string; footer: string };
+type Layout = { lang: string; preheader: string; heading: string; body: string; footer: string };
 
-function layout({ preheader, heading, body, footer }: Layout): string {
+function layout({ lang, preheader, heading, body, footer }: Layout): string {
   const base = siteUrl();
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
 <title>${esc(heading)}</title></head>
 <body style="margin:0;padding:0;background:${C.paper}">
@@ -68,49 +69,42 @@ const p = (text: string, extra = "") =>
 
 // The 6-digit code. The code leads the subject and preheader so it shows in
 // the notification without opening the email.
-export function codeEmail(code: string, purpose: CodePurpose): Email {
-  const heading = purpose === "backup" ? "Keep your album safe" : "Welcome back";
-  const why =
-    purpose === "backup"
-      ? "Type this code into the app and your album is backed up to this email. If you lose your phone, it comes back with you."
-      : "Type this code into the app to open your album on this phone.";
+export function codeEmail(code: string, purpose: CodePurpose, t: ServerT): Email {
+  const heading = purpose === "backup" ? t("email.backupHeading") : t("email.signinHeading");
+  const why = purpose === "backup" ? t("email.backupWhy") : t("email.signinWhy");
   const html = layout({
-    preheader: `${code} is your code. It works for 15 minutes.`,
+    lang: t.locale,
+    preheader: t("email.codePreheader", { code }),
     heading,
     body: [
       filmStrip(siteUrl(), ["royal-court", "painted-pet", "family-album"]),
-      p(why),
+      p(esc(why)),
       `<div style="margin:6px auto 18px;display:inline-block;padding:16px 26px;border:1px dashed ${C.accent};border-radius:14px;background:${C.paper};font-family:'SF Mono',Menlo,Consolas,monospace;font-size:34px;letter-spacing:10px;color:${C.ink}">${esc(code)}</div>`,
-      p("It works for 15 minutes.", "font-size:14px;margin:0"),
+      p(esc(t("email.works")), "font-size:14px;margin:0"),
     ].join("\n"),
-    footer: "Didn't ask for this? You can ignore this email; nothing changes without the code.",
+    footer: esc(t("email.codeFooter")),
   });
-  const text = [`${heading}`, "", `Your ${BRAND} code is ${code}`, "", why, "It works for 15 minutes.", "", "Didn't ask for this? You can ignore this email."].join("\n");
-  return { subject: `${code} is your ${BRAND} code`, html, text };
+  const text = [heading, "", t("email.codeLine", { brand: BRAND, code }), "", why, t("email.works"), "", t("email.codeFooter")].join("\n");
+  return { subject: t("email.codeSubject", { code, brand: BRAND }), html, text };
 }
 
 // After a backup goes through: proof it worked, and a nudge back to the app.
-export function backedUpEmail(petName: string): Email {
-  const name = petName.trim() || "your pet";
-  const possessive = petName.trim() ? `${name}'s` : "Your";
+export function backedUpEmail(petName: string, t: ServerT): Email {
   const base = siteUrl();
+  const heading = namedS(t, "email.safeHeading", petName);
+  const body = namedS(t, "email.safeBody", petName);
   const html = layout({
-    preheader: `${possessive} album is backed up to this email.`,
-    heading: `${possessive} album is safe`,
+    lang: t.locale,
+    preheader: namedS(t, "email.safePreheader", petName),
+    heading,
     body: [
-      p(`Every photo of ${esc(name)} is now backed up to this email. New phone, lost phone, cracked phone: sign in with this address and the whole album comes back.`),
+      p(esc(body)),
       filmStrip(base, ["golden-age", "your-scene", "holiday-special"]),
-      p(`Next time you're in, paint ${esc(name)} into another world: a royal court, a film noir, or a scene you dream up yourself.`),
-      button(base, "Open the album"),
+      p(esc(namedS(t, "email.safeNext", petName))),
+      button(base, t("email.openAlbum")),
     ].join("\n"),
-    footer: "You're getting this because you backed up an album with this address.",
+    footer: esc(t("email.safeFooter")),
   });
-  const text = [
-    `${possessive} album is safe`,
-    "",
-    `Every photo of ${name} is now backed up to this email. On a new phone, sign in with this address and the whole album comes back.`,
-    "",
-    `Open the album: ${base}`,
-  ].join("\n");
-  return { subject: `${possessive} album is backed up`, html, text };
+  const text = [heading, "", body, "", `${t("email.openAlbum")}: ${base}`].join("\n");
+  return { subject: namedS(t, "email.safeSubject", petName), html, text };
 }

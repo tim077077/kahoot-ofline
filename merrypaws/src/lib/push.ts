@@ -1,4 +1,5 @@
-import { promptFor } from "./dailyPrompts";
+import { namedS, serverT } from "@/i18n/server";
+import { promptIndex } from "./dailyPrompts";
 import { getProfile } from "./pack";
 import type { Store } from "./store";
 
@@ -76,10 +77,14 @@ export async function removeReminder(store: Store, accountId: string) {
 export type Notice = { title: string; body: string; url: string };
 
 export async function reminderNotice(store: Store, accountId: string, day: string): Promise<Notice> {
-  const { petName } = await getProfile(store, accountId);
+  const { petName, locale } = await getProfile(store, accountId);
+  const t = await serverT(locale);
+  const prompt = t.list("daily.prompts")[promptIndex(day)] ?? "";
   return {
-    title: petName ? `${petName}'s photo of the day` : "Photo of the day",
-    body: `Today: ${promptFor(day).toLowerCase()}`,
+    title: namedS(t, "push.title", petName),
+    // German nouns stay capitalised, so the prompt is only lowered for the
+    // languages where that reads naturally after "Today:".
+    body: t("push.body", { prompt: t.locale === "de" ? prompt : prompt.charAt(0).toLowerCase() + prompt.slice(1) }),
     url: "/",
   };
 }

@@ -2,7 +2,9 @@
 
 import { CaretLeft, CaretRight, DownloadSimple, Flag, Heart, ShareNetwork, Trash, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { downloadUrl, starName, type Portrait } from "@/lib/client";
+import { displayName, styleTitle } from "@/i18n/app";
+import { useT } from "@/i18n/react";
+import { downloadUrl, type Portrait } from "@/lib/client";
 import { findStyle } from "@/lib/styles";
 
 export type ReportReason = "inappropriate" | "not_my_pet" | "other";
@@ -24,6 +26,7 @@ type Panel = "none" | "delete" | "report" | "reported";
 // One portrait, full screen, with its title card. Swipe or use the arrows to
 // move through the album.
 export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, onKeep, onShare, onReport }: Props) {
+  const t = useT();
   const index = reel.findIndex((p) => p.id === openId);
   const p = reel[index];
   const [panel, setPanel] = useState<Panel>("none");
@@ -49,13 +52,14 @@ export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, on
 
   if (!p) return null;
   const s = findStyle(p.style)!;
-  const name = starName(p.petName);
+  const name = displayName(t, p.petName);
+  const title = styleTitle(t, s.id);
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${name} in ${s.title}`}
+      aria-label={t("studio.portraitAlt", { name, title })}
       className="fixed inset-0 z-40 flex flex-col bg-paper pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {
@@ -67,16 +71,16 @@ export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, on
       }}
     >
       <div className="flex items-center justify-between px-3 py-2">
-        <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full">
+        <button onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-full">
           <X size={24} />
         </button>
         <p className="font-display text-sm italic text-muted">
-          {index + 1} of {reel.length}
+          {t("viewer.count", { n: index + 1, total: reel.length })}
         </p>
         <button
           onClick={() => onStar(p.id)}
           aria-pressed={p.starred}
-          aria-label={p.starred ? "Remove from highlights" : "Add to highlights"}
+          aria-label={p.starred ? t("viewer.removeHighlight") : t("viewer.addHighlight")}
           className="flex h-11 w-11 items-center justify-center rounded-full"
         >
           <Heart size={24} weight={p.starred ? "fill" : "regular"} className={p.starred ? "text-accent" : ""} />
@@ -89,82 +93,75 @@ export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, on
           <img src={p.preview} alt="" className="max-h-[calc(100dvh-24rem)] w-auto max-w-full object-contain" />
         </div>
         {prev && (
-          <button onClick={() => go(prev.id)} aria-label="Previous" className="absolute left-1 hidden h-11 w-11 items-center justify-center rounded-full bg-card sm:flex">
+          <button onClick={() => go(prev.id)} aria-label={t("common.previous")} className="absolute left-1 hidden h-11 w-11 items-center justify-center rounded-full bg-card sm:flex">
             <CaretLeft size={22} />
           </button>
         )}
         {next && (
-          <button onClick={() => go(next.id)} aria-label="Next" className="absolute right-1 hidden h-11 w-11 items-center justify-center rounded-full bg-card sm:flex">
+          <button onClick={() => go(next.id)} aria-label={t("common.next")} className="absolute right-1 hidden h-11 w-11 items-center justify-center rounded-full bg-card sm:flex">
             <CaretRight size={22} />
           </button>
         )}
       </div>
 
       <div className="px-5 pb-4 pt-4 text-center">
-        {p.memorial && <p className="font-display text-sm italic text-muted">In loving memory of</p>}
+        {p.memorial && <p className="font-display text-sm italic text-muted">{t("common.inLovingMemoryOf")}</p>}
         <p className="font-script text-[2.6rem] leading-[1.1]">{name}</p>
         <p className="font-display italic">
-          in {s.title}, {s.year}
-          {p.withOwner ? ", with you" : ""}
+          {t(p.withOwner ? "studio.titleCardOwner" : "studio.titleCard", { title, year: s.year })}
         </p>
 
         {panel === "delete" && (
           <div className="mt-4 flex items-center justify-center gap-3">
-            <span className="text-muted">Remove it from the album?</span>
+            <span className="text-muted">{t("viewer.removeConfirm")}</span>
             <button onClick={() => onDelete(p.id)} className="min-h-11 rounded-full bg-accent px-5 font-medium text-accent-ink">
-              Remove
+              {t("common.remove")}
             </button>
             <button onClick={() => setPanel("none")} className="min-h-11 px-3 text-muted">
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         )}
         {panel === "report" && (
           <div className="mt-4">
-            <p className="text-muted">What&apos;s wrong with it?</p>
+            <p className="text-muted">{t("viewer.whatsWrong")}</p>
             <div className="mt-2 flex flex-wrap justify-center gap-2">
-              {(
-                [
-                  ["not_my_pet", "Doesn't look like them"],
-                  ["inappropriate", "Inappropriate"],
-                  ["other", "Something else"],
-                ] as const
-              ).map(([reason, label]) => (
+              {(["not_my_pet", "inappropriate", "other"] as const).map((reason) => (
                 <button
                   key={reason}
                   onClick={async () => setPanel((await onReport(p, reason)) ? "reported" : "none")}
                   className="min-h-11 rounded-full bg-sand px-4 text-sm"
                 >
-                  {label}
+                  {t(`viewer.reasons.${reason}`)}
                 </button>
               ))}
             </div>
           </div>
         )}
-        {panel === "reported" && <p className="mt-4 text-muted">Thank you. We&apos;ll take a look.</p>}
+        {panel === "reported" && <p className="mt-4 text-muted">{t("viewer.thanks")}</p>}
 
         {panel === "none" && (
           <>
             <div className="mt-4 grid grid-cols-2 gap-3">
               {p.unlocked ? (
                 <a href={downloadUrl(p.id)} download className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink">
-                  <DownloadSimple size={20} weight="bold" /> Save in HD
+                  <DownloadSimple size={20} weight="bold" /> {t("common.saveHd")}
                 </a>
               ) : (
                 <button onClick={() => onKeep(p)} className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink active:scale-[0.98]">
-                  <DownloadSimple size={20} weight="bold" /> {p.memorial ? "Keep in HD" : "Save in HD"}
+                  <DownloadSimple size={20} weight="bold" /> {p.memorial ? t("common.keepHd") : t("common.saveHd")}
                 </button>
               )}
               <button onClick={() => onShare(p)} className="flex min-h-13 items-center justify-center gap-2 rounded-full border border-ink/25 font-medium active:scale-[0.98]">
-                <ShareNetwork size={20} /> Share
+                <ShareNetwork size={20} /> {t("common.share")}
               </button>
             </div>
             <div className="mt-2 flex justify-center gap-6">
               <button onClick={() => setPanel("delete")} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted">
-                <Trash size={16} /> Remove
+                <Trash size={16} /> {t("common.remove")}
               </button>
               <button onClick={() => setPanel("report")} className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted">
-                <Flag size={16} /> Report
+                <Flag size={16} /> {t("viewer.report")}
               </button>
             </div>
           </>

@@ -198,6 +198,16 @@ GEMINI_API_KEY=... npm run lab -- --yes
 - `GET /api/stats` with `Authorization: Bearer $STATS_KEY` shows the last 14 days.
 - `POST /api/report` stores portrait reports for 90 days.
 
+## Languages
+
+English, German, French, Spanish, Italian, Dutch, Polish, Portuguese (Portugal) and Romanian. No library: `src/i18n/`.
+
+- `messages/en.ts` is the source. Every other file must have the same keys, the same `{placeholders}`, the plural forms its grammar needs and 40 daily prompts. `npm test` fails if one doesn't.
+- The phone picks the browser's language on first open. Owners can change it in Membership, which also saves it to the profile so emails and reminders arrive in that language.
+- Pet names are never declined: sentences are built so the name stays as typed ("Das Album von Luna", "Albumul lui Luna").
+- Image prompts stay in English. Prices are still charged in USD and shown in the local number format.
+- To add a language: copy `messages/de.ts`, translate, add the code to `LOCALES` and `LOCALE_NAMES` in `core.ts` and to `load.ts`.
+
 ## Run locally
 
 ```bash

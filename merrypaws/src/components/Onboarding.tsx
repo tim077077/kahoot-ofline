@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { Polaroid, Print, Tape } from "@/components/Vintage";
 import { BRAND, MASCOT } from "@/lib/config";
-import { starName, track, type PetKind } from "@/lib/client";
+import { track, type PetKind } from "@/lib/client";
+import { displayName, named } from "@/i18n/app";
+import { useT, type T } from "@/i18n/react";
 import type { Costume } from "@/lib/styles";
 
 type Step = 0 | 1 | 2 | 3;
@@ -44,7 +46,9 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
   useEffect(() => track(["intro_seen", "onboarding_name", "onboarding_photos", "onboarding_page"][step]), [step]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
 
-  const star = starName(name);
+  const t = useT();
+  const { tp } = t;
+  const star = displayName(t, name);
   const done = (next: "album" | "portrait") => onDone({ petName: name.trim(), kind, memorial }, next);
 
   async function upload(files: File[]) {
@@ -58,14 +62,14 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       <div className="flex h-11 items-center justify-between">
         {step > 0 && step < 3 ? (
-          <button onClick={() => setStep((s) => (s - 1) as Step)} aria-label="Back" className="-ml-2 flex h-11 w-11 items-center justify-center">
+          <button onClick={() => setStep((s) => (s - 1) as Step)} aria-label={t("common.back")} className="-ml-2 flex h-11 w-11 items-center justify-center">
             <ArrowLeft size={22} />
           </button>
         ) : (
           <span className="font-display italic">{BRAND}</span>
         )}
         {/* Progress as paper tabs. */}
-        <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${STEPS}`}>
+        <div className="flex gap-1.5" aria-label={t("onboarding.step", { n: step + 1, total: STEPS })}>
           {Array.from({ length: STEPS }, (_, i) => (
             <span key={i} className={`h-1.5 w-6 rounded-full transition ${i <= step ? "bg-accent" : "bg-sand"}`} />
           ))}
@@ -74,18 +78,18 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
 
       {step === 0 && (
         <>
-          <Welcome />
+          <Welcome t={t} />
           <h1 className="font-display mt-8 text-center text-[2.5rem] leading-[1.04] tracking-tight">
-            Every good dog deserves an <span className="font-script text-[3.2rem] text-accent">album</span>
+            {t("onboarding.headlineStart")} <span className="font-script text-[3.2rem] text-accent">{t("onboarding.headlineWord")}</span>
           </h1>
           <p className="mx-auto mt-3 max-w-[31ch] text-center text-muted">
-            Keep their photos like prints in an old family album, sorted into little collages of the moments you love.
+            {t("onboarding.intro")}
           </p>
-          {invitedBy && <p className="font-hand mt-3 text-center text-lg leading-normal">a friend invited you to their pack</p>}
+          {invitedBy && <p className="font-hand mt-3 text-center text-lg leading-normal">{t("onboarding.invited")}</p>}
           <Footer>
-            <Primary onClick={() => setStep(1)}>Begin</Primary>
+            <Primary onClick={() => setStep(1)}>{t("onboarding.begin")}</Primary>
             <button onClick={onSignIn} className="mt-2 min-h-11 w-full text-muted">
-              Already have an album? <span className="text-ink underline underline-offset-4">Sign in</span>
+              {t("onboarding.haveAlbum")} <span className="text-ink underline underline-offset-4">{t("onboarding.signIn")}</span>
             </button>
           </Footer>
         </>
@@ -97,39 +101,40 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
             <Mascot mood="cheer" size={120} />
           </div>
           <h1 className="font-display mt-4 text-center text-[2.4rem] leading-tight">
-            Who&apos;s the <span className="font-script text-[3rem] text-accent">star</span>?
+            {t("onboarding.whoStart")} <span className="font-script text-[3rem] text-accent">{t("onboarding.whoWord")}</span>
+            {t("onboarding.whoEnd")}
           </h1>
           <label htmlFor="pet-name" className="sr-only">
-            Their name
+            {t("onboarding.theirName")}
           </label>
           <input
             id="pet-name"
             value={name}
             onChange={(e) => setName(e.target.value.slice(0, 24))}
             onKeyDown={(e) => e.key === "Enter" && setStep(2)}
-            placeholder="Their name"
+            placeholder={t("onboarding.theirName")}
             autoComplete="off"
             className="font-hand mx-auto mt-6 w-full max-w-xs border-b-2 border-dashed border-ink/25 bg-transparent py-3 text-center text-3xl leading-normal outline-none placeholder:text-muted/60 focus:border-accent"
           />
-          <div className="mt-6 flex justify-center gap-2" role="radiogroup" aria-label="Kind of pet">
+          <div className="mt-6 flex justify-center gap-2" role="radiogroup" aria-label={t("onboarding.kindOfPet")}>
             {(["dog", "cat", "other"] as const).map((k) => (
               <button
                 key={k}
                 role="radio"
                 aria-checked={kind === k}
                 onClick={() => setKind(k)}
-                className={`min-h-11 rounded-full px-5 capitalize transition ${kind === k ? "bg-ink text-paper" : "bg-sand"}`}
+                className={`min-h-11 rounded-full px-5 transition ${kind === k ? "bg-ink text-paper" : "bg-sand"}`}
               >
-                {k === "other" ? "Another friend" : k}
+                {t(`common.kinds.${k}`)}
               </button>
             ))}
           </div>
           <label className="mx-auto mt-6 flex max-w-xs items-center justify-center gap-2 text-sm text-muted">
             <input type="checkbox" checked={memorial} onChange={(e) => setMemorial(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
-            This album is in loving memory
+            {t("onboarding.memorialCheck")}
           </label>
           <Footer>
-            <Primary onClick={() => setStep(2)}>{name.trim() ? `Continue with ${name.trim()}` : "Continue"}</Primary>
+            <Primary onClick={() => setStep(2)}>{name.trim() ? t("onboarding.continueWith", { name: name.trim() }) : t("onboarding.continue")}</Primary>
           </Footer>
         </>
       )}
@@ -138,13 +143,13 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
         <>
           <EmptyPage />
           <h1 className="font-display mt-8 text-center text-[2.2rem] leading-tight">
-            Add a few favourite photos of {star === "Your pet" ? "them" : star}
+            {named(t, "onboarding.addPhotos", name)}
           </h1>
-          <p className="mx-auto mt-3 max-w-[30ch] text-center text-muted">Five to twelve is perfect. They stay private, in your album.</p>
+          <p className="mx-auto mt-3 max-w-[30ch] text-center text-muted">{t("onboarding.photosHint")}</p>
           <Footer>
-            <Primary onClick={() => input.current?.click()}>Choose photos</Primary>
+            <Primary onClick={() => input.current?.click()}>{t("onboarding.choosePhotos")}</Primary>
             <button onClick={() => done("album")} className="mt-2 min-h-12 w-full text-muted underline underline-offset-4">
-              I&apos;ll add them later
+              {t("onboarding.later")}
             </button>
           </Footer>
           <input
@@ -170,33 +175,35 @@ export function Onboarding({ onPhotos, uploaded, total, onDone, invitedBy, onSig
       {step === 3 && (
         <>
           <p className="font-script mt-4 text-center text-[3rem] leading-[1.1]">{star}</p>
-          <p className="font-hand text-center text-lg leading-normal text-muted">{memorial ? "in loving memory" : "chapter one"}</p>
+          <p className="font-hand text-center text-lg leading-normal text-muted">{memorial ? t("onboarding.inLovingMemory") : t("onboarding.chapterOne")}</p>
           <FirstPage previews={previews} />
           <p className="relative z-10 mt-4 text-center text-sm text-muted" aria-live="polite">
             {failed === null
-              ? `Putting them in the album, ${Math.min(uploaded, chosen)} of ${total || chosen}`
+              ? t("onboarding.putting", { done: Math.min(uploaded, chosen), total: total || chosen })
               : failed.length === 0
-                ? `All ${chosen} are in ${star === "Your pet" ? "the" : `${star}'s`} album`
+                ? name.trim()
+                  ? tp("onboarding.allInNamed", chosen, { name: name.trim() })
+                  : tp("onboarding.allInAnon", chosen)
                 : inAlbum === 0
-                  ? "Couldn't reach the album. Check your connection."
-                  : `${inAlbum} of ${chosen} are in. ${failed.length} didn't make it.`}
+                  ? t("onboarding.offline")
+                  : t("onboarding.partial", { done: inAlbum, total: chosen, failed: failed.length })}
           </p>
           {failed !== null && failed.length > 0 && (
             <p className="relative z-10 mt-2 text-center">
               <button onClick={() => void upload(failed)} className="min-h-11 rounded-full border border-ink/20 px-5 text-sm font-medium">
-                Try again
+                {t("common.tryAgain")}
               </button>
             </p>
           )}
           {!memorial && allIn && (
             <p className="rise mt-2 text-center">
-              <span className="dymo" data-tone="red">Day 1 of the photo-a-day roll</span>
+              <span className="dymo" data-tone="red">{t("onboarding.dayOne")}</span>
             </p>
           )}
           <Footer>
-            <Primary onClick={() => done("album")}>Open {star === "Your pet" ? "the" : `${star}'s`} album</Primary>
+            <Primary onClick={() => done("album")}>{named(t, "onboarding.open", name)}</Primary>
             <button onClick={() => done("portrait")} className="mt-2 min-h-12 w-full text-muted underline underline-offset-4">
-              Make a vintage portrait, the first is free
+              {t("onboarding.makePortrait")}
             </button>
           </Footer>
         </>
@@ -230,12 +237,12 @@ function MascotSnap({ costume, bg, caption, date, rotate, className }: { costume
   );
 }
 
-function Welcome() {
+function Welcome({ t }: { t: T }) {
   return (
-    <div className="relative mx-auto mt-4 aspect-[10/9] w-full max-w-[21rem]" aria-label={`${MASCOT}'s album page`} role="img">
-      <MascotSnap costume="none" bg="linear-gradient(180deg,#b9d3e4,#e7d9b8)" caption="first walk" date="'19 4 2" rotate={-6} className="left-0 top-[8%]" />
-      <MascotSnap costume="scarf" bg="radial-gradient(circle at 30% 30%,#f1c070 0 3px,transparent 4px),radial-gradient(90% 80% at 50% 40%,#8e2a22,#3a0f0c)" caption="our first christmas" date="'19 12 25" rotate={5} className="right-0 top-0" />
-      <MascotSnap costume="none" bg="linear-gradient(180deg,#f3cf98,#9fbfb6)" caption="lake days" date="'20 7 14" rotate={-1} className="bottom-0 left-[26%]" />
+    <div className="relative mx-auto mt-4 aspect-[10/9] w-full max-w-[21rem]" aria-label={t("onboarding.mascotPage", { mascot: MASCOT })} role="img">
+      <MascotSnap costume="none" bg="linear-gradient(180deg,#b9d3e4,#e7d9b8)" caption={t("onboarding.snaps.walk")} date="'19 4 2" rotate={-6} className="left-0 top-[8%]" />
+      <MascotSnap costume="scarf" bg="radial-gradient(circle at 30% 30%,#f1c070 0 3px,transparent 4px),radial-gradient(90% 80% at 50% 40%,#8e2a22,#3a0f0c)" caption={t("onboarding.snaps.christmas")} date="'19 12 25" rotate={5} className="right-0 top-0" />
+      <MascotSnap costume="none" bg="linear-gradient(180deg,#f3cf98,#9fbfb6)" caption={t("onboarding.snaps.lake")} date="'20 7 14" rotate={-1} className="bottom-0 left-[26%]" />
       <Tape className="left-[14%] top-[4%]" rotate={-18} />
       <Tape className="right-[12%] -top-2" rotate={10} />
       <Tape className="top-[40%] left-[40%]" rotate={-4} />

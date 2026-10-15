@@ -34,7 +34,25 @@ function loadImage(src: string) {
 
 export type CardText = { name: string; title: string; year: number; memorial?: boolean };
 
-export async function makeShareCard(src: string, text: CardText, format: ShareFormat): Promise<Blob> {
+// The words drawn onto cards, in the reader's language (src/i18n/app.ts
+// builds these from the catalog). English by default.
+export type CardWords = {
+  memorial: string;
+  titleCard: (title: string, year: number) => string;
+  madeWith: string;
+  rollDay: (n: number) => string;
+  starring: (name: string) => string;
+};
+
+export const ENGLISH_CARD_WORDS: CardWords = {
+  memorial: "In loving memory of",
+  titleCard: (title, year) => `in ${title}, ${year}`,
+  madeWith: `MADE WITH ${BRAND.toUpperCase()}`,
+  rollDay: (n) => `day ${n} of the photo-a-day roll`,
+  starring: (name) => `starring ${name}`,
+};
+
+export async function makeShareCard(src: string, text: CardText, format: ShareFormat, words = ENGLISH_CARD_WORDS): Promise<Blob> {
   const size = SIZES[format];
   const display = family("--font-bodoni", "serif");
   const script = family("--font-pinyon", "cursive");
@@ -80,20 +98,20 @@ export async function makeShareCard(src: string, text: CardText, format: ShareFo
   if (text.memorial) {
     ctx.font = `italic 40px ${display}`;
     ctx.fillStyle = MUTED;
-    ctx.fillText("In loving memory of", size.w / 2, ty - (format === "story" ? 92 : 78));
+    ctx.fillText(words.memorial, size.w / 2, ty - (format === "story" ? 92 : 78));
     ctx.fillStyle = INK;
   }
   ctx.font = `${format === "story" ? 124 : 104}px ${script}`;
   ctx.fillText(text.name, size.w / 2, ty);
   ty += format === "story" ? 84 : 68;
   ctx.font = `italic ${format === "story" ? 50 : 42}px ${display}`;
-  ctx.fillText(`in ${text.title}, ${text.year}`, size.w / 2, ty);
+  ctx.fillText(words.titleCard(text.title, text.year), size.w / 2, ty);
 
   // The small mark.
   ctx.font = `500 26px ${sans}`;
   ctx.fillStyle = MUTED;
   if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "4px";
-  ctx.fillText(`MADE WITH ${BRAND.toUpperCase()}`, size.w / 2, size.h - (format === "story" ? 120 : 56));
+  ctx.fillText(words.madeWith, size.w / 2, size.h - (format === "story" ? 120 : 56));
 
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", 0.92),
@@ -106,6 +124,7 @@ export async function makeShareCard(src: string, text: CardText, format: ShareFo
 export async function makePhotoStoryCard(
   src: string,
   text: { name: string; caption?: string; date: string; filter: string; roll?: number },
+  words = ENGLISH_CARD_WORDS,
 ): Promise<Blob> {
   const display = family("--font-bodoni", "serif");
   const script = family("--font-pinyon", "cursive");
@@ -173,12 +192,12 @@ export async function makePhotoStoryCard(
   if (text.roll) {
     ctx.font = `italic 38px ${display}`;
     ctx.fillStyle = MUTED;
-    ctx.fillText(`day ${text.roll} of the photo-a-day roll`, 540, nameY + 64);
+    ctx.fillText(words.rollDay(text.roll), 540, nameY + 64);
   }
   ctx.font = `500 26px ${sans}`;
   ctx.fillStyle = MUTED;
   if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "4px";
-  ctx.fillText(`MADE WITH ${BRAND.toUpperCase()}`, 540, 1690);
+  ctx.fillText(words.madeWith, 540, 1690);
 
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", 0.92),
@@ -243,6 +262,7 @@ const COLLAGE_SLOTS = [
 export async function makeCollageCard(
   photos: { src: string; date: string }[],
   text: { title: string; name: string; filter: string },
+  words = ENGLISH_CARD_WORDS,
 ): Promise<Blob> {
   const display = family("--font-bodoni", "serif");
   const script = family("--font-pinyon", "cursive");
@@ -269,7 +289,7 @@ export async function makeCollageCard(
   ctx.fillText(text.title, 540, 190);
   ctx.font = `italic 40px ${display}`;
   ctx.fillStyle = MUTED;
-  ctx.fillText(`starring ${text.name}`, 540, 262);
+  ctx.fillText(words.starring(text.name), 540, 262);
 
   images.forEach((img, i) => {
     const slot = COLLAGE_SLOTS[i];
@@ -312,7 +332,7 @@ export async function makeCollageCard(
   ctx.font = `500 26px ${sans}`;
   ctx.fillStyle = MUTED;
   if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "4px";
-  ctx.fillText(`MADE WITH ${BRAND.toUpperCase()}`, 540, 1830);
+  ctx.fillText(words.madeWith, 540, 1830);
 
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", 0.9),

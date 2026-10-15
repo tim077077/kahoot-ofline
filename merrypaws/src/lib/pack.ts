@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import { addDays, getEntries, viewStreak } from "./daily";
+import { isLocale, type Locale } from "@/i18n/core";
 import type { ObjectStore } from "./objects";
 import { getPhoto, withUrls } from "./photos";
 import type { Store } from "./store";
@@ -11,7 +12,8 @@ import type { Store } from "./store";
 export const MAX_PACK = 50;
 export const REACTIONS = ["paw", "heart", "laugh"] as const;
 export type Reaction = (typeof REACTIONS)[number];
-export type PetProfile = { petName: string; kind: "dog" | "cat" | "other"; memorial: boolean };
+// locale: the owner's language, for the reminders and emails the server writes.
+export type PetProfile = { petName: string; kind: "dog" | "cat" | "other"; memorial: boolean; locale?: Locale };
 
 // No 0/O/1/I, so codes survive being read aloud.
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -23,6 +25,9 @@ export async function setProfile(store: Store, accountId: string, input: Partial
     kind,
     memorial: input.memorial === true,
   };
+  // An older phone that doesn't send a language keeps the one already saved.
+  const locale = isLocale(input.locale) ? input.locale : (await getProfile(store, accountId)).locale;
+  if (locale) profile.locale = locale;
   await store.set(`profile:${accountId}`, JSON.stringify(profile));
   return profile;
 }

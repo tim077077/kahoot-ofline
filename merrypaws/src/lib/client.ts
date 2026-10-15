@@ -179,7 +179,6 @@ export function downloadUrl(id: string) {
   return `${API_BASE}/api/download/${id}`;
 }
 
-export const starName = (name: string) => name.trim() || "Your pet";
 
 // The phone resizes every album photo before upload: a 2048px print and a
 // 480px thumbnail. Fast on mobile data, and cheap to store.

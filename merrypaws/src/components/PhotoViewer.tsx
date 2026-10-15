@@ -3,7 +3,9 @@
 import { Heart, InstagramLogo, Plus, ShareNetwork, Trash, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Print } from "@/components/Vintage";
-import { ACTIVITIES, activityFor, MAX_TAGS } from "@/lib/activities";
+import { activityText } from "@/i18n/app";
+import { useT } from "@/i18n/react";
+import { ACTIVITIES, MAX_TAGS } from "@/lib/activities";
 import { track, type Photo } from "@/lib/client";
 import type { LookId } from "@/lib/looks";
 import { shareOrSave } from "@/lib/share";
@@ -23,6 +25,7 @@ type Props = {
 // One photo from the album: the print, what's written on the back, and which
 // highlights it belongs to.
 export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate, onUpdate, onDelete, onStory }: Props) {
+  const t = useT();
   const index = photos.findIndex((p) => p.id === openId);
   const photo = photos[index];
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -51,13 +54,13 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
   }, [prev, next, onClose, onNavigate]);
 
   if (!photo) return null;
-  const taken = new Date(photo.takenAt);
+  const takenText = t.date(photo.takenAt, { day: "numeric", month: "long", year: "numeric" });
   const toggleTag = (tag: string) => {
     const has = photo.tags.includes(tag);
     if (!has && photo.tags.length >= MAX_TAGS) return;
-    onUpdate(photo.id, { tags: has ? photo.tags.filter((t) => t !== tag) : [...photo.tags, tag] });
+    onUpdate(photo.id, { tags: has ? photo.tags.filter((x) => x !== tag) : [...photo.tags, tag] });
   };
-  const customTags = photo.tags.filter((t) => !ACTIVITIES.some((a) => a.id === t));
+  const customTags = photo.tags.filter((tag) => !ACTIVITIES.some((a) => a.id === tag));
 
   async function share() {
     try {
@@ -73,7 +76,7 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Photo from ${taken.toLocaleDateString("en", { month: "long", day: "numeric", year: "numeric" })}`}
+      aria-label={t("photo.dialog", { date: takenText })}
       className="paper fixed inset-0 z-40 overflow-y-auto pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]"
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {
@@ -86,16 +89,16 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
     >
       <div className="mx-auto max-w-lg">
         <div className="flex items-center justify-between px-3 py-2">
-          <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full">
+          <button onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-full">
             <X size={24} />
           </button>
           <p className="font-display text-sm italic text-muted">
-            {taken.toLocaleDateString("en", { day: "numeric", month: "long", year: "numeric" })}
+            {takenText}
           </p>
           <button
             onClick={() => onUpdate(photo.id, { favorite: !photo.favorite })}
             aria-pressed={photo.favorite}
-            aria-label={photo.favorite ? "Remove from favourites" : "Add to favourites"}
+            aria-label={photo.favorite ? t("photo.removeFavourite") : t("photo.addFavourite")}
             className="flex h-11 w-11 items-center justify-center rounded-full"
           >
             <Heart size={24} weight={photo.favorite ? "fill" : "regular"} className={photo.favorite ? "text-accent" : ""} />
@@ -106,7 +109,7 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
           <Print
             key={photo.id}
             src={photo.full}
-            alt={photo.caption || `${petName}, ${taken.toLocaleDateString()}`}
+            alt={photo.caption || `${petName}, ${takenText}`}
             look={look}
             date={photo.takenAt}
             rotate={-1}
@@ -121,10 +124,10 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
             onClick={() => onStory(photo)}
             className="mb-5 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink active:scale-[0.98]"
           >
-            <InstagramLogo size={20} /> Share to Instagram Story
+            <InstagramLogo size={20} /> {t("photo.toStory")}
           </button>
           <label htmlFor="caption" className="sr-only">
-            Caption
+            {t("photo.caption")}
           </label>
           <input
             id="caption"
@@ -132,11 +135,11 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
             onChange={(e) => setCaption(e.target.value.slice(0, 80))}
             onBlur={() => caption !== photo.caption && onUpdate(photo.id, { caption })}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-            placeholder="Write something on the back"
+            placeholder={t("photo.captionPlaceholder")}
             className="font-hand w-full border-b border-dashed border-line bg-transparent py-2 text-center text-lg leading-normal outline-none placeholder:text-muted/70 focus:border-accent"
           />
 
-          <h2 className="font-display mt-6 text-center italic">What were they up to?</h2>
+          <h2 className="font-display mt-6 text-center italic">{t("photo.upTo")}</h2>
           <div className="mt-3 flex flex-wrap justify-center gap-2">
             {[...ACTIVITIES.map((a) => a.id), ...customTags].map((tag) => {
               const on = photo.tags.includes(tag);
@@ -147,7 +150,7 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
                   aria-pressed={on}
                   className={on ? "dymo min-h-9" : "min-h-9 rounded-[3px] border border-dashed border-ink/30 px-2.5 text-[0.78rem] font-bold uppercase tracking-[0.14em] text-muted"}
                 >
-                  {activityFor(tag).label}
+                  {activityText(t, tag).label}
                 </button>
               );
             })}
@@ -162,37 +165,37 @@ export function PhotoViewer({ photos, openId, look, petName, onClose, onNavigate
             }}
           >
             <label htmlFor="custom-tag" className="sr-only">
-              Your own highlight
+              {t("photo.ownHighlight")}
             </label>
             <input
               id="custom-tag"
               value={custom}
               onChange={(e) => setCustom(e.target.value.slice(0, 24))}
-              placeholder="Your own, like Grandma's house"
+              placeholder={t("photo.ownPlaceholder")}
               className="min-h-11 flex-1 rounded-full border border-line bg-card px-4 text-sm outline-none focus:border-accent"
             />
-            <button type="submit" aria-label="Add highlight" className="flex h-11 w-11 items-center justify-center rounded-full bg-ink text-paper">
+            <button type="submit" aria-label={t("photo.addHighlight")} className="flex h-11 w-11 items-center justify-center rounded-full bg-ink text-paper">
               <Plus size={18} weight="bold" />
             </button>
           </form>
 
           {confirmDelete ? (
             <div className="mt-8 flex items-center justify-center gap-3 pb-6">
-              <span className="text-muted">Remove this photo?</span>
+              <span className="text-muted">{t("photo.removeConfirm")}</span>
               <button onClick={() => onDelete(photo.id)} className="min-h-11 rounded-full bg-accent px-5 font-medium text-accent-ink">
-                Remove
+                {t("common.remove")}
               </button>
               <button onClick={() => setConfirmDelete(false)} className="min-h-11 px-3 text-muted">
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           ) : (
             <div className="mt-8 flex justify-center gap-6 pb-6">
               <button onClick={() => void share()} className="inline-flex min-h-11 items-center gap-1.5 text-muted">
-                <ShareNetwork size={18} /> Share
+                <ShareNetwork size={18} /> {t("common.share")}
               </button>
               <button onClick={() => setConfirmDelete(true)} className="inline-flex min-h-11 items-center gap-1.5 text-muted">
-                <Trash size={18} /> Remove
+                <Trash size={18} /> {t("common.remove")}
               </button>
             </div>
           )}

@@ -5,9 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { StyleArt } from "@/components/StyleCard";
 import { MASCOT } from "@/lib/config";
-import { downloadUrl, starName, track, type Photo, type Portrait, type UploadPhase } from "@/lib/client";
+import { displayName, named, styleBlurb, styleTitle } from "@/i18n/app";
+import { useT } from "@/i18n/react";
+import { downloadUrl, track, type Photo, type Portrait, type UploadPhase } from "@/lib/client";
 import { prepareUpload } from "@/lib/image";
-import { checkPhoto, PROBLEM_TEXT, type PhotoProblem } from "@/lib/photoCheck";
+import { checkPhoto, type PhotoProblem } from "@/lib/photoCheck";
 import { CANVASES, cleanIdea, findStyle, IDEA_MAX, STYLES, type CanvasId, type Style, type StyleId } from "@/lib/styles";
 
 type Upload = { blob: Blob; url: string };
@@ -16,13 +18,6 @@ type Step = "photo" | "style" | "develop" | "reveal";
 export type ShootResult = { ok: true; portrait: Portrait } | { ok: false; error: string; code?: string };
 export type ShootRequest = { pet: Blob; owner: Blob | null; style: StyleId; memorial: boolean; name?: string; canvas?: CanvasId; idea?: string };
 
-// Starting points for "Your own scene", so the box is never a blank page.
-const IDEA_STARTERS = [
-  "an astronaut floating above the Earth",
-  "a knight in shining armour in a castle hall",
-  "a cosy watercolour, napping in a field of sunflowers",
-  "a chef in a tiny white hat, baking croissants",
-];
 
 type Props = {
   petName: string;
@@ -42,6 +37,7 @@ type Props = {
 };
 
 export function Studio(props: Props) {
+  const t = useT();
   const [step, setStep] = useState<Step>("photo");
   const [pet, setPet] = useState<Upload | null>(null);
   const [owner, setOwner] = useState<Upload | null>(null);
@@ -123,7 +119,6 @@ export function Studio(props: Props) {
   }
 
   const selected = findStyle(props.style)!;
-  const star = starName(props.petName);
   const needsIdea = selected.kind === "idea" && !cleanIdea(idea);
 
   return (
@@ -132,49 +127,49 @@ export function Studio(props: Props) {
         <button
           onClick={() => setStep("photo")}
           className="print w-16 shrink-0 !p-1 !pb-1.5"
-          aria-label="Change the star's photo"
+          aria-label={t("studio.changePhoto")}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {pet && <img src={pet.url} alt="" className="aspect-square w-full object-cover" />}
         </button>
         <div>
-          <h1 className="font-display text-[2rem] leading-none">Choose the era</h1>
-          <p className="mt-1 text-muted">Where should {star === "Your pet" ? "they" : star} be remembered?</p>
+          <h1 className="font-display text-[2rem] leading-none">{t("studio.chooseEra")}</h1>
+          <p className="mt-1 text-muted">{named(t, "studio.remembered", props.petName)}</p>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5" role="radiogroup" aria-label="Era">
+      <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5" role="radiogroup" aria-label={t("studio.era")}>
         {STYLES.map((s) => (
           <EraCard key={s.id} style={s} sample={props.samples[s.id]} selected={props.style === s.id} onSelect={() => props.onStyle(s.id)} />
         ))}
       </div>
       <p className="mt-4 text-muted">
-        <span className="font-display italic text-ink">{selected.title}.</span> {selected.blurb}
+        <span className="font-display italic text-ink">{styleTitle(t, selected.id)}.</span> {styleBlurb(t, selected.id)}
       </p>
 
       {selected.kind === "illustration" && <CanvasPicker value={canvas} onChange={setCanvas} />}
-      {selected.kind === "idea" && <IdeaBox value={idea} onChange={setIdea} star={star} />}
+      {selected.kind === "idea" && <IdeaBox value={idea} onChange={setIdea} petName={props.petName} />}
 
       <div className="mt-8 divide-y divide-line border-y border-line">
         <label className="flex min-h-16 items-center justify-between gap-4 py-3">
           <span>
-            <span className="block font-medium">Their name</span>
+            <span className="block font-medium">{t("studio.theirName")}</span>
             <span className="text-sm text-muted">
-              {selected.kind === "illustration" ? "Painted on the portrait itself" : "Written on the title card"}
+              {selected.kind === "illustration" ? t("studio.nameOnPortrait") : t("studio.nameOnCard")}
             </span>
           </span>
           <input
             value={props.petName}
             onChange={(e) => props.onPetName(e.target.value.slice(0, 24))}
-            placeholder="Luna"
+            placeholder={t("studio.namePlaceholder")}
             autoComplete="off"
             className="min-h-11 w-36 rounded-full border border-line bg-card px-4 text-right text-base outline-none focus:border-accent"
           />
         </label>
-        <OwnerRow owner={owner} setOwner={setOwner} star={star} />
+        <OwnerRow owner={owner} setOwner={setOwner} petName={props.petName} />
         <Toggle
-          label="In loving memory"
-          hint="For a pet who has passed. Gentler words, same care."
+          label={t("common.inLovingMemory")}
+          hint={t("studio.memorialHint")}
           checked={memorial}
           onChange={setMemorial}
         />
@@ -185,7 +180,7 @@ export function Studio(props: Props) {
           <p>{error.text}</p>
           {error.code === "limit_reached" && (
             <button onClick={props.onPlans} className="mt-2 min-h-11 font-medium text-accent underline underline-offset-4">
-              See portrait credits
+              {t("studio.seeCredits")}
             </button>
           )}
         </div>
@@ -196,20 +191,21 @@ export function Studio(props: Props) {
         disabled={!pet || needsIdea}
         className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink transition active:scale-[0.98] disabled:opacity-40"
       >
-        Develop the portrait
+        {t("studio.develop")}
       </button>
       <p className="mt-3 text-center text-sm text-muted">
         {props.previews > 0
-          ? `Uses 1 of your ${props.previews} previews. Keeping one in HD uses a credit (you have ${props.credits}).`
+          ? t.tp("studio.usesPreview", props.previews, { credits: props.credits })
           : props.freeLeft > 0
-            ? "Your first portrait is free."
-            : "You've used your free portrait. Credits let you make more."}
+            ? t("studio.firstFree")
+            : t("studio.usedFree")}
       </p>
     </section>
   );
 }
 
 function EraCard({ style, sample, selected, onSelect }: { style: Style; sample: string | null; selected: boolean; onSelect: () => void }) {
+  const t = useT();
   return (
     <button role="radio" aria-checked={selected} onClick={onSelect} className="group text-left">
       <div className={`arch relative p-1 transition ${selected ? "bg-accent" : "bg-transparent"}`}>
@@ -220,23 +216,24 @@ function EraCard({ style, sample, selected, onSelect }: { style: Style; sample: 
           </span>
         )}
       </div>
-      <p className="font-display mt-2 text-[1.05rem] leading-tight">{style.title}</p>
+      <p className="font-display mt-2 text-[1.05rem] leading-tight">{styleTitle(t, style.id)}</p>
       <p className="font-display text-sm italic text-muted">{style.year}</p>
     </button>
   );
 }
 
 function CanvasPicker({ value, onChange }: { value: CanvasId; onChange: (id: CanvasId) => void }) {
+  const t = useT();
   return (
     <div className="mt-5">
-      <p className="font-medium">Background colour</p>
-      <div className="mt-3 flex flex-wrap gap-3" role="radiogroup" aria-label="Background colour">
+      <p className="font-medium">{t("studio.background")}</p>
+      <div className="mt-3 flex flex-wrap gap-3" role="radiogroup" aria-label={t("studio.background")}>
         {CANVASES.map((c) => (
           <button
             key={c.id}
             role="radio"
             aria-checked={value === c.id}
-            aria-label={c.label}
+            aria-label={t(`studio.canvases.${c.id}`)}
             onClick={() => onChange(c.id)}
             className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${value === c.id ? "border-accent ring-2 ring-accent ring-offset-2 ring-offset-paper" : "border-line"}`}
             style={{ background: c.hex }}
@@ -249,26 +246,25 @@ function CanvasPicker({ value, onChange }: { value: CanvasId; onChange: (id: Can
   );
 }
 
-function IdeaBox({ value, onChange, star }: { value: string; onChange: (v: string) => void; star: string }) {
+function IdeaBox({ value, onChange, petName }: { value: string; onChange: (v: string) => void; petName: string }) {
+  const t = useT();
   return (
     <div className="mt-5">
       <label htmlFor="idea" className="font-medium">
-        Describe the scene
+        {t("studio.describe")}
       </label>
-      <p className="text-sm text-muted">
-        One or two sentences. We keep {star === "Your pet" ? "your pet" : star} looking exactly like themselves and handle the light, style and details.
-      </p>
+      <p className="text-sm text-muted">{named(t, "studio.describeHint", petName)}</p>
       <textarea
         id="idea"
         value={value}
         onChange={(e) => onChange(e.target.value.slice(0, IDEA_MAX))}
         rows={3}
         maxLength={IDEA_MAX}
-        placeholder="As a pirate captain on a ship at sunset"
+        placeholder={t("studio.ideaPlaceholder")}
         className="mt-3 w-full resize-none rounded-2xl border border-line bg-card px-4 py-3 text-base outline-none focus:border-accent"
       />
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        {IDEA_STARTERS.map((idea) => (
+        {t.list("studio.starters").map((idea) => (
           <button
             key={idea}
             onClick={() => onChange(idea)}
@@ -299,20 +295,21 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint: strin
   );
 }
 
-function OwnerRow({ owner, setOwner, star }: { owner: Upload | null; setOwner: (u: Upload | null) => void; star: string }) {
+function OwnerRow({ owner, setOwner, petName }: { owner: Upload | null; setOwner: (u: Upload | null) => void; petName: string }) {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   return (
     <div className="flex min-h-16 items-center justify-between gap-4 py-3">
       <span>
-        <span className="block font-medium">Add me too</span>
+        <span className="block font-medium">{t("studio.addMe")}</span>
         <span className="text-sm text-muted">
-          {owner ? `You and ${star === "Your pet" ? "your pet" : star}, together` : "You and your pet in one portrait"}
+          {owner ? named(t, "studio.together", petName) : t("studio.addMeHint")}
         </span>
       </span>
       {owner ? (
         <span className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={owner.url} alt="Your photo" className="h-11 w-11 rounded-full object-cover" />
+          <img src={owner.url} alt={t("studio.yourPhoto")} className="h-11 w-11 rounded-full object-cover" />
           <button
             onClick={() => {
               URL.revokeObjectURL(owner.url);
@@ -320,12 +317,12 @@ function OwnerRow({ owner, setOwner, star }: { owner: Upload | null; setOwner: (
             }}
             className="min-h-11 px-2 text-sm text-muted underline underline-offset-4"
           >
-            Remove
+            {t("common.remove")}
           </button>
         </span>
       ) : (
         <button onClick={() => input.current?.click()} className="min-h-11 rounded-full border border-line px-4 text-sm font-medium">
-          Add a photo
+          {t("studio.addPhoto")}
         </button>
       )}
       <input
@@ -347,6 +344,7 @@ function OwnerRow({ owner, setOwner, star }: { owner: Upload | null; setOwner: (
 }
 
 function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | null; onPicked: (u: Upload) => void; onBack?: () => void; album: Photo[] }) {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const [checking, setChecking] = useState(false);
   const [pending, setPending] = useState<{ upload: Upload; problem: PhotoProblem } | null>(null);
@@ -390,10 +388,10 @@ function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | nul
       <section className="px-6 pb-10 pt-6 text-center">
         <div className="print mx-auto w-44 -rotate-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={pending.upload.url} alt="The photo you chose" className="aspect-square w-full object-cover" />
+          <img src={pending.upload.url} alt={t("studio.chosenPhoto")} className="aspect-square w-full object-cover" />
         </div>
-        <h1 className="font-display mt-8 text-[2rem] leading-tight">Maybe another one?</h1>
-        <p className="mx-auto mt-2 max-w-[32ch] text-muted">{PROBLEM_TEXT[pending.problem]}</p>
+        <h1 className="font-display mt-8 text-[2rem] leading-tight">{t("studio.maybeAnother")}</h1>
+        <p className="mx-auto mt-2 max-w-[32ch] text-muted">{t(`studio.problems.${pending.problem}`)}</p>
         <button
           onClick={() => {
             URL.revokeObjectURL(pending.upload.url);
@@ -402,7 +400,7 @@ function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | nul
           }}
           className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink active:scale-[0.98]"
         >
-          Choose another photo
+          {t("studio.chooseAnother")}
         </button>
         <button
           onClick={() => {
@@ -411,7 +409,7 @@ function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | nul
           }}
           className="mt-2 min-h-12 w-full text-muted underline underline-offset-4"
         >
-          Use this one anyway
+          {t("studio.useAnyway")}
         </button>
         {chooser}
       </section>
@@ -421,15 +419,16 @@ function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | nul
   return (
     <section className="px-6 pb-10 pt-4">
       <h1 className="font-display text-[2.4rem] leading-[1.05]">
-        Who&apos;s the <span className="font-script text-[3rem] text-accent">star</span>?
+        {t("studio.photoTitleStart")} <span className="font-script text-[3rem] text-accent">{t("studio.photoTitleWord")}</span>
+        {t("studio.photoTitleEnd")}
       </h1>
-      <p className="mt-2 text-muted">One clear photo of their face works best.</p>
+      <p className="mt-2 text-muted">{t("studio.photoHint")}</p>
 
       <div className="mt-6 grid grid-cols-4 gap-2.5">
-        <Tip good label="Clear face" />
-        <Tip good label="Daylight" light />
-        <Tip label="Blurry" look="blur(2.5px)" />
-        <Tip label="Too dark" look="brightness(0.3)" />
+        <Tip good label={t("studio.tipClear")} />
+        <Tip good label={t("studio.tipDaylight")} light />
+        <Tip label={t("studio.tipBlurry")} look="blur(2.5px)" />
+        <Tip label={t("studio.tipDark")} look="brightness(0.3)" />
       </div>
 
       <button
@@ -437,21 +436,21 @@ function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | nul
         disabled={checking}
         className="mt-8 flex min-h-14 w-full items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-ink transition active:scale-[0.98] disabled:opacity-60"
       >
-        {checking ? "Looking at the photo" : "Choose from Photos"}
+        {checking ? t("studio.looking") : t("studio.choose")}
       </button>
       {failed && (
         <p role="alert" className="mt-3 text-center text-accent">
-          That photo couldn&apos;t be opened. Try a JPG or PNG.
+          {t("studio.openFailed")}
         </p>
       )}
       {onBack && current && (
         <button onClick={onBack} className="mt-3 min-h-11 w-full text-muted underline underline-offset-4">
-          Keep the current photo
+          {t("studio.keepCurrent")}
         </button>
       )}
       {album.length > 0 && (
         <>
-          <h2 className="font-display mt-8 italic">Or one from the album</h2>
+          <h2 className="font-display mt-8 italic">{t("studio.fromAlbum")}</h2>
           <div className="-mx-6 mt-3 flex gap-3 overflow-x-auto px-6 pb-2">
             {album.slice(0, 24).map((p) => (
               <button
@@ -476,13 +475,14 @@ function PhotoStep({ current, onPicked, onBack, album }: { current: Upload | nul
           </div>
         </>
       )}
-      <p className="mt-6 text-center text-sm text-muted">Only the photo you pick is used. Nothing else in your library is read.</p>
+      <p className="mt-6 text-center text-sm text-muted">{t("studio.privacy")}</p>
       {chooser}
     </section>
   );
 }
 
 function Tip({ label, good = false, look, light = false }: { label: string; good?: boolean; look?: string; light?: boolean }) {
+  const t = useT();
   return (
     <figure className="text-center">
       <div
@@ -493,9 +493,9 @@ function Tip({ label, good = false, look, light = false }: { label: string; good
       </div>
       <figcaption className="mt-1.5 flex items-center justify-center gap-1 text-[0.8rem] leading-tight">
         {good ? (
-          <CheckCircle size={16} weight="fill" className="shrink-0 text-[#3d6b45]" aria-label="Good:" />
+          <CheckCircle size={16} weight="fill" className="shrink-0 text-[#3d6b45]" aria-label={t("studio.good")} />
         ) : (
-          <XCircle size={16} weight="fill" className="shrink-0 text-accent" aria-label="Avoid:" />
+          <XCircle size={16} weight="fill" className="shrink-0 text-accent" aria-label={t("studio.avoid")} />
         )}
         {label}
       </figcaption>
@@ -504,21 +504,22 @@ function Tip({ label, good = false, look, light = false }: { label: string; good
 }
 
 function DevelopStep({ photo, phase, memorial }: { photo: string | null; phase: UploadPhase | { kind: "drying" }; memorial: boolean }) {
+  const t = useT();
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   const order = ["loading", "developing", "drying"] as const;
   const at = order.indexOf(phase.kind);
   const steps = [
     {
-      label: "Loading the film",
-      detail: phase.kind === "loading" ? (phase.progress > 0 ? `${Math.round(phase.progress * 100)}% sent` : "Sending your photo") : null,
+      label: t("studio.loadingFilm"),
+      detail: phase.kind === "loading" ? (phase.progress > 0 ? t("studio.sent", { percent: Math.round(phase.progress * 100) }) : t("studio.sending")) : null,
     },
-    { label: "Developing", detail: phase.kind === "developing" ? `${seconds}s, usually 20 to 40` : null },
-    { label: "Drying the print", detail: null },
+    { label: t("studio.developing"), detail: phase.kind === "developing" ? t("studio.usually", { seconds }) : null },
+    { label: t("studio.drying"), detail: null },
   ];
 
   return (
@@ -534,9 +535,9 @@ function DevelopStep({ photo, phase, memorial }: { photo: string | null; phase: 
       </div>
 
       <h1 className="font-display mt-12 text-center text-[2rem] leading-tight">
-        {memorial ? "Taking our time with this one" : "In the darkroom"}
+        {memorial ? t("studio.takingTime") : t("studio.darkroom")}
       </h1>
-      <p className="mt-1 text-center text-muted">{MASCOT} is looking after it. Keep the app open.</p>
+      <p className="mt-1 text-center text-muted">{t("studio.lookingAfter", { mascot: MASCOT })}</p>
 
       <ol className="mt-8 w-full max-w-xs space-y-4">
         {steps.map((s, i) => {
@@ -579,23 +580,26 @@ function RevealStep({
   onAnother: () => void;
   onOpenAlbum: () => void;
 }) {
+  const t = useT();
   const s = findStyle(portrait.style)!;
+  const name = displayName(t, portrait.petName);
+  const title = styleTitle(t, s.id);
   return (
     <section className="px-6 pb-10 pt-4 text-center">
       <div className="print mx-auto w-[82%] max-w-xs">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={portrait.preview} alt={`${starName(portrait.petName)} in ${s.title}`} className="develop block w-full" />
+        <img src={portrait.preview} alt={t("studio.portraitAlt", { name, title })} className="develop block w-full" />
       </div>
 
       <div className="rise mt-7" style={{ animationDelay: "1.6s" }}>
-        {portrait.memorial && <p className="font-display italic text-muted">In loving memory of</p>}
-        <p className="font-script text-[3.2rem] leading-[1.1]">{starName(portrait.petName)}</p>
+        {portrait.memorial && <p className="font-display italic text-muted">{t("common.inLovingMemoryOf")}</p>}
+        <p className="font-script text-[3.2rem] leading-[1.1]">{name}</p>
         <p className="font-display text-lg italic">
-          in {s.title}, {s.year}
+          {t(portrait.withOwner ? "studio.titleCardOwner" : "studio.titleCard", { title, year: s.year })}
         </p>
       </div>
       {portrait.mock && (
-        <p className="mt-3 text-sm text-muted">Demo mode: there&apos;s no image key yet, so this is your own photo.</p>
+        <p className="mt-3 text-sm text-muted">{t("studio.demo")}</p>
       )}
 
       <div className="rise mt-7 grid gap-3" style={{ animationDelay: "2s" }}>
@@ -605,27 +609,27 @@ function RevealStep({
             download
             className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent text-lg font-medium text-accent-ink"
           >
-            <DownloadSimple size={20} weight="bold" /> Save in HD
+            <DownloadSimple size={20} weight="bold" /> {t("common.saveHd")}
           </a>
         ) : (
           <button
             onClick={onKeep}
             className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent text-lg font-medium text-accent-ink active:scale-[0.98]"
           >
-            <DownloadSimple size={20} weight="bold" /> {portrait.memorial ? "Keep it in HD" : "Save in HD"}
+            <DownloadSimple size={20} weight="bold" /> {portrait.memorial ? t("studio.keepItHd") : t("common.saveHd")}
           </button>
         )}
         <button
           onClick={onShare}
           className="flex min-h-14 items-center justify-center gap-2 rounded-full border border-ink/25 text-lg font-medium active:scale-[0.98]"
         >
-          <ShareNetwork size={20} /> Share
+          <ShareNetwork size={20} /> {t("common.share")}
         </button>
         <button onClick={onAnother} className="inline-flex min-h-12 items-center justify-center gap-2 text-muted underline underline-offset-4">
-          <ArrowCounterClockwise size={18} /> Try another era
+          <ArrowCounterClockwise size={18} /> {t("studio.anotherEra")}
         </button>
         <button onClick={onOpenAlbum} className="min-h-11 text-sm text-muted">
-          It&apos;s already in your album
+          {t("studio.inAlbum")}
         </button>
       </div>
     </section>

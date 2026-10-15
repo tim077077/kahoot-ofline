@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useT } from "@/i18n/react";
 import { dateStamp } from "@/lib/client";
 import { DECKLE_MASK } from "@/lib/deckle";
 import { findLook, type LookId } from "@/lib/looks";
@@ -87,6 +88,7 @@ export function Stack({ srcs, look, label }: { srcs: string[]; look?: LookId; la
 
 // "October 2025" (or just the year), handwritten on the album page.
 export function MonthHeading({ date, yearOnly = false }: { date: string; yearOnly?: boolean }) {
+  const { locale } = useT();
   const d = new Date(date);
   return (
     <h3 className="flex items-center gap-3 px-5 text-muted">
@@ -94,7 +96,7 @@ export function MonthHeading({ date, yearOnly = false }: { date: string; yearOnl
         <span className="font-hand text-xl leading-normal text-ink">{d.getFullYear()}</span>
       ) : (
         <>
-          <span className="font-hand text-lg leading-normal text-ink">{d.toLocaleString("en", { month: "long" })}</span>
+          <span className="font-hand text-lg leading-normal text-ink">{d.toLocaleString(locale, { month: "long" })}</span>
           <span className="font-display italic">{d.getFullYear()}</span>
         </>
       )}

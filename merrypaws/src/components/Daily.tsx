@@ -5,7 +5,9 @@ import { Mascot } from "@/components/Mascot";
 import { Sheet } from "@/components/Sheet";
 import { Polaroid, Print, Tape } from "@/components/Vintage";
 import type { Daily, DayCell, Photo } from "@/lib/client";
-import { promptFor } from "@/lib/dailyPrompts";
+import { named } from "@/i18n/app";
+import { useT } from "@/i18n/react";
+import { promptIndex } from "@/lib/dailyPrompts";
 import type { LookId } from "@/lib/looks";
 
 // The streak as a strip of film: one frame per day. Done frames are exposed,
@@ -31,7 +33,7 @@ export function FilmRoll({ days, doneToday }: { days: DayCell[]; doneToday: bool
 }
 
 type CardProps = {
-  name: string;
+  petName: string;
   daily: Daily | null;
   today: string;
   todayPhoto: Photo | null;
@@ -46,21 +48,21 @@ type CardProps = {
 // Top of the album: today's prompt, the roll, and one button. Once today's
 // photo is in, the card turns into a small celebration with the two things
 // worth doing next: share it, or see the pack.
-export function DailyCard({ name, daily, today, todayPhoto, look, busy, onAdd, onStory, onPack, onMakeRoom }: CardProps) {
+export function DailyCard({ petName, daily, today, todayPhoto, look, busy, onAdd, onStory, onPack, onMakeRoom }: CardProps) {
   const count = daily?.count ?? 0;
   const done = daily?.doneToday ?? false;
-  const who = name === "Your pet" ? "their" : `${name}'s`;
+  const t = useT();
 
   return (
-    <section className="mx-5 mt-6 rounded-2xl bg-card p-4 shadow-[0_14px_30px_-22px_var(--shadow)]" aria-label="Photo of the day">
+    <section className="mx-5 mt-6 rounded-2xl bg-card p-4 shadow-[0_14px_30px_-22px_var(--shadow)]" aria-label={t("daily.label")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-script text-[2rem] leading-[1.1]">{count > 0 ? `Day ${count}` : "Day one"}</p>
-          <p className="font-display text-sm italic text-muted">of {who} photo-a-day roll</p>
+          <p className="font-script text-[2rem] leading-[1.1]">{count > 0 ? t("daily.day", { n: count }) : t("daily.dayOne")}</p>
+          <p className="font-display text-sm italic text-muted">{named(t, "daily.ofRoll", petName)}</p>
         </div>
         {daily && daily.freezes > 0 && (
-          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#dfeaf1] px-2.5 py-1 text-xs text-[#2a4a60]" title="A freeze covers a missed day">
-            <Snowflake size={14} weight="bold" /> {daily.freezes} {daily.freezes === 1 ? "freeze" : "freezes"}
+          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#dfeaf1] px-2.5 py-1 text-xs text-[#2a4a60]" title={t("daily.freezeTitle")}>
+            <Snowflake size={14} weight="bold" /> {t.tp("daily.freezes", daily.freezes)}
           </span>
         )}
       </div>
@@ -69,9 +71,9 @@ export function DailyCard({ name, daily, today, todayPhoto, look, busy, onAdd, o
 
       {daily?.paused ? (
         <div className="mt-4">
-          <p className="text-sm text-muted">The roll is paused while the album is full. Nothing is lost.</p>
+          <p className="text-sm text-muted">{t("daily.paused")}</p>
           <button onClick={onMakeRoom} className="mt-3 min-h-12 w-full rounded-full bg-accent font-medium text-accent-ink">
-            Make room to keep going
+            {t("daily.makeRoom")}
           </button>
         </div>
       ) : done ? (
@@ -85,32 +87,32 @@ export function DailyCard({ name, daily, today, todayPhoto, look, busy, onAdd, o
             <Mascot mood="cheer" size={64} />
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-medium">Today&apos;s photo is in.</p>
-            <p className="text-sm text-muted">Tomorrow brings a new prompt.</p>
+            <p className="font-medium">{t("daily.done")}</p>
+            <p className="text-sm text-muted">{t("daily.tomorrow")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {todayPhoto && (
                 <button onClick={onStory} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-ink px-3.5 text-sm text-paper">
-                  <InstagramLogo size={16} /> Story
+                  <InstagramLogo size={16} /> {t("common.story")}
                 </button>
               )}
               <button onClick={onPack} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-ink/20 px-3.5 text-sm">
-                <UsersThree size={16} /> The pack
+                <UsersThree size={16} /> {t("daily.thePack")}
               </button>
             </div>
           </div>
         </div>
       ) : (
         <div className="mt-4">
-          <p className="text-sm text-muted">Today&apos;s prompt</p>
-          <p className="font-hand text-xl leading-normal">{promptFor(today)}</p>
+          <p className="text-sm text-muted">{t("daily.prompt")}</p>
+          <p className="font-hand text-xl leading-normal">{t.list("daily.prompts")[promptIndex(today)]}</p>
           <button
             onClick={onAdd}
             disabled={busy}
             className="mt-3 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink active:scale-[0.98] disabled:opacity-60"
           >
-            <Camera size={20} weight="bold" /> {busy ? "Developing" : "Add today's photo"}
+            <Camera size={20} weight="bold" /> {busy ? t("daily.developing") : t("daily.add")}
           </button>
-          {count > 0 && <p className="mt-2 text-center text-xs text-muted">Keeps the roll going. Any photo you add today counts.</p>}
+          {count > 0 && <p className="mt-2 text-center text-xs text-muted">{t("daily.counts")}</p>}
         </div>
       )}
     </section>
@@ -119,7 +121,10 @@ export function DailyCard({ name, daily, today, todayPhoto, look, busy, onAdd, o
 
 // "A year ago today": the album hands back a memory. Uses the same month and
 // day in earlier years, or the same day last month while the album is young.
-export function findMemory(photos: Photo[], today: string): { photo: Photo; label: string } | null {
+// years is 0 for "a month ago".
+export type Memory = { photo: Photo; years: number };
+
+export function findMemory(photos: Photo[], today: string): Memory | null {
   const [y, m, d] = today.split("-").map(Number);
   const sameDay = photos.filter((p) => {
     const t = new Date(p.takenAt);
@@ -128,17 +133,18 @@ export function findMemory(photos: Photo[], today: string): { photo: Photo; labe
   if (sameDay.length) {
     const photo = sameDay[0];
     const years = y - new Date(photo.takenAt).getFullYear();
-    return { photo, label: years === 1 ? "A year ago today" : `${years} years ago today` };
+    return { photo, years };
   }
   const monthAgo = photos.find((p) => {
     const t = new Date(p.takenAt);
     const prev = new Date(y, m - 2, d);
     return t.getFullYear() === prev.getFullYear() && t.getMonth() === prev.getMonth() && t.getDate() === prev.getDate();
   });
-  return monthAgo ? { photo: monthAgo, label: "A month ago today" } : null;
+  return monthAgo ? { photo: monthAgo, years: 0 } : null;
 }
 
-export function MemoryCard({ memory, look, onOpen }: { memory: { photo: Photo; label: string }; look: LookId; onOpen: () => void }) {
+export function MemoryCard({ memory, look, onOpen }: { memory: Memory; look: LookId; onOpen: () => void }) {
+  const t = useT();
   return (
     <button onClick={onOpen} className="mx-5 mt-4 flex w-[calc(100%-2.5rem)] items-center gap-4 rounded-2xl border border-dashed border-ink/20 p-3 text-left">
       {/* Percent padding follows the parent's width, so the print gets its own box. */}
@@ -146,25 +152,16 @@ export function MemoryCard({ memory, look, onOpen }: { memory: { photo: Photo; l
         <Polaroid src={memory.photo.thumb} look={look} rotate={3} />
       </span>
       <span className="min-w-0">
-        <span className="font-display block text-lg italic">{memory.label}</span>
+        <span className="font-display block text-lg italic">{memory.years ? t.tp("daily.yearsAgo", memory.years) : t("daily.monthAgo")}</span>
         <span className="font-hand block truncate text-base leading-normal text-muted">
-          {memory.photo.caption || new Date(memory.photo.takenAt).toLocaleDateString("en", { day: "numeric", month: "long", year: "numeric" })}
+          {memory.photo.caption || t.date(memory.photo.takenAt, { day: "numeric", month: "long", year: "numeric" })}
         </span>
       </span>
     </button>
   );
 }
 
-const MILESTONE_COPY: Record<number, string> = {
-  3: "Three days in a row. That's how habits start.",
-  7: "A whole week of them. You've got a roll going.",
-  14: "Two weeks. This is becoming your thing.",
-  30: "A month of photos. Future you will be so glad.",
-  50: "Fifty days. That's a real record of a life.",
-  100: "One hundred days. Frame this one.",
-  200: "Two hundred days of love, kept.",
-  365: "A year, every single day. Remarkable.",
-};
+const MILESTONES = ["3", "7", "14", "30", "50", "100", "200", "365"] as const;
 
 // A milestone: a moment worth marking, with the roll so far and a way to
 // share it. Shown once per milestone.
@@ -177,9 +174,11 @@ export function MilestoneSheet({ count, name, photos, look, onSee, onStory, onCl
   onStory: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const shown = photos.slice(0, 3);
+  const key = MILESTONES.find((m) => m === String(count)) ?? "other";
   return (
-    <Sheet label={`${count} days`} onClose={onClose}>
+    <Sheet label={t.tp("daily.milestoneDays", count)} onClose={onClose}>
       <div className="text-center">
         <div className="relative mx-auto h-40 w-56">
           {shown.map((p, i) => (
@@ -189,15 +188,15 @@ export function MilestoneSheet({ count, name, photos, look, onSee, onStory, onCl
           ))}
           {shown.length === 0 && <Mascot mood="cheer" size={110} className="mx-auto" />}
         </div>
-        <p className="font-script mt-4 text-[3.2rem] leading-[1.05]">{count} days</p>
-        <p className="font-display italic text-muted">of {name}</p>
-        <p className="mx-auto mt-3 max-w-[30ch]">{MILESTONE_COPY[count] ?? "Another milestone on the roll."}</p>
+        <p className="font-script mt-4 text-[3.2rem] leading-[1.05]">{t.tp("daily.milestoneDays", count)}</p>
+        <p className="font-display italic text-muted">{t("daily.ofName", { name })}</p>
+        <p className="mx-auto mt-3 max-w-[30ch]">{t(`daily.milestones.${key}`)}</p>
         <div className="mt-6 grid gap-2">
           <button onClick={onSee} className="min-h-13 rounded-full bg-accent font-medium text-accent-ink">
-            See the roll
+            {t("daily.seeRoll")}
           </button>
           <button onClick={onStory} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-ink/25 font-medium">
-            <InstagramLogo size={18} /> Share to your story
+            <InstagramLogo size={18} /> {t("daily.toStory")}
           </button>
         </div>
       </div>

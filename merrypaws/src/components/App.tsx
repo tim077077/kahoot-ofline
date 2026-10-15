@@ -15,6 +15,8 @@ import { ShareSheet } from "@/components/ShareSheet";
 import { Studio, type ShootRequest, type ShootResult } from "@/components/Studio";
 import { Viewer, type ReportReason } from "@/components/Viewer";
 import { BRAND, TIERS } from "@/lib/config";
+import { cardText, displayName, named } from "@/i18n/app";
+import { I18nProvider, useT } from "@/i18n/react";
 import {
   api,
   jsonApi,
@@ -23,7 +25,6 @@ import {
   postPreview,
   preparePhoto,
   removePhoto,
-  starName,
   storage,
   track,
   uploadPhoto,
@@ -66,23 +67,24 @@ function snooze(key: string) {
   }
 }
 
-const ERRORS: Record<string, string> = {
-  limit_reached: "You've used your free portrait. Credits let you make more, and keep the ones you love in HD.",
-  slow_down: "That's a lot of portraits in a minute. Give it a moment and try again.",
-  generation_failed: "The print didn't come out. Nothing was charged, so try again.",
-  refused: "That scene couldn't be painted. Nothing was charged. Try describing it another way.",
-  bad_idea: "Describe the scene in a sentence or two first.",
-  bad_request: "That photo couldn't be used. Try a JPG or PNG under 4 MB.",
-  not_configured: "That isn't switched on yet.",
-  expired: "That portrait has expired. Make a new one.",
-  generic: "Something went wrong. Try again in a moment.",
-};
-
-const errorText = (code?: string) => ERRORS[code ?? "generic"] ?? ERRORS.generic;
+const ERROR_CODES = ["limit_reached", "slow_down", "generation_failed", "refused", "bad_idea", "bad_request", "not_configured", "expired"] as const;
+const LOCALE_SYNCED_KEY = "pp_locale_synced";
 
 const byTaken = (a: Photo, b: Photo) => b.takenAt.localeCompare(a.takenAt);
 
-export function App({ samples }: { samples: Record<StyleId, string | null> }) {
+export function App(props: { samples: Record<StyleId, string | null> }) {
+  return (
+    <I18nProvider>
+      <AppBody {...props} />
+    </I18nProvider>
+  );
+}
+
+function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
+  const t = useT();
+  const { tp, locale } = t;
+  const errorText = (code?: string) =>
+    (ERROR_CODES as readonly string[]).includes(code ?? "") ? t(`errors.${code as (typeof ERROR_CODES)[number]}`) : t("errors.generic");
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -167,8 +169,13 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
   }, []);
 
   const syncProfile = useCallback((tok: string | null, p: Profile | null) => {
-    if (tok && p) void jsonApi("/api/profile", "PUT", { petName: p.petName, kind: p.kind ?? "dog", memorial: Boolean(p.memorial) }, tok).catch(() => {});
-  }, []);
+    if (!tok || !p) return;
+    void jsonApi("/api/profile", "PUT", { petName: p.petName, kind: p.kind ?? "dog", memorial: Boolean(p.memorial), locale }, tok)
+      .then((res) => {
+        if (res.ok) localStorage.setItem(LOCALE_SYNCED_KEY, locale);
+      })
+      .catch(() => {});
+  }, [locale]);
 
   // A pending invite (from a ?pack= link) is used as soon as there's an account.
   const joinInvite = useCallback(
@@ -187,10 +194,10 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
         // Storage blocked: the invite simply isn't retried.
       }
       const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
-      if (data?.result === "joined") setToast("You joined a friend's pack. Say hi with a paw.");
+      if (data?.result === "joined") setToast(t("toasts.joinedPack"));
       await loadPack(tok);
     },
-    [loadPack],
+    [loadPack, t],
   );
 
   // Restore this device's state, pick up an access link (#k=...) or a pack
@@ -228,7 +235,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
 
       if (!paid) return;
       setTab(paid === "plan" ? "album" : paidFor ? "studio" : "you");
-      setToast(paid === "plan" ? "Welcome in. Your membership is active." : "Payment received. Your credits are on their way.");
+      setToast(paid === "plan" ? t("toasts.welcomeMember") : t("toasts.paymentReceived"));
       // Something paid for should never live only on one phone.
       if (acct?.account && !acct.email) setBackup("backup");
       if (!paidFor) return;
@@ -238,7 +245,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
         const data = (await res?.json().catch(() => ({}))) as { unlocked?: boolean } | undefined;
         if (data?.unlocked) {
           updateReel((prev) => prev.map((p) => (p.id === paidFor ? { ...p, unlocked: true } : p)));
-          setToast("It's yours in HD. Tap Save in HD.");
+          setToast(t("toasts.hdReady"));
           await refresh(tok);
           return;
         }
@@ -246,7 +253,19 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       }
       await refresh(tok);
     })();
+    // Runs once on open; the strings it uses are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite, updateReel]);
+
+  // The server writes the reminders and emails, so it needs the language too.
+  useEffect(() => {
+    if (!ready || !token || !profile?.onboarded) return;
+    let synced: string | null = null;
+    try {
+      synced = localStorage.getItem(LOCALE_SYNCED_KEY);
+    } catch {}
+    if (synced !== locale) syncProfile(token, profile);
+  }, [ready, token, profile, locale, syncProfile]);
 
   useEffect(() => {
     if (!toast) return;
@@ -296,7 +315,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
     setReminderHour(await syncReminder(tok));
     track("signed_in");
-    setToast(`Welcome back. ${starName(restored.petName)}'s album is here.`);
+    setToast(named(t, "toasts.welcomeBack", restored.petName));
   }
 
   function onDaily(result: DailyResult | undefined) {
@@ -317,10 +336,10 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
         date: photo.takenAt,
         filter: findLook(look).filter,
         roll: isToday && !profile?.memorial ? daily?.count : undefined,
-      });
+      }, cardText(t));
       if ((await shareToInstagramStory(blob, name)) !== "cancelled") track("story_share");
     } catch {
-      setToast("Couldn't make the story. Try again in a moment.");
+      setToast(t("toasts.storyFailed"));
     }
   }
 
@@ -328,10 +347,10 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     const roll = photos.filter((p) => daily?.dailyPhotoIds.includes(p.id)).slice(0, 5);
     if (!roll.length) return;
     try {
-      const blob = await makeCollageCard(roll.map((p) => ({ src: p.full, date: p.takenAt })), { title: `${count} days`, name, filter: findLook(look).filter });
-      if ((await shareToInstagramStory(blob, `${count} days of ${name}`)) !== "cancelled") track("story_share");
+      const blob = await makeCollageCard(roll.map((p) => ({ src: p.full, date: p.takenAt })), { title: tp("invite.rollTitle", count), name, filter: findLook(look).filter }, cardText(t));
+      if ((await shareToInstagramStory(blob, t("invite.rollShareNamed", { n: count, name }))) !== "cancelled") track("story_share");
     } catch {
-      setToast("Couldn't make the story. Try again in a moment.");
+      setToast(t("toasts.storyFailed"));
     }
   }
 
@@ -345,7 +364,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     }
     if (!code) return;
     const url = `${window.location.origin}/?pack=${code}`;
-    const text = `Join ${name === "Your pet" ? "my pet" : name}'s pack on ${BRAND}: one photo of our pets a day.`;
+    const text = named(t, "invite.text", profile?.petName, { brand: BRAND });
     track("pack_invite_sent");
     try {
       if (navigator.share) {
@@ -356,7 +375,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       return;
     }
     await navigator.clipboard?.writeText(`${text} ${url}`).catch(() => {});
-    setToast("Invite link copied. Send it to a friend.");
+    setToast(t("toasts.inviteCopied"));
   }
 
   async function reactTo(friend: string, reaction: Reaction) {
@@ -380,7 +399,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
   async function addPhotos(files: File[], tags: string[]): Promise<File[]> {
     const tok = await ensureToken();
     if (!tok) {
-      setToast("Couldn't reach the album. Check your connection and try again.");
+      setToast(t("toasts.albumOffline"));
       return files;
     }
     const failed: File[] = [];
@@ -440,13 +459,13 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     const saved = token ? await patchPhoto(id, patch, token) : null;
     if (!saved) {
       setPhotos(before);
-      setToast("That change didn't save. Try again in a moment.");
+      setToast(t("toasts.changeFailed"));
     }
   }
 
   async function deletePhoto(id: string) {
     if (!token || !(await removePhoto(id, token))) {
-      setToast("Couldn't remove that photo. Try again in a moment.");
+      setToast(t("toasts.removeFailed"));
       return;
     }
     setOpenPhoto(null);
@@ -512,7 +531,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     updateReel((prev) => prev.map((x) => (x.id === p.id ? { ...x, unlocked: true } : x)));
     void refresh(token);
     setOpenPortrait(p.id);
-    setToast("It's yours in HD. Tap Save in HD.");
+    setToast(t("toasts.hdReady"));
   }
 
   async function buy(purchase: Purchase) {
@@ -522,7 +541,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       const res = await api("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, token);
       const data = (await res.json().catch(() => ({}))) as { url?: string; token?: string; error?: string };
       if (!res.ok || !data.url) {
-        setToast(data.error === "not_configured" ? "Payments aren't switched on yet." : errorText(data.error));
+        setToast(data.error === "not_configured" ? t("errors.paymentsOff") : errorText(data.error));
         return;
       }
       if (data.token) storage.setToken(data.token);
@@ -534,7 +553,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
 
   async function report(p: Portrait, reason: ReportReason) {
     const res = await api("/api/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, reason }) }).catch(() => null);
-    if (!res?.ok) setToast("That report didn't send. Try again in a moment.");
+    if (!res?.ok) setToast(t("toasts.reportFailed"));
     return Boolean(res?.ok);
   }
 
@@ -545,7 +564,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       token,
     ).catch(() => null);
     if (!res?.ok) {
-      setToast("Couldn't reach the server, so nothing was deleted. Try again in a moment.");
+      setToast(t("toasts.deleteFailed"));
       return;
     }
     if (token) await disableReminder(token);
@@ -566,25 +585,21 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     const res = token ? await jsonApi("/api/billing", "POST", {}, token).catch(() => null) : null;
     const data = (await res?.json().catch(() => ({}))) as { url?: string } | undefined;
     if (data?.url) window.location.assign(data.url);
-    else setToast("Manage it in your App Store or Google Play subscriptions, or reply to your receipt email.");
+    else setToast(t("toasts.manageElsewhere"));
   }
 
   const backupSheet = backup && (
     <BackupSheet
       mode={backup}
       token={token}
-      name={starName(profile?.petName ?? "")}
-      warning={
-        backup === "signin" && account?.photos && !account.email
-          ? `This phone's album (${account.photos} ${account.photos === 1 ? "photo" : "photos"}) isn't backed up. Signing in to another album leaves it behind.`
-          : null
-      }
+      petName={profile?.petName ?? ""}
+      warning={backup === "signin" && account?.photos && !account.email ? tp("signInWarning", account.photos) : null}
       onClose={() => setBackup(null)}
       onBackedUp={(email) => {
         setBackup(null);
         setAccount((a) => (a ? { ...a, email } : a));
         track("backup_done");
-        setToast("Done. The album can be opened on any phone with that email.");
+        setToast(t("toasts.backedUp"));
       }}
       onSignedIn={signedIn}
     />
@@ -613,22 +628,23 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
     );
   }
 
-  const name = starName(profile.petName);
+  // For text drawn onto share cards, where a sentence can't switch wording.
+  const name = displayName(t, profile.petName);
   const today = localDay();
   const memory = findMemory(photos, today);
   const todayPhoto = photos.find((p) => p.id === daily?.todayEntry?.photoId) ?? null;
   const tabs: { id: Tab; label: string; Icon: typeof Books }[] = [
-    { id: "album", label: "Album", Icon: Books },
-    { id: "pack", label: "Pack", Icon: UsersThree },
-    { id: "studio", label: "Portraits", Icon: FrameCorners },
-    { id: "you", label: "Membership", Icon: IdentificationCard },
+    { id: "album", label: t("nav.album"), Icon: Books },
+    { id: "pack", label: t("nav.pack"), Icon: UsersThree },
+    { id: "studio", label: t("nav.portraits"), Icon: FrameCorners },
+    { id: "you", label: t("nav.membership"), Icon: IdentificationCard },
   ];
 
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-lg flex-col pt-[env(safe-area-inset-top)]">
       <header className="flex h-14 items-center justify-between px-5">
         <span className="font-display text-lg italic">{BRAND}</span>
-        <button onClick={() => setTab("you")} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-muted" aria-label={`${account?.credits ?? 0} portrait credits`}>
+        <button onClick={() => setTab("you")} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-muted" aria-label={tp("nav.credits", account?.credits ?? 0)}>
           <Ticket size={20} /> {account?.credits ?? 0}
         </button>
       </header>
@@ -656,7 +672,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
               <>
                 {!profile.memorial && photos.length > 0 && (
                   <DailyCard
-                    name={name}
+                    petName={profile.petName}
                     daily={daily}
                     today={today}
                     todayPhoto={todayPhoto}
@@ -674,7 +690,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
                     onOn={(h) => {
                       track("reminder_on");
                       setReminderHour(h);
-                      setToast("See you tomorrow. One reminder, only if today's photo isn't in.");
+                      setToast(t("toasts.reminderOn"));
                     }}
                     onDismiss={() => {
                       snooze(REMINDER_LATER_KEY);
@@ -684,7 +700,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
                 )}
                 {account?.account && !account.email && photos.length >= 5 && !snoozed(BACKUP_LATER_KEY, 7) && (
                   <BackupNudge
-                    name={name}
+                    petName={profile.petName}
                     onAdd={() => setBackup("backup")}
                     onLater={() => {
                       snooze(BACKUP_LATER_KEY);
@@ -711,22 +727,16 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
             cards={pack?.cards ?? null}
             code={pack?.code ?? null}
             look={look}
-            name={name}
+            petName={profile.petName}
             onInvite={() => void invite()}
             onJoin={async (code) => {
               const tok = await ensureToken();
-              if (!tok) return "Couldn't reach the server.";
+              if (!tok) return t("errors.noServer");
               const res = await jsonApi("/api/pack/join", "POST", { code }, tok).catch(() => null);
               const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
               await loadPack(tok);
-              return (
-                {
-                  joined: "You're in each other's pack now.",
-                  already: "You're already in this pack.",
-                  self: "That's your own code.",
-                  full: "That pack is full.",
-                }[data?.result ?? ""] ?? "That code didn't match a pack."
-              );
+              const result = data?.result ?? "";
+              return result === "joined" || result === "already" || result === "self" || result === "full" ? t(`join.${result}`) : t("join.noMatch");
             }}
             onReact={(friend, r) => void reactTo(friend, r)}
             onToggleShare={async (shared) => {
@@ -768,7 +778,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
               const next = { ...profile, ...patch };
               saveProfile(next);
               syncProfile(token, next);
-              if (patch.petName !== undefined) setToast("Saved.");
+              if (patch.petName !== undefined) setToast(t("toasts.saved"));
             }}
             onDeleteData={deleteData}
             onManage={() => void manage()}
@@ -819,7 +829,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
         }}
       />
 
-      <nav className="paper fixed inset-x-0 bottom-0 z-30 border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="Sections">
+      <nav className="paper fixed inset-x-0 bottom-0 z-30 border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label={t("nav.sections")}>
         <div className="mx-auto grid max-w-lg grid-cols-4">
           {tabs.map(({ id, label, Icon }) => (
             <button
@@ -841,7 +851,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       {picked && (
         <AddPhotosSheet
           count={picked.length}
-          name={name}
+          petName={profile.petName}
           recent={[...new Set(photos.flatMap((p) => p.tags))]}
           onClose={() => setPicked(null)}
           onAdd={(tags) => {
@@ -919,7 +929,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
       {sheet && (
         <PlansSheet
           reason={sheet}
-          name={name}
+          petName={profile.petName}
           current={tier}
           busy={busy}
           onBuy={(p) => void buy(p)}
@@ -945,7 +955,7 @@ export function App({ samples }: { samples: Record<StyleId, string | null> }) {
             const roll = photos.filter((p) => daily?.dailyPhotoIds.includes(p.id));
             setMilestone(null);
             setTab("album");
-            if (roll.length) setHighlight({ id: "roll", label: "Photo a day", caption: "One a day, every day", photos: roll });
+            if (roll.length) setHighlight({ id: "roll", label: t("album.rollLabel"), caption: t("album.rollCaption"), photos: roll });
           }}
         />
       )}

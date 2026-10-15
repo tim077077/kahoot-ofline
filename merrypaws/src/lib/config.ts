@@ -100,11 +100,6 @@ export const PACKS: Record<PackId, Pack> = {
 
 export const PACK_ORDER: PackId[] = ["p3", "p10", "p25"];
 
-export function formatUsd(cents: number): string {
-  const value = cents / 100;
-  return `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
-}
-
 // What one portrait try costs us: Gemini Nano Banana 2.1 at 1K is $0.0336 an
 // image, plus about $0.003 for the photo and prompt going in. HD unlocks cost
 // nothing (the image already exists). plans.test.ts fails if any plan or pack

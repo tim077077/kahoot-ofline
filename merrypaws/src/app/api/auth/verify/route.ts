@@ -24,7 +24,8 @@ export async function POST(request: Request) {
     }
     if (!(await linkEmail(store, result.accountId, email))) return Response.json({ error: "email_in_use" }, { status: 409 });
     // Proof it worked, in their inbox. Never fails the backup itself.
-    await sendBackedUp(email, (await getProfile(store, result.accountId)).petName);
+    const { petName, locale } = await getProfile(store, result.accountId);
+    await sendBackedUp(email, petName, locale);
     return Response.json({ backedUp: true, email });
   }
   return Response.json({ token: await issueToken(store, result.accountId), email });

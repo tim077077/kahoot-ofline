@@ -51,7 +51,7 @@ export function StyleArt({ style, sample, className = "", mascotSize = 96 }: Pro
     <div className={`arch grain relative aspect-[4/5] w-full overflow-hidden ${className}`}>
       {sample ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={sample} alt={`Example: ${style.title}`} className="h-full w-full object-cover" />
+        <img src={sample} alt="" className="h-full w-full object-cover" />
       ) : (
         <div className="absolute inset-0 flex items-end justify-center" style={{ background: look.bg, filter: look.filter }}>
           <Mascot size={mascotSize} costume={style.costume} still className="mb-[6%]" />

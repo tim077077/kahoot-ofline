@@ -9,7 +9,7 @@ import { MailNotConfiguredError, sendCode } from "@/lib/mailer";
 export async function POST(request: Request) {
   const store = storeOr503();
   if (store instanceof Response) return store;
-  const body = (await request.json().catch(() => ({}))) as { email?: unknown; purpose?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { email?: unknown; purpose?: unknown; locale?: unknown };
   const email = normalizeEmail(body.email);
   const purpose: CodePurpose | null = body.purpose === "backup" || body.purpose === "signin" ? body.purpose : null;
   if (!email || !purpose) return Response.json({ error: "bad_email" }, { status: 400 });
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!result.ok) return Response.json({ error: result.error }, { status: result.error === "slow_down" ? 429 : 409 });
   if (!result.code) return Response.json({ sent: true });
   try {
-    const { dev } = await sendCode(email, result.code, purpose);
+    const { dev } = await sendCode(email, result.code, purpose, body.locale);
     return Response.json({ sent: true, ...(dev ? { devCode: dev } : {}) });
   } catch (err) {
     if (err instanceof MailNotConfiguredError) return Response.json({ error: "email_not_configured" }, { status: 503 });

@@ -3,6 +3,8 @@
 import { FilmStrip, InstagramLogo, Pause, Play, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Polaroid, Print, Tape } from "@/components/Vintage";
+import { cardText } from "@/i18n/app";
+import { useT, type T } from "@/i18n/react";
 import { dateStamp, track, type Photo } from "@/lib/client";
 import { findLook, type LookId } from "@/lib/looks";
 import { makeCollageCard, shareToInstagramStory } from "@/lib/share";
@@ -21,11 +23,11 @@ const LAYOUT = [
   { span: "col-span-4", kind: "polaroid", rotate: 3, tape: "right-[30%] -top-3" },
 ] as const;
 
-function yearRange(photos: Photo[]) {
+function yearRange(t: T, photos: Photo[]) {
   const years = photos.map((p) => new Date(p.takenAt).getFullYear());
   const min = Math.min(...years);
   const max = Math.max(...years);
-  return min === max ? String(min) : `${min} to ${max}`;
+  return min === max ? String(min) : t("collage.yearRange", { from: min, to: max });
 }
 
 export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
@@ -35,6 +37,7 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
   onClose: () => void;
   onOpenPhoto: (id: string) => void;
 }) {
+  const t = useT();
   const [playing, setPlaying] = useState(false);
   const [sharing, setSharing] = useState(false);
   const photos = highlight.photos;
@@ -45,6 +48,7 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
       const blob = await makeCollageCard(
         photos.slice(0, 5).map((p) => ({ src: p.full, date: p.takenAt })),
         { title: highlight.label, name: petName, filter: findLook(look).filter },
+        cardText(t),
       );
       const outcome = await shareToInstagramStory(blob, `${petName}: ${highlight.label}`);
       if (outcome !== "cancelled") track("story_share");
@@ -59,15 +63,15 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
     <div role="dialog" aria-modal="true" aria-label={highlight.label} className="paper fixed inset-0 z-40 overflow-y-auto">
       <div className="mx-auto max-w-lg pb-[max(2rem,env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)]">
         <div className="sticky top-0 z-10 flex items-center justify-between bg-paper/90 px-3 py-2 backdrop-blur">
-          <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full">
+          <button onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-full">
             <X size={24} />
           </button>
           <div className="flex gap-1">
             <button onClick={() => void share()} disabled={sharing} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm disabled:opacity-50">
-              <InstagramLogo size={18} /> {sharing ? "Making the page" : "Story"}
+              <InstagramLogo size={18} /> {sharing ? t("collage.making") : t("common.story")}
             </button>
             <button onClick={() => setPlaying(true)} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-medium text-paper">
-              <FilmStrip size={18} /> Play
+              <FilmStrip size={18} /> {t("common.play")}
             </button>
           </div>
         </div>
@@ -76,7 +80,7 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
           <h1 className="font-script text-[3.6rem] leading-[1.1]">{highlight.label}</h1>
           {highlight.caption && <p className="font-hand mt-1 text-lg leading-normal text-muted">{highlight.caption}</p>}
           <p className="font-display mt-2 italic text-muted">
-            starring {petName}, {photos.length} {photos.length === 1 ? "photo" : "photos"}, {yearRange(photos)}
+            {t.tp("collage.starring", photos.length, { name: petName, years: yearRange(t, photos) })}
           </p>
         </header>
 
@@ -87,7 +91,7 @@ export function Collage({ highlight, petName, look, onClose, onOpenPhoto }: {
             return (
               <button key={p.id} onClick={() => onOpenPhoto(p.id)} className={`drop relative text-left ${slot.span}`} style={{ animationDelay: `${Math.min(i, 8) * 90}ms` }}>
                 {slot.kind === "polaroid" ? (
-                  <Polaroid {...common} caption={p.caption || new Date(p.takenAt).toLocaleDateString("en", { month: "long", year: "numeric" })} />
+                  <Polaroid {...common} caption={p.caption || t.date(p.takenAt, { month: "long", year: "numeric" })} />
                 ) : (
                   <Print {...common} date={p.takenAt} aspect={slot.kind === "wide" ? "aspect-[4/3]" : "aspect-[4/5]"} />
                 )}
@@ -110,6 +114,7 @@ type Frame = { kind: "title" } | { kind: "photo"; photo: Photo } | { kind: "end"
 // The highlight as a little film: title card, each photo with a slow push-in
 // and a light leak between them, then THE END.
 function Slideshow({ highlight, petName, look, onClose }: { highlight: Highlight; petName: string; look: LookId; onClose: () => void }) {
+  const t = useT();
   const frames: Frame[] = [{ kind: "title" }, ...highlight.photos.map((photo) => ({ kind: "photo" as const, photo })), { kind: "end" }];
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -117,8 +122,8 @@ function Slideshow({ highlight, petName, look, onClose }: { highlight: Highlight
 
   useEffect(() => {
     if (paused || i >= frames.length - 1) return;
-    const t = setTimeout(() => setI((v) => v + 1), frame.kind === "photo" ? SLIDE_MS : CARD_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setI((v) => v + 1), frame.kind === "photo" ? SLIDE_MS : CARD_MS);
+    return () => clearTimeout(timer);
   }, [i, paused, frame.kind, frames.length]);
 
   useEffect(() => {
@@ -131,12 +136,12 @@ function Slideshow({ highlight, petName, look, onClose }: { highlight: Highlight
   }, [onClose]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`${highlight.label}, playing`} className="fixed inset-0 z-50 flex flex-col bg-[#0d0a08] text-[#f3eadb]">
+    <div role="dialog" aria-modal="true" aria-label={t("collage.playing", { label: highlight.label })} className="fixed inset-0 z-50 flex flex-col bg-[#0d0a08] text-[#f3eadb]">
       <div className="h-[8vh] shrink-0" />
       <div className="grain relative flex-1 overflow-hidden">
         {frame.kind === "title" && (
           <div key="title" className="fade-in flex h-full flex-col items-center justify-center px-8 text-center">
-            <p className="font-display italic text-[#c2af98]">{petName} in</p>
+            <p className="font-display italic text-[#c2af98]">{t("collage.nameIn", { name: petName })}</p>
             <p className="font-script mt-2 text-[4rem] leading-[1.1]">{highlight.label}</p>
             {highlight.caption && <p className="font-hand mt-3 text-lg leading-normal text-[#c2af98]">{highlight.caption}</p>}
           </div>
@@ -162,15 +167,15 @@ function Slideshow({ highlight, petName, look, onClose }: { highlight: Highlight
         )}
         {frame.kind === "end" && (
           <div key="end" className="fade-in flex h-full flex-col items-center justify-center gap-6">
-            <p className="font-display text-5xl italic">The End</p>
+            <p className="font-display text-5xl italic">{t("collage.theEnd")}</p>
             <button onClick={() => setI(0)} className="min-h-11 rounded-full border border-[#f3eadb]/30 px-5 text-sm">
-              Play again
+              {t("collage.playAgain")}
             </button>
           </div>
         )}
       </div>
       <div className="flex h-[8vh] min-h-14 shrink-0 items-center justify-between px-4 pb-[env(safe-area-inset-bottom)]">
-        <button onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center">
+        <button onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center">
           <X size={24} />
         </button>
         <div className="flex max-w-[60%] gap-1 overflow-hidden">
@@ -178,7 +183,7 @@ function Slideshow({ highlight, petName, look, onClose }: { highlight: Highlight
             <span key={j} className={`h-1 w-3 shrink-0 rounded-full ${j <= i ? "bg-[#e9d8b4]" : "bg-white/20"}`} />
           ))}
         </div>
-        <button onClick={() => setPaused((v) => !v)} aria-label={paused ? "Play" : "Pause"} className="flex h-11 w-11 items-center justify-center">
+        <button onClick={() => setPaused((v) => !v)} aria-label={paused ? t("common.play") : t("common.pause")} className="flex h-11 w-11 items-center justify-center">
           {paused ? <Play size={22} weight="fill" /> : <Pause size={22} weight="fill" />}
         </button>
       </div>
