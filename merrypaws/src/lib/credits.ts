@@ -54,7 +54,7 @@ export async function refundCredit(store: Store, accountId: string) {
   await store.incrby(`credits:${accountId}`, 1);
 }
 
-// Stripe retries webhooks; this makes sure each event grants credits once.
+// RevenueCat retries webhooks; this makes sure each event grants credits once.
 export async function claimEvent(store: Store, eventId: string) {
   return store.set(`evt:${eventId}`, "1", { ex: 30 * DAY, nx: true });
 }

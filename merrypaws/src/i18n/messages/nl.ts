@@ -446,7 +446,7 @@ const nl: Catalog<Messages> = {
     mostLoved: "Meest geliefd",
     perMonth: "/maand",
     perYear: "/jaar",
-    perDay: "ongeveer {cents} cent per dag",
+    perDay: "ongeveer {price} per dag",
     aMonth: "{price} per maand",
     yourPlan: "Je abonnement",
     choose: "Kies {plan}",

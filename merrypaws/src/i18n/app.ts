@@ -2,7 +2,7 @@
 // into words in the reader's language. Custom tags the owner typed stay as typed.
 
 import { ACTIVITIES } from "@/lib/activities";
-import { BRAND } from "@/lib/config";
+import { BRAND, type Price } from "@/lib/config";
 import type { CardWords } from "@/lib/share";
 import type { TextKey } from "./core";
 import type { Messages } from "./messages/en";
@@ -33,10 +33,15 @@ export function named(t: T, base: string, name: string | null | undefined, vars:
   return n ? t(`${base}Named` as K, { ...vars, name: n }) : t(`${base}Anon` as K, vars);
 }
 
-// Prices. Stripe charges in US dollars today, so that's the currency shown,
-// written the reader's way ("4,99 US$" in German, "US$ 4,99" in Portuguese).
-export function money(locale: string, cents: number): string {
-  return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+// Prices in the currency the store charges, written the reader's way
+// ("4,99 €" in German, "€4.99" in Irish English). Whole amounts drop the
+// decimals ("30 €").
+export function money(locale: string, price: Price, scale = 1): string {
+  const amount = price.micros / 1_000_000 / scale;
+  const whole = Math.abs(amount - Math.round(amount)) < 0.005;
+  return new Intl.NumberFormat(locale, { style: "currency", currency: price.currency, ...(whole ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}) }).format(
+    amount,
+  );
 }
 
 export function hourText(locale: string, h: number): string {

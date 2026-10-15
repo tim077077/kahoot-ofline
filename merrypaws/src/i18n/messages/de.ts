@@ -446,7 +446,7 @@ const de: Catalog<Messages> = {
     mostLoved: "Am beliebtesten",
     perMonth: "/Monat",
     perYear: "/Jahr",
-    perDay: "etwa {cents} ¢ pro Tag",
+    perDay: "etwa {price} pro Tag",
     aMonth: "{price} im Monat",
     yourPlan: "Dein Tarif",
     choose: "{plan} wählen",

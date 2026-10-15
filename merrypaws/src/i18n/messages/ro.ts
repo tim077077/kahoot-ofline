@@ -461,7 +461,7 @@ const ro: Catalog<Messages> = {
     mostLoved: "Cel mai iubit",
     perMonth: "/lună",
     perYear: "/an",
-    perDay: "cam {cents} cenți pe zi",
+    perDay: "cam {price} pe zi",
     aMonth: "{price} pe lună",
     yourPlan: "Planul tău",
     choose: "Alege {plan}",

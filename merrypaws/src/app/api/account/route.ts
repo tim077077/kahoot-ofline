@@ -8,7 +8,6 @@ import { deleteSocial } from "@/lib/pack";
 import { deleteAllPhotos, photoCount } from "@/lib/photos";
 import { removeReminder } from "@/lib/push";
 import { currentTier, getPlan, previewsLeft, refreshAllowance } from "@/lib/plans";
-import { getStripe } from "@/lib/stripe";
 
 // Everything the app shows about the member: plan, album usage, credits.
 export async function GET(request: Request) {
@@ -85,15 +84,6 @@ export async function DELETE(request: Request) {
   const accountId = await accountIdForToken(store, token);
   let photos = 0;
   if (accountId && token) {
-    const plan = await getPlan(store, accountId);
-    if (plan?.subscriptionId && plan.until > Date.now() && process.env.STRIPE_SECRET_KEY) {
-      try {
-        await getStripe().subscriptions.cancel(plan.subscriptionId);
-      } catch (err) {
-        console.error("subscription cancel failed", err);
-        return Response.json({ error: "cancel_failed" }, { status: 502 });
-      }
-    }
     photos = await deleteAllPhotos(store, getObjects(), accountId);
     await store.del(`plan:${accountId}`);
     await store.del(`subprev:${accountId}`);

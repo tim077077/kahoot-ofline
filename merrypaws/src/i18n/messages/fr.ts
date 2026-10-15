@@ -447,7 +447,7 @@ const fr: Catalog<Messages> = {
     mostLoved: "Le préféré",
     perMonth: "/mois",
     perYear: "/an",
-    perDay: "environ {cents} ¢ par jour",
+    perDay: "environ {price} par jour",
     aMonth: "{price} par mois",
     yourPlan: "Votre formule",
     choose: "Choisir {plan}",

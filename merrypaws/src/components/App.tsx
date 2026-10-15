@@ -10,11 +10,12 @@ import { Onboarding } from "@/components/Onboarding";
 import { PackTab } from "@/components/Pack";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { BackupNudge, BackupSheet, ReminderCard, type BackupMode } from "@/components/Safety";
-import { LooksSheet, PlansSheet, YouTab, type Busy, type Purchase, type SheetReason } from "@/components/Plans";
+import { LooksSheet, PlansSheet, PricesContext, YouTab, type Busy, type SheetReason } from "@/components/Plans";
 import { ShareSheet } from "@/components/ShareSheet";
 import { Studio, type ShootRequest, type ShootResult } from "@/components/Studio";
 import { Viewer, type ReportReason } from "@/components/Viewer";
-import { BRAND, TIERS } from "@/lib/config";
+import { BRAND, TIERS, type Purchase } from "@/lib/config";
+import { buyWithStore, LIST_PRICES, managementUrl, paymentsOn, storePrices, type PriceList } from "@/lib/payments";
 import { cardText, displayName, named } from "@/i18n/app";
 import { I18nProvider, useT } from "@/i18n/react";
 import {
@@ -104,6 +105,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   const [looksOpen, setLooksOpen] = useState(false);
   const [picked, setPicked] = useState<File[] | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
+  const [prices, setPrices] = useState<PriceList>(LIST_PRICES);
+  const pricesAsked = useRef(false);
   const [toast, setToast] = useState<string | null>(null);
   const [daily, setDaily] = useState<Daily | null>(null);
   const [pack, setPack] = useState<{ code: string; cards: PackCard[] } | null>(null);
@@ -201,13 +204,11 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   );
 
   // Restore this device's state, pick up an access link (#k=...) or a pack
-  // invite (?pack=...), and finish a purchase after returning from checkout.
+  // invite (?pack=...).
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     if (hash.get("k")) storage.setToken(hash.get("k"));
     const query = new URLSearchParams(window.location.search);
-    const paid = query.get("paid");
-    const paidFor = paid ? query.get("portrait") : null;
     const invite = query.get("pack");
     if (invite) {
       try {
@@ -229,33 +230,11 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       setToken(tok);
       setReady(true);
       registerWorker();
-      const [acct] = await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
+      await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
       if (tok) void syncReminder(tok).then(setReminderHour);
       await joinInvite(tok);
-
-      if (!paid) return;
-      setTab(paid === "plan" ? "album" : paidFor ? "studio" : "you");
-      setToast(paid === "plan" ? t("toasts.welcomeMember") : t("toasts.paymentReceived"));
-      // Something paid for should never live only on one phone.
-      if (acct?.account && !acct.email) setBackup("backup");
-      if (!paidFor) return;
-      setOpenPortrait(paidFor);
-      for (let i = 0; i < 15; i++) {
-        const res = await api(`/api/portrait/${paidFor}`).catch(() => null);
-        const data = (await res?.json().catch(() => ({}))) as { unlocked?: boolean } | undefined;
-        if (data?.unlocked) {
-          updateReel((prev) => prev.map((p) => (p.id === paidFor ? { ...p, unlocked: true } : p)));
-          setToast(t("toasts.hdReady"));
-          await refresh(tok);
-          return;
-        }
-        await new Promise((r) => setTimeout(r, 2000));
-      }
-      await refresh(tok);
     })();
-    // Runs once on open; the strings it uses are read at that moment.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite, updateReel]);
+  }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite]);
 
   // The server writes the reminders and emails, so it needs the language too.
   useEffect(() => {
@@ -279,8 +258,26 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   // After a downgrade, a members-only look quietly falls back to Summer.
   const look: LookId = chosenLook.free || allLooks ? chosenLook.id : "summer";
 
+  // The buyer's own prices (euros, złoty...) from RevenueCat, fetched the
+  // first time a paywall shows. The list prices stand in until then.
+  const loadPrices = useCallback(() => {
+    if (!paymentsOn || pricesAsked.current) return;
+    pricesAsked.current = true;
+    storePrices()
+      .then((found) => found && setPrices(found))
+      .catch((err) => {
+        pricesAsked.current = false;
+        console.warn("prices", err);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (tab === "you") loadPrices();
+  }, [tab, loadPrices]);
+
   function openSheet(reason: SheetReason) {
     track("plans_shown");
+    loadPrices();
     setSheet(reason);
   }
 
@@ -535,20 +532,50 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   }
 
   async function buy(purchase: Purchase) {
+    if (!paymentsOn) return setToast(t("errors.paymentsOff"));
     setBusy(purchase.kind === "plan" ? `${purchase.tier}-${purchase.interval}` : purchase.pack);
+    const unlockId = purchase.kind === "pack" ? unlockFor?.id : undefined;
     try {
-      const body = purchase.kind === "pack" && unlockFor ? { ...purchase, unlockId: unlockFor.id } : purchase;
-      const res = await api("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, token);
-      const data = (await res.json().catch(() => ({}))) as { url?: string; token?: string; error?: string };
-      if (!res.ok || !data.url) {
-        setToast(data.error === "not_configured" ? t("errors.paymentsOff") : errorText(data.error));
-        return;
-      }
-      if (data.token) storage.setToken(data.token);
-      window.location.assign(data.url);
+      const res = await jsonApi("/api/pay", "POST", { unlockId }, token);
+      const data = (await res.json().catch(() => ({}))) as { accountId?: string; token?: string; error?: string };
+      if (!res.ok || !data.accountId) return setToast(errorText(data.error));
+      if (data.token) applyToken(data.token);
+      const tok = data.token ?? token;
+      const result = await buyWithStore(purchase, data.accountId, { email: account?.email, locale: t.locale });
+      if (result === "cancelled") return;
+      if (result !== "done") return setToast(t("errors.paymentsOff"));
+      setSheet(null);
+      await purchased(purchase, tok, unlockId);
+    } catch (err) {
+      console.error("purchase", err);
+      setToast(t("errors.generic"));
     } finally {
       setBusy(null);
     }
+  }
+
+  // The store has taken the money; the plan or credits arrive by webhook a
+  // moment later, so wait for the server to see them.
+  async function purchased(purchase: Purchase, tok: string | null, unlockId: string | undefined) {
+    const before = account?.credits ?? 0;
+    setTab(purchase.kind === "plan" ? "album" : unlockId ? "studio" : "you");
+    setToast(purchase.kind === "plan" ? t("toasts.welcomeMember") : t("toasts.paymentReceived"));
+    if (unlockId) setOpenPortrait(unlockId);
+    for (let i = 0; i < 15; i++) {
+      const acct = await refresh(tok);
+      if (unlockId) {
+        const res = await api(`/api/portrait/${unlockId}`).catch(() => null);
+        const data = (await res?.json().catch(() => ({}))) as { unlocked?: boolean } | undefined;
+        if (data?.unlocked) {
+          updateReel((prev) => prev.map((p) => (p.id === unlockId ? { ...p, unlocked: true } : p)));
+          setToast(t("toasts.hdReady"));
+          break;
+        }
+      } else if (purchase.kind === "plan" ? acct?.tier === purchase.tier : (acct?.credits ?? 0) > before) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    // Something paid for should never live only on one phone.
+    if (!account?.email) setBackup("backup");
   }
 
   async function report(p: Portrait, reason: ReportReason) {
@@ -582,9 +609,10 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   }
 
   async function manage() {
-    const res = token ? await jsonApi("/api/billing", "POST", {}, token).catch(() => null) : null;
-    const data = (await res?.json().catch(() => ({}))) as { url?: string } | undefined;
-    if (data?.url) window.location.assign(data.url);
+    const res = token ? await jsonApi("/api/pay", "POST", {}, token).catch(() => null) : null;
+    const data = (await res?.json().catch(() => ({}))) as { accountId?: string } | undefined;
+    const url = data?.accountId ? await managementUrl(data.accountId).catch(() => null) : null;
+    if (url) window.location.assign(url);
     else setToast(t("toasts.manageElsewhere"));
   }
 
@@ -641,332 +669,334 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   ];
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-lg flex-col pt-[env(safe-area-inset-top)]">
-      <header className="flex h-14 items-center justify-between px-5">
-        <span className="font-display text-lg italic">{BRAND}</span>
-        <button onClick={() => setTab("you")} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-muted" aria-label={tp("nav.credits", account?.credits ?? 0)}>
-          <Ticket size={20} /> {account?.credits ?? 0}
-        </button>
-      </header>
+    <PricesContext.Provider value={prices}>
+      <div className="mx-auto flex min-h-[100dvh] max-w-lg flex-col pt-[env(safe-area-inset-top)]">
+        <header className="flex h-14 items-center justify-between px-5">
+          <span className="font-display text-lg italic">{BRAND}</span>
+          <button onClick={() => setTab("you")} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-muted" aria-label={tp("nav.credits", account?.credits ?? 0)}>
+            <Ticket size={20} /> {account?.credits ?? 0}
+          </button>
+        </header>
 
-      <main className="flex-1 pb-24">
-        {tab === "album" && (
-          <Album
+        <main className="flex-1 pb-24">
+          {tab === "album" && (
+            <Album
+              petName={profile.petName}
+              photos={photos}
+              pending={pending}
+              portraits={reel}
+              look={look}
+              account={account}
+              onAdd={() => addInput.current?.click()}
+              onLook={() => setLooksOpen(true)}
+              onOpenPhoto={setOpenPhoto}
+              onOpenHighlight={(h) => {
+                track("highlight_opened");
+                setHighlight(h);
+              }}
+              onOpenPortraits={() => reel[0] && setOpenPortrait(reel[0].id)}
+              onPlans={() => setTab("you")}
+              dailyPhotoIds={daily?.dailyPhotoIds}
+              top={
+                <>
+                  {!profile.memorial && photos.length > 0 && (
+                    <DailyCard
+                      petName={profile.petName}
+                      daily={daily}
+                      today={today}
+                      todayPhoto={todayPhoto}
+                      look={look}
+                      busy={dailyBusy}
+                      onAdd={() => dailyInput.current?.click()}
+                      onStory={() => todayPhoto && void storyForPhoto(todayPhoto)}
+                      onPack={() => setTab("pack")}
+                      onMakeRoom={() => openSheet("photos")}
+                    />
+                  )}
+                  {!profile.memorial && token && daily?.doneToday && reminderHour === null && !snoozed(REMINDER_LATER_KEY, 14) && (
+                    <ReminderCard
+                      token={token}
+                      onOn={(h) => {
+                        track("reminder_on");
+                        setReminderHour(h);
+                        setToast(t("toasts.reminderOn"));
+                      }}
+                      onDismiss={() => {
+                        snooze(REMINDER_LATER_KEY);
+                        setNudges((n) => n + 1);
+                      }}
+                    />
+                  )}
+                  {account?.account && !account.email && photos.length >= 5 && !snoozed(BACKUP_LATER_KEY, 7) && (
+                    <BackupNudge
+                      petName={profile.petName}
+                      onAdd={() => setBackup("backup")}
+                      onLater={() => {
+                        snooze(BACKUP_LATER_KEY);
+                        setNudges((n) => n + 1);
+                      }}
+                    />
+                  )}
+                  {memory && (
+                    <MemoryCard
+                      memory={memory}
+                      look={look}
+                      onOpen={() => {
+                        track("memory_opened");
+                        setOpenPhoto(memory.photo.id);
+                      }}
+                    />
+                  )}
+                </>
+              }
+            />
+          )}
+          {tab === "pack" && (
+            <PackTab
+              cards={pack?.cards ?? null}
+              code={pack?.code ?? null}
+              look={look}
+              petName={profile.petName}
+              onInvite={() => void invite()}
+              onJoin={async (code) => {
+                const tok = await ensureToken();
+                if (!tok) return t("errors.noServer");
+                const res = await jsonApi("/api/pack/join", "POST", { code }, tok).catch(() => null);
+                const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
+                await loadPack(tok);
+                const result = data?.result ?? "";
+                return result === "joined" || result === "already" || result === "self" || result === "full" ? t(`join.${result}`) : t("join.noMatch");
+              }}
+              onReact={(friend, r) => void reactTo(friend, r)}
+              onToggleShare={async (shared) => {
+                if (!token) return;
+                await jsonApi("/api/daily", "PATCH", { day: today, shared }, token).catch(() => null);
+                await loadPack(token);
+              }}
+              onAddToday={() => dailyInput.current?.click()}
+            />
+          )}
+          {/* Kept mounted so the chosen photo survives a trip to another tab. */}
+          <div hidden={tab !== "studio"}>
+            <Studio
+              petName={profile.petName}
+              onPetName={(petName) => saveProfile({ ...profile, petName })}
+              style={style}
+              onStyle={setStyle}
+              samples={samples}
+              freeLeft={account?.freeLeft ?? 0}
+              previews={account?.previews ?? 0}
+              credits={account?.credits ?? 0}
+              album={photos}
+              shoot={shoot}
+              onKeep={(p) => void keep(p)}
+              onShare={setSharing}
+              onPlans={() => openSheet("previews")}
+              onOpenAlbum={() => setTab("album")}
+            />
+          </div>
+          {tab === "you" && (
+            <YouTab
+              account={account}
+              token={token}
+              petName={profile.petName}
+              kind={profile.kind ?? "dog"}
+              busy={busy}
+              onBuy={(p) => void buy(p)}
+              onProfile={(patch) => {
+                const next = { ...profile, ...patch };
+                saveProfile(next);
+                syncProfile(token, next);
+                if (patch.petName !== undefined) setToast(t("toasts.saved"));
+              }}
+              onDeleteData={deleteData}
+              onManage={() => void manage()}
+              memorial={Boolean(profile.memorial)}
+              onMemorial={(memorial) => {
+                const next = { ...profile, memorial };
+                saveProfile(next);
+                syncProfile(token, next);
+              }}
+              reminderHour={reminderHour}
+              onReminderHour={(h) => {
+                track(h === null ? "reminder_off" : "reminder_on");
+                setReminderHour(h);
+              }}
+              onBackup={() => setBackup("backup")}
+              onSignIn={() => setBackup("signin")}
+            />
+          )}
+        </main>
+
+        <input
+          ref={addInput}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          data-testid="album-input"
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? []).slice(0, 50);
+            e.target.value = "";
+            if (files.length) setPicked(files);
+          }}
+        />
+
+        <input
+          ref={dailyInput}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          data-testid="daily-input"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            setDailyBusy(true);
+            await addPhotos([file], []);
+            setDailyBusy(false);
+          }}
+        />
+
+        <nav className="paper fixed inset-x-0 bottom-0 z-30 border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label={t("nav.sections")}>
+          <div className="mx-auto grid max-w-lg grid-cols-4">
+            {tabs.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  if (id === "pack") track("pack_opened");
+                  setTab(id);
+                }}
+                aria-current={tab === id ? "page" : undefined}
+                className={`flex min-h-15 flex-col items-center justify-center gap-0.5 text-xs ${tab === id ? "font-medium text-accent" : "text-muted"}`}
+              >
+                <Icon size={24} weight={tab === id ? "fill" : "regular"} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {picked && (
+          <AddPhotosSheet
+            count={picked.length}
             petName={profile.petName}
-            photos={photos}
-            pending={pending}
-            portraits={reel}
+            recent={[...new Set(photos.flatMap((p) => p.tags))]}
+            onClose={() => setPicked(null)}
+            onAdd={(tags) => {
+              const files = picked;
+              setPicked(null);
+              void addPhotos(files, tags);
+            }}
+          />
+        )}
+
+        {highlight && (
+          <Collage
+            highlight={highlight}
+            petName={name}
             look={look}
-            account={account}
-            onAdd={() => addInput.current?.click()}
-            onLook={() => setLooksOpen(true)}
+            onClose={() => setHighlight(null)}
             onOpenPhoto={setOpenPhoto}
-            onOpenHighlight={(h) => {
-              track("highlight_opened");
-              setHighlight(h);
-            }}
-            onOpenPortraits={() => reel[0] && setOpenPortrait(reel[0].id)}
-            onPlans={() => setTab("you")}
-            dailyPhotoIds={daily?.dailyPhotoIds}
-            top={
-              <>
-                {!profile.memorial && photos.length > 0 && (
-                  <DailyCard
-                    petName={profile.petName}
-                    daily={daily}
-                    today={today}
-                    todayPhoto={todayPhoto}
-                    look={look}
-                    busy={dailyBusy}
-                    onAdd={() => dailyInput.current?.click()}
-                    onStory={() => todayPhoto && void storyForPhoto(todayPhoto)}
-                    onPack={() => setTab("pack")}
-                    onMakeRoom={() => openSheet("photos")}
-                  />
-                )}
-                {!profile.memorial && token && daily?.doneToday && reminderHour === null && !snoozed(REMINDER_LATER_KEY, 14) && (
-                  <ReminderCard
-                    token={token}
-                    onOn={(h) => {
-                      track("reminder_on");
-                      setReminderHour(h);
-                      setToast(t("toasts.reminderOn"));
-                    }}
-                    onDismiss={() => {
-                      snooze(REMINDER_LATER_KEY);
-                      setNudges((n) => n + 1);
-                    }}
-                  />
-                )}
-                {account?.account && !account.email && photos.length >= 5 && !snoozed(BACKUP_LATER_KEY, 7) && (
-                  <BackupNudge
-                    petName={profile.petName}
-                    onAdd={() => setBackup("backup")}
-                    onLater={() => {
-                      snooze(BACKUP_LATER_KEY);
-                      setNudges((n) => n + 1);
-                    }}
-                  />
-                )}
-                {memory && (
-                  <MemoryCard
-                    memory={memory}
-                    look={look}
-                    onOpen={() => {
-                      track("memory_opened");
-                      setOpenPhoto(memory.photo.id);
-                    }}
-                  />
-                )}
-              </>
-            }
           />
         )}
-        {tab === "pack" && (
-          <PackTab
-            cards={pack?.cards ?? null}
-            code={pack?.code ?? null}
+
+        {openPhoto && (
+          <PhotoViewer
+            photos={highlight ? highlight.photos : photos}
+            openId={openPhoto}
             look={look}
-            petName={profile.petName}
-            onInvite={() => void invite()}
-            onJoin={async (code) => {
-              const tok = await ensureToken();
-              if (!tok) return t("errors.noServer");
-              const res = await jsonApi("/api/pack/join", "POST", { code }, tok).catch(() => null);
-              const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
-              await loadPack(tok);
-              const result = data?.result ?? "";
-              return result === "joined" || result === "already" || result === "self" || result === "full" ? t(`join.${result}`) : t("join.noMatch");
+            petName={name}
+            onClose={() => setOpenPhoto(null)}
+            onNavigate={setOpenPhoto}
+            onUpdate={(id, patch) => {
+              void changePhoto(id, patch);
+              if (highlight) setHighlight({ ...highlight, photos: highlight.photos.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
             }}
-            onReact={(friend, r) => void reactTo(friend, r)}
-            onToggleShare={async (shared) => {
-              if (!token) return;
-              await jsonApi("/api/daily", "PATCH", { day: today, shared }, token).catch(() => null);
-              await loadPack(token);
+            onDelete={(id) => {
+              void deletePhoto(id);
+              if (highlight) setHighlight({ ...highlight, photos: highlight.photos.filter((p) => p.id !== id) });
             }}
-            onAddToday={() => dailyInput.current?.click()}
+            onStory={(p) => void storyForPhoto(p)}
           />
         )}
-        {/* Kept mounted so the chosen photo survives a trip to another tab. */}
-        <div hidden={tab !== "studio"}>
-          <Studio
-            petName={profile.petName}
-            onPetName={(petName) => saveProfile({ ...profile, petName })}
-            style={style}
-            onStyle={setStyle}
-            samples={samples}
-            freeLeft={account?.freeLeft ?? 0}
-            previews={account?.previews ?? 0}
-            credits={account?.credits ?? 0}
-            album={photos}
-            shoot={shoot}
+
+        {openPortrait && (
+          <Viewer
+            reel={reel}
+            openId={openPortrait}
+            onClose={() => setOpenPortrait(null)}
+            onNavigate={setOpenPortrait}
+            onStar={(id) => updateReel((prev) => prev.map((p) => (p.id === id ? { ...p, starred: !p.starred } : p)))}
+            onDelete={(id) => {
+              updateReel((prev) => prev.filter((p) => p.id !== id));
+              setOpenPortrait(null);
+            }}
             onKeep={(p) => void keep(p)}
             onShare={setSharing}
-            onPlans={() => openSheet("previews")}
-            onOpenAlbum={() => setTab("album")}
-          />
-        </div>
-        {tab === "you" && (
-          <YouTab
-            account={account}
-            token={token}
-            petName={profile.petName}
-            kind={profile.kind ?? "dog"}
-            busy={busy}
-            onBuy={(p) => void buy(p)}
-            onProfile={(patch) => {
-              const next = { ...profile, ...patch };
-              saveProfile(next);
-              syncProfile(token, next);
-              if (patch.petName !== undefined) setToast(t("toasts.saved"));
-            }}
-            onDeleteData={deleteData}
-            onManage={() => void manage()}
-            memorial={Boolean(profile.memorial)}
-            onMemorial={(memorial) => {
-              const next = { ...profile, memorial };
-              saveProfile(next);
-              syncProfile(token, next);
-            }}
-            reminderHour={reminderHour}
-            onReminderHour={(h) => {
-              track(h === null ? "reminder_off" : "reminder_on");
-              setReminderHour(h);
-            }}
-            onBackup={() => setBackup("backup")}
-            onSignIn={() => setBackup("signin")}
+            onReport={report}
           />
         )}
-      </main>
 
-      <input
-        ref={addInput}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        data-testid="album-input"
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? []).slice(0, 50);
-          e.target.value = "";
-          if (files.length) setPicked(files);
-        }}
-      />
+        {looksOpen && (
+          <LooksSheet
+            look={look}
+            allLooks={allLooks}
+            sample={photos[0]?.thumb ?? null}
+            onPick={(id) => {
+              saveProfile({ ...profile, look: id });
+              setLooksOpen(false);
+            }}
+            onLocked={() => {
+              setLooksOpen(false);
+              openSheet("looks");
+            }}
+            onClose={() => setLooksOpen(false)}
+          />
+        )}
 
-      <input
-        ref={dailyInput}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        data-testid="daily-input"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          setDailyBusy(true);
-          await addPhotos([file], []);
-          setDailyBusy(false);
-        }}
-      />
+        {sheet && (
+          <PlansSheet
+            reason={sheet}
+            petName={profile.petName}
+            current={tier}
+            busy={busy}
+            onBuy={(p) => void buy(p)}
+            onClose={() => {
+              track("paywall_dismissed");
+              setSheet(null);
+              setUnlockFor(null);
+            }}
+          />
+        )}
 
-      <nav className="paper fixed inset-x-0 bottom-0 z-30 border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label={t("nav.sections")}>
-        <div className="mx-auto grid max-w-lg grid-cols-4">
-          {tabs.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => {
-                if (id === "pack") track("pack_opened");
-                setTab(id);
-              }}
-              aria-current={tab === id ? "page" : undefined}
-              className={`flex min-h-15 flex-col items-center justify-center gap-0.5 text-xs ${tab === id ? "font-medium text-accent" : "text-muted"}`}
-            >
-              <Icon size={24} weight={tab === id ? "fill" : "regular"} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
+        {sharing && <ShareSheet portrait={sharing} onClose={() => setSharing(null)} />}
 
-      {picked && (
-        <AddPhotosSheet
-          count={picked.length}
-          petName={profile.petName}
-          recent={[...new Set(photos.flatMap((p) => p.tags))]}
-          onClose={() => setPicked(null)}
-          onAdd={(tags) => {
-            const files = picked;
-            setPicked(null);
-            void addPhotos(files, tags);
-          }}
-        />
-      )}
+        {milestone && (
+          <MilestoneSheet
+            count={milestone}
+            name={name}
+            photos={photos.filter((p) => daily?.dailyPhotoIds.includes(p.id))}
+            look={look}
+            onClose={() => setMilestone(null)}
+            onStory={() => void storyForRoll(milestone)}
+            onSee={() => {
+              const roll = photos.filter((p) => daily?.dailyPhotoIds.includes(p.id));
+              setMilestone(null);
+              setTab("album");
+              if (roll.length) setHighlight({ id: "roll", label: t("album.rollLabel"), caption: t("album.rollCaption"), photos: roll });
+            }}
+          />
+        )}
 
-      {highlight && (
-        <Collage
-          highlight={highlight}
-          petName={name}
-          look={look}
-          onClose={() => setHighlight(null)}
-          onOpenPhoto={setOpenPhoto}
-        />
-      )}
+        {backupSheet}
 
-      {openPhoto && (
-        <PhotoViewer
-          photos={highlight ? highlight.photos : photos}
-          openId={openPhoto}
-          look={look}
-          petName={name}
-          onClose={() => setOpenPhoto(null)}
-          onNavigate={setOpenPhoto}
-          onUpdate={(id, patch) => {
-            void changePhoto(id, patch);
-            if (highlight) setHighlight({ ...highlight, photos: highlight.photos.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
-          }}
-          onDelete={(id) => {
-            void deletePhoto(id);
-            if (highlight) setHighlight({ ...highlight, photos: highlight.photos.filter((p) => p.id !== id) });
-          }}
-          onStory={(p) => void storyForPhoto(p)}
-        />
-      )}
-
-      {openPortrait && (
-        <Viewer
-          reel={reel}
-          openId={openPortrait}
-          onClose={() => setOpenPortrait(null)}
-          onNavigate={setOpenPortrait}
-          onStar={(id) => updateReel((prev) => prev.map((p) => (p.id === id ? { ...p, starred: !p.starred } : p)))}
-          onDelete={(id) => {
-            updateReel((prev) => prev.filter((p) => p.id !== id));
-            setOpenPortrait(null);
-          }}
-          onKeep={(p) => void keep(p)}
-          onShare={setSharing}
-          onReport={report}
-        />
-      )}
-
-      {looksOpen && (
-        <LooksSheet
-          look={look}
-          allLooks={allLooks}
-          sample={photos[0]?.thumb ?? null}
-          onPick={(id) => {
-            saveProfile({ ...profile, look: id });
-            setLooksOpen(false);
-          }}
-          onLocked={() => {
-            setLooksOpen(false);
-            openSheet("looks");
-          }}
-          onClose={() => setLooksOpen(false)}
-        />
-      )}
-
-      {sheet && (
-        <PlansSheet
-          reason={sheet}
-          petName={profile.petName}
-          current={tier}
-          busy={busy}
-          onBuy={(p) => void buy(p)}
-          onClose={() => {
-            track("paywall_dismissed");
-            setSheet(null);
-            setUnlockFor(null);
-          }}
-        />
-      )}
-
-      {sharing && <ShareSheet portrait={sharing} onClose={() => setSharing(null)} />}
-
-      {milestone && (
-        <MilestoneSheet
-          count={milestone}
-          name={name}
-          photos={photos.filter((p) => daily?.dailyPhotoIds.includes(p.id))}
-          look={look}
-          onClose={() => setMilestone(null)}
-          onStory={() => void storyForRoll(milestone)}
-          onSee={() => {
-            const roll = photos.filter((p) => daily?.dailyPhotoIds.includes(p.id));
-            setMilestone(null);
-            setTab("album");
-            if (roll.length) setHighlight({ id: "roll", label: t("album.rollLabel"), caption: t("album.rollCaption"), photos: roll });
-          }}
-        />
-      )}
-
-      {backupSheet}
-
-      {toast && (
-        <div role="status" className="rise fixed inset-x-4 bottom-24 z-[60] mx-auto max-w-md rounded-2xl bg-ink px-5 py-3.5 text-paper shadow-lg">
-          {toast}
-        </div>
-      )}
-    </div>
+        {toast && (
+          <div role="status" className="rise fixed inset-x-4 bottom-24 z-[60] mx-auto max-w-md rounded-2xl bg-ink px-5 py-3.5 text-paper shadow-lg">
+            {toast}
+          </div>
+        )}
+      </div>
+    </PricesContext.Provider>
   );
 }

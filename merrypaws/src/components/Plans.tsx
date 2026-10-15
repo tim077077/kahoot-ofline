@@ -1,17 +1,25 @@
 "use client";
 
 import { Check, FilmStrip, Lock } from "@phosphor-icons/react";
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { SafetySection } from "@/components/Safety";
 import { Sheet } from "@/components/Sheet";
 import type { Account, PetKind } from "@/lib/client";
 import { lookLabel, money, named, tierBlurb, tierName } from "@/i18n/app";
 import { isLocale, LOCALE_NAMES, LOCALES } from "@/i18n/core";
 import { useT, type T } from "@/i18n/react";
-import { PACK_ORDER, PACKS, PAID_TIERS, PREVIEWS_PER_CREDIT, TARGET_TIER, TIERS, type Interval, type PackId, type Tier } from "@/lib/config";
+import { listPrice, PACK_ORDER, PACKS, PAID_TIERS, PREVIEWS_PER_CREDIT, productId, TARGET_TIER, TIERS, type Interval, type Price, type Purchase, type Tier } from "@/lib/config";
 import { findLook, LOOKS, type LookId } from "@/lib/looks";
 
-export type Purchase = { kind: "plan"; tier: Tier; interval: Interval } | { kind: "pack"; pack: PackId };
+export type { Purchase };
+
+// The buyer's prices, in their currency, keyed by product id (see payments.ts).
+export const PricesContext = createContext<Record<string, Price>>({});
+
+function usePrice() {
+  const prices = useContext(PricesContext);
+  return (p: Purchase): Price => prices[productId(p)] ?? listPrice(p);
+}
 export type Busy = string | null;
 const busyKey = (p: Purchase) => (p.kind === "plan" ? `${p.tier}-${p.interval}` : p.pack);
 
@@ -27,16 +35,16 @@ function perks(t: T, tier: Tier) {
   return list;
 }
 
-const savings = (tier: Tier) => Math.round((1 - TIERS[tier].price.year / (TIERS[tier].price.month * 12)) * 100);
-const perDay = (cents: number, interval: Interval) => (cents / (interval === "year" ? 365 : 30)).toFixed(0);
 
 // Three plans, the priciest first as the anchor and Plus in the middle,
 // highlighted and ready to pick. Every price is the full price: no fake
 // discounts, no countdowns (see PSYCHOLOGY.md).
 export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: Purchase) => void; busy: Busy }) {
   const t = useT();
-  const usd = (cents: number) => money(t.locale, cents);
+  const priceOf = usePrice();
   const [interval, setInterval] = useState<Interval>("year");
+  const target = (i: Interval) => priceOf({ kind: "plan", tier: TARGET_TIER, interval: i }).micros;
+  const savings = Math.round((1 - target("year") / (target("month") * 12)) * 100);
   return (
     <div>
       <div className="mx-auto flex w-fit rounded-full bg-sand p-1" role="radiogroup" aria-label={t("plans.billing")}>
@@ -48,13 +56,13 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
             onClick={() => setInterval(i)}
             className={`min-h-10 rounded-full px-5 text-sm transition ${interval === i ? "bg-card font-medium shadow-sm" : "text-muted"}`}
           >
-            {i === "month" ? t("plans.monthly") : t("plans.yearly", { percent: savings(TARGET_TIER) })}
+            {i === "month" ? t("plans.monthly") : t("plans.yearly", { percent: savings })}
           </button>
         ))}
       </div>
       <div className="mt-4 grid gap-3">
         {PAID_TIERS.map((tier) => {
-          const price = TIERS[tier].price[interval];
+          const price = priceOf({ kind: "plan", tier, interval });
           const isCurrent = current === tier;
           const featured = tier === TARGET_TIER;
           return (
@@ -71,11 +79,15 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
                 </div>
                 <p className="shrink-0 text-right">
                   <span className="block text-xl font-medium">
-                    {usd(price)}
+                    {money(t.locale, price)}
                     <span className="text-sm font-normal text-muted">{interval === "month" ? t("plans.perMonth") : t("plans.perYear")}</span>
                   </span>
                   <span className="whitespace-nowrap text-sm text-muted">
-                    {featured ? t("plans.perDay", { cents: perDay(price, interval) }) : interval === "year" ? t("plans.aMonth", { price: usd(Math.round(price / 12)) }) : ""}
+                    {featured
+                      ? t("plans.perDay", { price: money(t.locale, price, interval === "year" ? 365 : 30) })
+                      : interval === "year"
+                        ? t("plans.aMonth", { price: money(t.locale, price, 12) })
+                        : ""}
                   </span>
                 </p>
               </div>
@@ -104,6 +116,7 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
 
 export function PackList({ onBuy, busy }: { onBuy: (p: Purchase) => void; busy: Busy }) {
   const t = useT();
+  const priceOf = usePrice();
   return (
     <div className="grid grid-cols-3 gap-2.5">
       {PACK_ORDER.map((id) => {
@@ -117,7 +130,7 @@ export function PackList({ onBuy, busy }: { onBuy: (p: Purchase) => void; busy: 
           >
             <span className="font-display text-3xl leading-none">{pack.credits}</span>
             <span className="mt-1 text-xs uppercase tracking-[0.14em]">{t("plans.portraits")}</span>
-            <span className="mt-2 font-medium">{busy === id ? t("common.opening") : money(t.locale, pack.price)}</span>
+            <span className="mt-2 font-medium">{busy === id ? t("common.opening") : money(t.locale, priceOf({ kind: "pack", pack: id }))}</span>
           </button>
         );
       })}

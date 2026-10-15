@@ -100,6 +100,38 @@ export const PACKS: Record<PackId, Pack> = {
 
 export const PACK_ORDER: PackId[] = ["p3", "p10", "p25"];
 
+// Payments run through RevenueCat: Web Billing on the web, the App Store and
+// Google Play in the apps. Every store uses these product IDs, so a webhook
+// from any of them maps back to the same plan or pack. On Google Play a
+// subscription is "pp_plus" with base plans "monthly" and "yearly", which
+// RevenueCat reports as "pp_plus:monthly".
+export type Purchase = { kind: "plan"; tier: Tier; interval: Interval } | { kind: "pack"; pack: PackId };
+
+export function productId(p: Purchase): string {
+  return p.kind === "plan" ? `pp_${p.tier}_${p.interval === "year" ? "yearly" : "monthly"}` : `pp_pack_${PACKS[p.pack].credits}`;
+}
+
+export function purchaseFor(id: string | null | undefined): Purchase | null {
+  const m = /^pp_(\w+?)[_:](monthly|yearly|\d+)$/.exec(id ?? "");
+  if (!m) return null;
+  if (m[1] === "pack") {
+    const pack = PACK_ORDER.find((p) => String(PACKS[p].credits) === m[2]);
+    return pack ? { kind: "pack", pack } : null;
+  }
+  const tier = m[1] as Tier;
+  if (!PAID_TIERS.includes(tier) || /^\d+$/.test(m[2])) return null;
+  return { kind: "plan", tier, interval: m[2] === "yearly" ? "year" : "month" };
+}
+
+// A price as the store reports it, in the buyer's own currency. Until the
+// store answers (or when payments are off) the list prices above stand in.
+export type Price = { micros: number; currency: string };
+
+export function listPrice(p: Purchase): Price {
+  const cents = p.kind === "plan" ? TIERS[p.tier].price[p.interval] : PACKS[p.pack].price;
+  return { micros: cents * 10_000, currency: "USD" };
+}
+
 // What one portrait try costs us: Gemini Nano Banana 2.1 at 1K is $0.0336 an
 // image, plus about $0.003 for the photo and prompt going in. HD unlocks cost
 // nothing (the image already exists). plans.test.ts fails if any plan or pack

@@ -165,16 +165,21 @@ GEMINI_API_KEY=... npm run lab -- --yes
 - `POST /api/unlock` spends an HD credit, once per portrait.
 - `GET /api/download/[id]` returns the full portrait, only once it's unlocked.
 
-### Payments (web)
+### Payments (RevenueCat)
 
-- `POST /api/checkout` opens Stripe: a subscription for plans, a one-off payment for packs.
-- `/api/webhook` handles these events:
+One system for the web and the store apps. RevenueCat holds the prices per country, so a German sees 3,99 € and a Pole sees złoty. Setup: [DEPLOY.md](DEPLOY.md#10-payments-revenuecat).
+
+- Product IDs are the same in every store: `pp_starter_monthly`, `pp_plus_yearly`, ..., `pp_pack_3`, `pp_pack_10`, `pp_pack_25` (`productId()` in `config.ts`).
+- The album's account id is the RevenueCat App User ID, so a purchase on any device lands on the right album.
+- On the web, `src/lib/payments.ts` loads the prices when a paywall opens and runs RevenueCat's checkout over the page. `POST /api/pay` makes sure an account exists first and remembers which preview to unlock.
+- `/api/revenuecat` (the webhook) handles these events:
 
   | Event | What it does |
   |---|---|
-  | `checkout.session.completed` | starts a plan, or adds pack credits |
-  | `invoice.paid` | extends the plan to the end of the period just paid for |
-  | `customer.subscription.deleted` | ends the plan |
+  | `INITIAL_PURCHASE`, `RENEWAL`, `UNCANCELLATION` | starts or extends the plan to the store's expiry date |
+  | `NON_RENEWING_PURCHASE` | adds pack credits, and unlocks the preview it was bought from |
+  | `CANCELLATION` | nothing (the plan runs to the end of the period), unless it's a refund, which ends it |
+  | `EXPIRATION` | ends the plan |
 
   A failed renewal simply lapses 3 days after the period ends.
 
@@ -190,7 +195,7 @@ GEMINI_API_KEY=... npm run lab -- --yes
   - `POST /api/pack/join` joins with a code.
   - `POST /api/pack/react` toggles a reaction.
   - `DELETE /api/pack/[id]` leaves.
-- `POST /api/billing` opens Stripe's billing page, so web subscribers can manage or cancel.
+- "Manage or cancel" opens RevenueCat's page for web subscribers; store subscribers manage theirs in the store settings.
 
 ### Funnel, moderation, stats
 
@@ -205,7 +210,7 @@ English, German, French, Spanish, Italian, Dutch, Polish, Portuguese (Portugal) 
 - `messages/en.ts` is the source. Every other file must have the same keys, the same `{placeholders}`, the plural forms its grammar needs and 40 daily prompts. `npm test` fails if one doesn't.
 - The phone picks the browser's language on first open. Owners can change it in Membership, which also saves it to the profile so emails and reminders arrive in that language.
 - Pet names are never declined: sentences are built so the name stays as typed ("Das Album von Luna", "Albumul lui Luna").
-- Image prompts stay in English. Prices are still charged in USD and shown in the local number format.
+- Image prompts stay in English. Prices come from RevenueCat in the buyer's currency; the USD list prices in `config.ts` show only until it answers.
 - To add a language: copy `messages/de.ts`, translate, add the code to `LOCALES` and `LOCALE_NAMES` in `core.ts` and to `load.ts`.
 
 ## Run locally
@@ -248,9 +253,9 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
    - Build the client as static files.
    - Set `NEXT_PUBLIC_API_BASE` to the deployed URL.
    - Allow CORS on `/api/*`.
-2. **In-app purchases with RevenueCat.** Stripe isn't allowed for digital goods in store apps.
-   - Starter, Plus and Pro become auto-renewing subscriptions; the three packs become consumables.
-   - A RevenueCat webhook calls the same `activatePlan` / `endPlan` and `addCredits` / `addPackPreviews` functions the Stripe webhook uses.
+2. **In-app purchases with RevenueCat**, already used on the web, so the server side is done.
+   - Create the same product IDs in App Store Connect and Google Play (DEPLOY.md lists them) and add them to the same offering.
+   - Swap `src/lib/payments.ts` for `@revenuecat/purchases-capacitor` in the app build, logging in with the album's account id.
    - Add **Restore purchases**.
    - Keep a 7-day trial on Plus yearly as a lever.
    - TrustMRR verifies RevenueCat revenue.

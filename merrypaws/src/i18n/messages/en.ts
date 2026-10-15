@@ -448,7 +448,7 @@ const en = {
     mostLoved: "Most loved",
     perMonth: "/mo",
     perYear: "/yr",
-    perDay: "about {cents}¢ a day",
+    perDay: "about {price} a day",
     aMonth: "{price} a month",
     yourPlan: "Your plan",
     choose: "Choose {plan}",

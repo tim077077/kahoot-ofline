@@ -446,7 +446,7 @@ const es: Catalog<Messages> = {
     mostLoved: "El favorito",
     perMonth: "/mes",
     perYear: "/año",
-    perDay: "unos {cents} ¢ al día",
+    perDay: "unos {price} al día",
     aMonth: "{price} al mes",
     yourPlan: "Tu plan",
     choose: "Elegir {plan}",

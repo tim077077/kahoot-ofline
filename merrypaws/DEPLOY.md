@@ -102,7 +102,7 @@ On iPhone, reminders only work after the site is added to the Home Screen. The a
 
 `NEXT_PUBLIC_SITE_URL` is needed in both places: the app uses it at build time, and the hourly timer reads it at run time.
 
-**Payments can wait.** Leave `STRIPE_*` empty for the friends test: the plans show "Payments aren't switched on yet." Add Stripe test keys when you're ready; the webhook URL is `https://your-site/api/webhook`, and its events are listed in `.env.example`.
+**Payments can wait.** Leave the `REVENUECAT_*` values empty for the friends test: the plans show "Payments aren't switched on yet." Section 10 sets them up.
 
 Deploy again (build variables only apply to a new build), then check `/api/health`.
 
@@ -135,3 +135,52 @@ Open `prompt-lab/out/index.html`. For every picture, ask one question: is that t
   | Did anyone share a Story? | at least 1 |
 
 - Those friends can also be most of the 12 testers Google Play needs for 14 days.
+
+## 10. Payments: RevenueCat
+
+One setup covers the web now and the App Store and Google Play later. Prices live in RevenueCat and the stores, not in the code, so you set euros, złoty and so on there. The app shows whatever the store will charge, in the buyer's currency.
+
+### Price in euros, not converted dollars
+
+Set the euro prices by hand. Converted prices look like 3,67 €, and clean ones sell better. Suggested starting point (the same numbers as the dollars):
+
+| Product ID | What | USD | EUR |
+|---|---|---|---|
+| `pp_starter_monthly` | Starter, monthly | 2.99 | 2,99 |
+| `pp_starter_yearly` | Starter, yearly | 19.99 | 19,99 |
+| `pp_plus_monthly` | Plus, monthly | 3.99 | 3,99 |
+| `pp_plus_yearly` | Plus, yearly | 29.99 | 29,99 |
+| `pp_pro_monthly` | Pro, monthly | 7.99 | 7,99 |
+| `pp_pro_yearly` | Pro, yearly | 69.99 | 69,99 |
+| `pp_pack_3` | 3 portraits (consumable) | 2.99 | 2,99 |
+| `pp_pack_10` | 10 portraits (consumable) | 6.99 | 6,99 |
+| `pp_pack_25` | 25 portraits (consumable) | 12.99 | 12,99 |
+
+EU prices include VAT (19–25%), US prices don't include sales tax, so the same number earns you about a fifth less per European sale. Every plan still makes money (`plans.test.ts` checks the dollar prices with a 30% store fee). Keep the numbers the same anyway: 3,99 € beats 4,79 €.
+
+For Poland and Romania, set złoty and lei too (for example 14,99 zł and 19,99 lei for Plus monthly) or they'll be charged in euros.
+
+### On the web (RevenueCat Web Billing)
+
+1. Sign up at [revenuecat.com](https://www.revenuecat.com) and create a project, **Paw Pictures**.
+2. **Apps → add Web Billing.** It needs a Stripe account to take the card payments. Connect one there; you don't touch Stripe after that, and there's no Stripe code in the app.
+3. **Products:** create the nine products above with exactly those IDs. Subscriptions get a 1-month or 1-year period; packs are consumables. Add a price in USD and EUR to each (plus PLN and RON if you want them).
+4. **Offerings:** create one, mark it **Current**, and add a package for each of the nine products. The package names don't matter, but all nine products do: if one is missing, the app falls back to dollar list prices and logs which one.
+5. **API keys:** copy the Web Billing public key (starts `rcb_`). Use the **sandbox** key while testing.
+6. **Integrations → Webhooks:** URL `https://your-site/api/revenuecat`. For the Authorization header, paste a long random string.
+7. In Cloudflare:
+
+   | Name | Kind | Value |
+   |---|---|---|
+   | `NEXT_PUBLIC_REVENUECAT_WEB_KEY` | build variable | the `rcb_` key |
+   | `REVENUECAT_WEBHOOK_AUTH` | secret | the same random string as the webhook header |
+   | `REVENUECAT_SANDBOX` | secret | `allow` while testing; **delete it before launch** |
+
+8. Deploy, buy Plus with the sandbox key and a test card, and check that the plan shows in Membership within a few seconds. Then a pack. Then cancel from "Manage or cancel your plan".
+9. Switch to the production key, delete `REVENUECAT_SANDBOX`, deploy.
+
+### In the store apps (later)
+
+- **App Store Connect:** create the six subscriptions in one group and the three packs as consumables, with the same IDs. Set the US price; Apple fills in every other country automatically. Then check the eurozone, Poland and Romania prices and change them to the numbers above. Apple converts from dollars and adds VAT, so its automatic euro price usually lands a step higher than you'd pick.
+- **Google Play:** create subscriptions `pp_starter`, `pp_plus` and `pp_pro`, each with base plans `monthly` and `yearly`, and in-app products `pp_pack_3`, `pp_pack_10` and `pp_pack_25`. Set the country prices the same way.
+- In RevenueCat, add the iOS and Android apps, import those products, and add them to the same offering. The webhook already understands them.

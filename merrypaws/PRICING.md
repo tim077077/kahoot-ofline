@@ -80,7 +80,7 @@ Social and habit features are free for everyone. Friends bring friends, and a fr
 
 | Item | Cost |
 |---|---|
-| Store fee | 15% with Apple's Small Business Program and on Google; 30% for Apple without it. Stripe on the web is about 3% + $0.30 |
+| Store fee | 15% with Apple's Small Business Program and on Google; 30% for Apple without it. On the web: RevenueCat Web Billing's fee plus Stripe's card processing |
 | One portrait try (Gemini Nano Banana 2.1 at 1K, straight from Google) | $0.0336 output + about $0.003 input = **$0.037** |
 | Fallback model (Nano Banana 2, only when the main one fails) | about $0.07 |
 | One album photo (2048px print + thumbnail) | about 0.65 MB |

@@ -482,7 +482,7 @@ const pl: Catalog<Messages> = {
     mostLoved: "Najczęściej wybierany",
     perMonth: "/mies.",
     perYear: "/rok",
-    perDay: "około {cents} centów dziennie",
+    perDay: "około {price} dziennie",
     aMonth: "{price} miesięcznie",
     yourPlan: "Twój plan",
     choose: "Wybierz {plan}",

@@ -44,7 +44,7 @@ These are also Apple review risks. Apple rejects apps that "manipulate users thr
 - **One notification a day, maximum**, and only when today's photo isn't in yet. Permission is asked only after the member taps "Remind me", never on first open. "Turn off" is in Membership.
 - **Nobody loses their album.** An email backup (a code, no password) means a new phone gets everything back. Losing years of photos would break the trust the whole app runs on.
 - **No fake scarcity.** No countdowns, no fake discounts, no "10,000 people made one today". Prices are the full price.
-- **Cancelling is as easy as subscribing.** "Manage or cancel your plan" sits in Membership (Stripe's billing page on the web, the store's settings in the apps). The FTC's click-to-cancel rule was vacated in 2025, but the FTC still enforces ROSCA case by case, and it's simply right.
+- **Cancelling is as easy as subscribing.** "Manage or cancel your plan" sits in Membership (RevenueCat's page on the web, the store's settings in the apps). The FTC's click-to-cancel rule was vacated in 2025, but the FTC still enforces ROSCA case by case, and it's simply right.
 - **Albums are private.** Only the photo of the day is shared with the pack, and "Friends can see it" is one tap to turn off.
 
 ## What to measure
