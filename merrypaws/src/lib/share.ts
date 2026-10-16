@@ -1,6 +1,6 @@
 "use client";
 
-import { nativeShare } from "./native";
+import { instagramStory, nativeShare } from "./native";
 import { BRAND } from "./config";
 
 // Share cards: the portrait as a print on cream paper with its title and a
@@ -205,27 +205,14 @@ export async function makePhotoStoryCard(
   );
 }
 
-type StoriesBridge = { share: (opts: { backgroundImage: string; appId?: string }) => Promise<unknown> };
-
-// Straight into Instagram Stories. In the store app a small native plugin
-// (see docs/INSTAGRAM.md) opens Instagram with the image already on the
-// canvas. On the web Instagram allows no such link, so the share sheet opens
-// with the image and Instagram is one tap away.
+// Straight into Instagram Stories. In the apps a small native plugin
+// (InstagramStoriesPlugin in android/ and ios/, see docs/INSTAGRAM.md) opens
+// Instagram's story composer with the card already on the canvas. Without
+// Instagram, without a Meta App ID, or on the web (Instagram allows no such
+// link there), the share sheet opens with the image and Instagram is one tap
+// away.
 export async function shareToInstagramStory(blob: Blob, title: string) {
-  const bridge = (globalThis as unknown as { Capacitor?: { Plugins?: { InstagramStories?: StoriesBridge } } }).Capacitor?.Plugins?.InstagramStories;
-  if (bridge) {
-    const dataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.readAsDataURL(blob);
-    });
-    try {
-      await bridge.share({ backgroundImage: dataUrl, appId: process.env.NEXT_PUBLIC_META_APP_ID });
-      return "shared" as const;
-    } catch {
-      // Instagram not installed: fall back to the share sheet.
-    }
-  }
+  if ((await instagramStory(blob, process.env.NEXT_PUBLIC_META_APP_ID).catch(() => "unavailable")) === "shared") return "shared" as const;
   return shareOrSave(blob, "story.jpg", title);
 }
 

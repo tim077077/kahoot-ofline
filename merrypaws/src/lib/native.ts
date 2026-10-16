@@ -1,6 +1,6 @@
 "use client";
 
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 // The phone's own features in the Android and iOS apps: the system share
 // sheet, saving straight into Photos, haptics. On the web every helper here
@@ -9,14 +9,16 @@ import { Capacitor } from "@capacitor/core";
 
 export const isNative = () => Capacitor.isNativePlatform();
 
-function base64Of(blob: Blob): Promise<string> {
+function dataUrlOf(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
 }
+
+const base64Of = async (blob: Blob) => (await dataUrlOf(blob)).split(",")[1] ?? "";
 
 async function cacheFile(blob: Blob, filename: string) {
   const { Directory, Filesystem } = await import("@capacitor/filesystem");
@@ -58,6 +60,24 @@ export async function saveToPhotos(blob: Blob, filename: string): Promise<"saved
   const albumIdentifier = Capacitor.getPlatform() === "android" ? await androidAlbum() : undefined;
   await Media.savePhoto({ path, albumIdentifier, fileName: filename.replace(/\.\w+$/, "") });
   return "saved";
+}
+
+// The app's own plugin (android/.../InstagramStoriesPlugin.java and
+// ios/App/App/InstagramStoriesPlugin.swift).
+type InstagramStoriesPlugin = { share(opts: { backgroundImage: string; appId: string }): Promise<void> };
+const InstagramStories = registerPlugin<InstagramStoriesPlugin>("InstagramStories");
+
+// Instagram's story composer with the image as the background. Instagram
+// needs a Meta App ID to accept it; "unavailable" means use the share sheet.
+export async function instagramStory(blob: Blob, appId: string | undefined): Promise<"shared" | "unavailable"> {
+  if (!isNative() || !appId) return "unavailable";
+  try {
+    await InstagramStories.share({ backgroundImage: await dataUrlOf(blob), appId });
+    return "shared";
+  } catch (err) {
+    console.warn("instagram stories", err);
+    return "unavailable";
+  }
 }
 
 // A light tap for the moments that deserve one (a photo of the day, a milestone).

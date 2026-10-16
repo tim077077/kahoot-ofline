@@ -265,7 +265,7 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
    - The system share sheet with the image (`@capacitor/share`), and "Save in HD" straight into Photos (`@capacitor-community/media`).
    - Haptics on a purchase and a saved portrait.
    - Photo picking already uses the system's multi-select picker through the file input, and keeps the photo dates the album needs.
-   - Still to do: Instagram Stories straight from the app ([docs/INSTAGRAM.md](docs/INSTAGRAM.md)).
+   - Instagram Stories straight from the app: the story card opens in Instagram's story composer ([docs/INSTAGRAM.md](docs/INSTAGRAM.md)). Needs `NEXT_PUBLIC_META_APP_ID` at build time; without it the share sheet opens instead.
 4. **What the stores check before approving** (done in code):
    - `/privacy` and `/terms` pages, linked under every price, in the consent sheet and under You → Privacy. Read them and adjust: they describe what the code does today, and they promise Gemini doesn't train on photos, which is only true on a **paid** Gemini API key.
    - A consent sheet before the first portrait: the photo goes to Google's Gemini AI. Asked once per phone, reset by "Delete my data".
