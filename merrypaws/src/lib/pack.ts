@@ -72,15 +72,14 @@ export async function isFriend(store: Store, accountId: string, friend: string) 
   return friend === accountId || Boolean(await store.hget(`pack:${accountId}`, friend));
 }
 
-// Toggle a reaction on a friend's photo of the day.
-export async function react(store: Store, accountId: string, friend: string, day: string, reaction: Reaction) {
+// Toggle a reaction on a friend's photo of the day. False when they aren't friends.
+export async function react(store: Store, accountId: string, friend: string, day: string, reaction: Reaction): Promise<"added" | "removed" | false> {
   if (!(await isFriend(store, accountId, friend)) || friend === accountId) return false;
   const key = `react:${friend}:${day}`;
   const current = await store.hget(key, accountId);
-  if (current === reaction) await store.hdel(key, accountId);
-  else await store.hset(key, accountId, reaction);
+  await (current === reaction ? store.hdel(key, accountId) : store.hset(key, accountId, reaction));
   await store.expire(key, 30 * 24 * 60 * 60);
-  return true;
+  return current === reaction ? "removed" : "added";
 }
 
 async function reactionsFor(store: Store, owner: string, day: string, viewer: string) {

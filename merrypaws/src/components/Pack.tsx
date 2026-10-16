@@ -1,11 +1,12 @@
 "use client";
 
-import { Copy, Heart, PawPrint, Smiley, UserPlus } from "@phosphor-icons/react";
+import { BellRinging, Copy, Heart, PawPrint, Smiley, UserPlus } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { Polaroid } from "@/components/Vintage";
 import { named } from "@/i18n/app";
 import { useT } from "@/i18n/react";
+import type { AppPushState } from "@/lib/appPush";
 import type { PackCard, Reaction } from "@/lib/client";
 import type { LookId } from "@/lib/looks";
 
@@ -21,15 +22,26 @@ type Props = {
   onReact: (friend: string, reaction: Reaction) => void;
   onToggleShare: (shared: boolean) => void;
   onAddToday: () => void;
+  notify: AppPushState;
+  onNotify: () => void;
 };
+
+const NOTIFY_LATER_KEY = "pp_pack_notify_later";
 
 // Today in the pack. Finite on purpose: one photo per pet per day, then
 // you're done, like opening a letter rather than scrolling a feed.
-export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact, onToggleShare, onAddToday }: Props) {
+export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact, onToggleShare, onAddToday, notify, onNotify }: Props) {
   const t = useT();
   const [joinCode, setJoinCode] = useState("");
   const [joinMsg, setJoinMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [later, setLater] = useState(() => {
+    try {
+      return localStorage.getItem(NOTIFY_LATER_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const me = cards?.[0];
   const friends = cards?.slice(1) ?? [];
   const posted = friends.filter((f) => f.today).length;
@@ -63,6 +75,35 @@ export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact,
               </button>
             )}
             {me.today && <Reactions card={me} onReact={() => {}} readOnly />}
+          </div>
+        </div>
+      )}
+
+      {/* Only in the apps, and only once there's someone to hear from. */}
+      {friends.length > 0 && (notify === "prompt" || notify === "denied") && !later && (
+        <div className="mt-4 flex gap-3 rounded-2xl bg-card p-4">
+          <BellRinging size={26} className="mt-0.5 shrink-0 text-accent" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{t("pack.notifyTitle")}</p>
+            <p className="mt-1 text-sm text-muted">{notify === "denied" ? t("pack.notifyBlocked") : t("pack.notifyBody")}</p>
+            <div className="mt-3 flex gap-2">
+              {notify === "prompt" && (
+                <button onClick={onNotify} className="min-h-10 rounded-full bg-accent px-4 text-sm font-medium text-accent-ink">
+                  {t("pack.notifyOn")}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setLater(true);
+                  try {
+                    localStorage.setItem(NOTIFY_LATER_KEY, "1");
+                  } catch {}
+                }}
+                className="min-h-10 rounded-full px-3 text-sm text-muted"
+              >
+                {t("pack.notifyLater")}
+              </button>
+            </div>
           </div>
         </div>
       )}

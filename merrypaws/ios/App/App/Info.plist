@@ -74,6 +74,8 @@
 	<string>Paw Pictures lets you take a photo of your pet for your album.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>instagram-stories</string>

@@ -187,3 +187,19 @@ For Poland and Romania, set złoty and lei too (for example 14,99 zł and 19,99 
 - **Project settings → API keys:** copy the App Store key (`appl_`) and the Google Play key (`goog_`) into the app build as `NEXT_PUBLIC_REVENUECAT_IOS_KEY` and `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY`, then `npm run app:apk`. Create a secret key too and add it to Cloudflare as the secret `REVENUECAT_SECRET_KEY`, for Restore purchases.
 - **Project settings → restore behavior:** keep "Transfer to new App User ID", so restoring on a new phone moves the purchase to that album.
 - Test with a Google Play license tester (internal testing track) and an App Store sandbox tester (TestFlight), with `REVENUECAT_SANDBOX=allow` set.
+
+## 11. Push for friends' reactions (the apps)
+
+When a friend leaves a paw on today's photo, their phone buzzes once. Firebase carries it to both Android and iPhone. It's free.
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** (Analytics off).
+2. **Add app → Android**, package `com.pawpictures.app`. Download `google-services.json` into `android/app/`.
+3. **Add app → iOS**, bundle ID `com.pawpictures.app`. Download `GoogleService-Info.plist` into `ios/App/App/` and add it to the App target in Xcode.
+   - iPhone pushes also need your APNs key uploaded under **Project settings → Cloud Messaging**, and the Push Notifications capability on the app (`ios/App/App/App.entitlements` is already there).
+4. **Project settings → Service accounts → Generate new private key.** Paste the whole file, as one line, into Cloudflare as the secret `FIREBASE_SERVICE_ACCOUNT`. It's a password: never commit it or paste it into a chat.
+5. Deploy, check that `/api/health` says `appPush: true`, then `npm run app:apk`. The build prints "Reaction push: 1".
+
+Both Firebase files are gitignored; keep a copy somewhere safe.
+
+**Test it:** two phones in one pack, both with notifications on. Post a photo on A, paw it from B, and lock A. It should buzz within seconds. Tap it and the Pack opens.
+

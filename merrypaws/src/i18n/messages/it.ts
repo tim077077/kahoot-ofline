@@ -321,6 +321,11 @@ const it: Catalog<Messages> = {
     friendsCode: "Il codice di un amico",
     join: "Unisciti",
     reactions: { paw: "Zampa", heart: "Che amore", laugh: "Ahah" },
+    notifyTitle: "Scopri quando un amico lascia una zampa",
+    notifyBody: "Una vibrazione discreta quando qualcuno reagisce alla tua foto. Nient’altro.",
+    notifyOn: "Attiva",
+    notifyLater: "Non ora",
+    notifyBlocked: "Disattivato nelle impostazioni del telefono. Attiva lì le notifiche per Paw Pictures.",
   },
 
   studio: {
@@ -619,6 +624,9 @@ const it: Catalog<Messages> = {
     titleNamed: "La foto del giorno di {name}",
     titleAnon: "Foto del giorno",
     body: "Oggi: {prompt}",
+    reactionTitle: "{emoji} da {friend}",
+    reactionBodyNamed: "La foto del giorno di {name} è piaciuta.",
+    reactionBodyAnon: "La foto del giorno del tuo animale è piaciuta.",
   },
 
   email: {

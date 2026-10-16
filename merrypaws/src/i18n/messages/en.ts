@@ -323,6 +323,11 @@ const en = {
     friendsCode: "A friend's code",
     join: "Join",
     reactions: { paw: "Paw", heart: "Love", laugh: "Ha" },
+    notifyTitle: "Know when friends leave a paw",
+    notifyBody: "One quiet buzz when someone reacts to your photo. Nothing else.",
+    notifyOn: "Turn on",
+    notifyLater: "Not now",
+    notifyBlocked: "Turned off in your phone's settings. Turn notifications on there for Paw Pictures.",
   },
 
   studio: {
@@ -609,6 +614,9 @@ const en = {
     titleNamed: "{name}'s photo of the day",
     titleAnon: "Photo of the day",
     body: "Today: {prompt}",
+    reactionTitle: "{emoji} from {friend}",
+    reactionBodyNamed: "They loved {name}'s photo of the day.",
+    reactionBodyAnon: "They loved your pet's photo of the day.",
   },
 
   email: {

@@ -322,6 +322,11 @@ const nl: Catalog<Messages> = {
     friendsCode: "Code van een vriend",
     join: "Meedoen",
     reactions: { paw: "Pootje", heart: "Zo lief", laugh: "Haha" },
+    notifyTitle: "Weet het als vrienden een pootje geven",
+    notifyBody: "Eén rustig seintje als iemand op je foto reageert. Verder niets.",
+    notifyOn: "Aanzetten",
+    notifyLater: "Niet nu",
+    notifyBlocked: "Uitgezet in de instellingen van je telefoon. Zet daar meldingen aan voor Paw Pictures.",
   },
 
   studio: {
@@ -620,6 +625,9 @@ const nl: Catalog<Messages> = {
     titleNamed: "Dagelijkse foto van {name}",
     titleAnon: "Dagelijkse foto",
     body: "Vandaag: {prompt}",
+    reactionTitle: "{emoji} van {friend}",
+    reactionBodyNamed: "De foto van de dag van {name} viel in de smaak.",
+    reactionBodyAnon: "De foto van de dag van je huisdier viel in de smaak.",
   },
 
   email: {

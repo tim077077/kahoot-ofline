@@ -1,5 +1,6 @@
 import { getStore } from "@/lib/store";
 import { pushConfigured } from "@/lib/webpush";
+import { fcmConfigured } from "@/lib/fcm";
 
 // After deploying, open /api/health on your phone: every line should say true.
 // Only says whether each service is set up, never any key.
@@ -23,6 +24,7 @@ export async function GET() {
     restorePurchases: env("REVENUECAT_SECRET_KEY"),
     email: env("RESEND_API_KEY", "EMAIL_FROM"),
     reminders: pushConfigured() && env("CRON_SECRET"),
+    appPush: fcmConfigured(),
     stats: env("STATS_KEY"),
     siteUrl: env("NEXT_PUBLIC_SITE_URL") && !process.env.NEXT_PUBLIC_SITE_URL!.includes("localhost"),
   };

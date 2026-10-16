@@ -1,4 +1,5 @@
 import { backupEmail } from "@/lib/auth";
+import { removeDeviceToken } from "@/lib/nativePush";
 import { LIMITS, TIERS } from "@/lib/config";
 import { accountIdForToken, createAccount, deleteAccount, freeTrialsLeft, getCredits } from "@/lib/credits";
 import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
@@ -91,6 +92,7 @@ export async function DELETE(request: Request) {
     await deleteDaily(store, accountId);
     await deleteSocial(store, accountId);
     await removeReminder(store, accountId);
+    await removeDeviceToken(store, accountId);
     await deleteAccount(store, token);
   }
   return Response.json({ deleted: true, account: Boolean(accountId), photos, portraits: ids.length });

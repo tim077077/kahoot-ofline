@@ -336,6 +336,11 @@ const ro: Catalog<Messages> = {
     friendsCode: "Codul unui prieten",
     join: "Intră",
     reactions: { paw: "Lăbuță", heart: "Ador", laugh: "Haha" },
+    notifyTitle: "Află când un prieten lasă o lăbuță",
+    notifyBody: "O notificare discretă când cineva reacționează la fotografia ta. Nimic altceva.",
+    notifyOn: "Activează",
+    notifyLater: "Nu acum",
+    notifyBlocked: "Dezactivat din setările telefonului. Activează acolo notificările pentru Paw Pictures.",
   },
 
   studio: {
@@ -647,6 +652,9 @@ const ro: Catalog<Messages> = {
     titleNamed: "Fotografia zilei cu {name}",
     titleAnon: "Fotografia zilei",
     body: "Azi: {prompt}",
+    reactionTitle: "{emoji} de la {friend}",
+    reactionBodyNamed: "Fotografia zilei cu {name} a plăcut.",
+    reactionBodyAnon: "Fotografia zilei cu animalul tău a plăcut.",
   },
 
   email: {

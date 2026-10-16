@@ -65,7 +65,7 @@ describe("the pack", () => {
     const added = await addPhoto(store, objects, "luna", "free", { image: new Uint8Array([1]), thumb: new Uint8Array([2]), w: 1, h: 1 });
     if (!added.ok) throw new Error("not added");
     await markDay(store, "luna", day(0), { kind: "photo", photoId: added.photo.id }, false);
-    expect(await react(store, "milo", "luna", day(0), "paw")).toBe(true);
+    expect(await react(store, "milo", "luna", day(0), "paw")).toBe("added");
     expect(await react(store, "stranger", "luna", day(0), "paw")).toBe(false);
 
     const [me, luna] = await packFeed(store, objects, "milo", day(0));

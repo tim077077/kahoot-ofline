@@ -45,6 +45,7 @@ import { makeCollageCard, makePhotoStoryCard, shareToInstagramStory } from "@/li
 import { findLook, type LookId } from "@/lib/looks";
 import { promptIndex } from "@/lib/dailyPrompts";
 import { tap } from "@/lib/native";
+import { type AppPushState, appPushState, enableAppPush, forgetAppPush, listenAppPush, syncAppPush } from "@/lib/appPush";
 import { disableReminder, registerWorker, syncReminder, updateLocalReminders } from "@/lib/reminders";
 import type { StyleId } from "@/lib/styles";
 
@@ -99,6 +100,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   const [pending, setPending] = useState<Pending[]>([]);
   const [batch, setBatch] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
   const [tab, setTab] = useState<Tab>("album");
+  const [appPush, setAppPush] = useState<AppPushState>("off");
   const [style, setStyle] = useState<StyleId>("royal-court");
   const [openPortrait, setOpenPortrait] = useState<string | null>(null);
   const [openPhoto, setOpenPhoto] = useState<string | null>(null);
@@ -141,6 +143,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   }, []);
 
   const applyToken = useCallback((tok: string | null) => {
+    // Another album on this phone: the old one's reactions stop coming here.
+    if (tokenRef.current && tokenRef.current !== tok) void forgetAppPush(tokenRef.current);
     tokenRef.current = tok;
     storage.setToken(tok);
     setToken(tok);
@@ -241,6 +245,27 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       await joinInvite(tok);
     })();
   }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite]);
+
+  // Friends' reactions as native push in the apps (see lib/appPush.ts).
+  useEffect(() => {
+    listenAppPush(
+      () => tokenRef.current,
+      (next) => next === "pack" && setTab("pack"),
+    );
+    void appPushState().then(setAppPush).catch(() => setAppPush("off"));
+  }, []);
+
+  useEffect(() => {
+    if (token && appPush === "granted") void syncAppPush(token).catch((err) => console.warn("push", err));
+  }, [token, appPush]);
+
+  async function turnOnAppPush() {
+    const tok = await ensureToken();
+    if (!tok) return setToast(t("errors.noServer"));
+    const state = await enableAppPush(tok).catch(() => "prompt" as const);
+    setAppPush(state);
+    if (state === "granted") tap(false);
+  }
 
   // The server writes the reminders and emails, so it needs the language too.
   useEffect(() => {
@@ -828,6 +853,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
                 return result === "joined" || result === "already" || result === "self" || result === "full" ? t(`join.${result}`) : t("join.noMatch");
               }}
               onReact={(friend, r) => void reactTo(friend, r)}
+              notify={appPush}
+              onNotify={() => void turnOnAppPush()}
               onToggleShare={async (shared) => {
                 if (!token) return;
                 await jsonApi("/api/daily", "PATCH", { day: today, shared }, token).catch(() => null);

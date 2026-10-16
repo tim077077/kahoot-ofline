@@ -7,6 +7,16 @@ const config: CapacitorConfig = {
   appName: "Paw Pictures",
   webDir: "out",
   backgroundColor: "#f5eee3",
+  plugins: {
+    // A friend's reaction shows even while the app is open.
+    FirebaseMessaging: { presentationOptions: ["alert", "sound"] },
+  },
+  experimental: {
+    ios: {
+      // Avoids a Swift Package Manager name clash (the plugin's README).
+      spm: { packageOptions: { "@capacitor-firebase/messaging": { symlink: true } } },
+    },
+  },
 };
 
 export default config;

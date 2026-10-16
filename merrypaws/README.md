@@ -193,7 +193,7 @@ One system for the web and the store apps. RevenueCat holds the prices per count
 - The Pack:
   - `GET /api/pack?day=` returns my card plus friends' cards and my invite code.
   - `POST /api/pack/join` joins with a code.
-  - `POST /api/pack/react` toggles a reaction.
+  - `POST /api/pack/react` toggles a reaction. A new one sends the friend a push in the apps (below).
   - `DELETE /api/pack/[id]` leaves.
 - "Manage or cancel" opens RevenueCat's page for web subscribers; store subscribers manage theirs in the store settings.
 
@@ -265,6 +265,11 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
    - The system share sheet with the image (`@capacitor/share`), and "Save in HD" straight into Photos (`@capacitor-community/media`).
    - Haptics on a purchase and a saved portrait.
    - Photo picking already uses the system's multi-select picker through the file input, and keeps the photo dates the album needs.
+   - Push when a friend reacts to your photo of the day ("🐾 from Milo"), in the album's language. Tapping it opens the Pack.
+     - Firebase Cloud Messaging for both phones (`src/lib/fcm.ts` sends, `src/lib/appPush.ts` registers). Apple's push service needs HTTP/2, which a Worker can't speak, so Firebase relays to Apple.
+     - Asked for in the Pack tab only once there are friends, never at launch. One push per friend per photo, at most 10 a day. The only push besides the daily reminder.
+     - `PUT`/`DELETE /api/push/devices` stores the phone's token (newest 5 per album); dead tokens are dropped when Firebase says so; deleting the album removes them.
+     - Off until set up (DEPLOY.md §11): the app build switches it on when `android/app/google-services.json` exists, and the server needs `FIREBASE_SERVICE_ACCOUNT`.
    - Instagram Stories straight from the app: the story card opens in Instagram's story composer ([docs/INSTAGRAM.md](docs/INSTAGRAM.md)). Needs `NEXT_PUBLIC_META_APP_ID` at build time; without it the share sheet opens instead.
 4. **What the stores check before approving** (done in code):
    - `/privacy` and `/terms` pages, linked under every price, in the consent sheet and under You → Privacy. Read them and adjust: they describe what the code does today, and they promise Gemini doesn't train on photos, which is only true on a **paid** Gemini API key.
