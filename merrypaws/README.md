@@ -249,18 +249,17 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
 
 ## Going to the stores
 
-1. **Wrap with Capacitor** (done for Android; `android/` is the project, `capacitor.config.ts` the config):
-   - `NEXT_PUBLIC_API_BASE=https://your-site npm run app:apk` builds the client as static files into `out/` (the API routes step aside), syncs it into `android/` and builds `android/app/build/outputs/apk/debug/app-debug.apk`.
-   - Needs JDK 21 and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `android/local.properties`).
+1. **Wrap with Capacitor** (done; `android/` and `ios/` are the projects, `capacitor.config.ts` the config):
+   - `NEXT_PUBLIC_API_BASE=https://your-site npm run app:apk` builds the client as static files into `out/` (the API routes step aside), syncs it into `android/` and `ios/`, and builds `android/app/build/outputs/apk/debug/app-debug.apk`.
+   - Android needs JDK 21 and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `android/local.properties`).
+   - iOS: `npm run app:build`, then open `ios/App/App.xcodeproj` in Xcode on a Mac.
    - CORS for the app's origins (`https://localhost`, `capacitor://localhost`) on `/api/*` lives in `worker.ts`, so it only works on the deployed site, not in `next dev`.
-   - Payments in the app still say "not switched on" until step 2: Web Billing inside an app breaks store rules.
-   - iOS: `npx cap add ios` on a Mac.
-2. **In-app purchases with RevenueCat**, already used on the web, so the server side is done.
-   - Create the same product IDs in App Store Connect and Google Play (DEPLOY.md lists them) and add them to the same offering.
-   - Swap `src/lib/payments.ts` for `@revenuecat/purchases-capacitor` in the app build, logging in with the album's account id.
-   - Add **Restore purchases**.
-   - Keep a 7-day trial on Plus yearly as a lever.
-   - TrustMRR verifies RevenueCat revenue.
+   - Links people share from the app (pack invites, the album link) point at `NEXT_PUBLIC_API_BASE`, the site.
+2. **In-app purchases with RevenueCat** (done in code):
+   - `src/lib/payments.ts` picks the store: Web Billing on the website, `@revenuecat/purchases-capacitor` (App Store / Google Play) in the apps, logged in as the album's account id. The app build never has the web key.
+   - Build variables `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY` and `NEXT_PUBLIC_REVENUECAT_IOS_KEY`; without them the app says payments aren't on.
+   - **Restore purchases** under the plans (apps only) re-attaches the store account's purchases, then `/api/restore` asks RevenueCat what's active (needs the secret `REVENUECAT_SECRET_KEY`).
+   - Store setup is in DEPLOY.md §10. Keep a 7-day trial on Plus yearly as a lever. TrustMRR verifies RevenueCat revenue.
 3. **Native touches**, so Apple doesn't reject it as a wrapped website:
    - native push for the daily prompt (the web version already works; the store app replaces it)
    - Instagram Stories straight from the app ([docs/INSTAGRAM.md](docs/INSTAGRAM.md))

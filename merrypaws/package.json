@@ -13,15 +13,17 @@
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "app:build": "./scripts/build-app.sh && npx cap sync android",
+    "app:build": "./scripts/build-app.sh && npx cap sync",
     "app:apk": "npm run app:build && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",
     "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
     "@google/genai": "^2.29.1",
     "@opennextjs/cloudflare": "^1.20.11",
     "@phosphor-icons/react": "^2.1.10",
+    "@revenuecat/purchases-capacitor": "13.7.4",
     "@revenuecat/purchases-js": "1.67.1",
     "aws4fetch": "^1.0.20",
     "fast-png": "^8.0.0",

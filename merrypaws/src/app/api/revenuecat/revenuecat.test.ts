@@ -6,6 +6,7 @@ import { currentTier, getPlan, previewsLeft, refreshAllowance } from "@/lib/plan
 import { MemoryStore } from "@/lib/store";
 import { POST } from "./route";
 import { POST as pay } from "../pay/route";
+import { POST as restore } from "../restore/route";
 import { fakeImage, MemoryObjects } from "@/test/memoryObjects";
 
 // /api/pay pulls in the photo storage helpers, which are marked server-only.
@@ -130,5 +131,42 @@ describe("revenuecat webhook", () => {
 
     await POST(hook({ id: "u4", type: "CANCELLATION", cancel_reason: "CUSTOMER_SUPPORT", app_user_id: account.id, product_id: "pp_pro_yearly" }));
     expect(await currentTier(store, account.id)).toBe("free");
+  });
+});
+
+describe("restore purchases", () => {
+  const day = 24 * 60 * 60 * 1000;
+  function restoreReq(token: string) {
+    return new Request("http://localhost/api/restore", { method: "POST", headers: { authorization: `Bearer ${token}` } });
+  }
+  function rcReplies(subscriptions: Record<string, unknown>) {
+    const fetchMock = vi.fn(async () => Response.json({ subscriber: { subscriptions } }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("switches on the best active store plan, reading Google Play's base plan", async () => {
+    process.env.REVENUECAT_SECRET_KEY = "sk_test";
+    const { account, token } = await createAccount(store);
+    const fetchMock = rcReplies({
+      pp_starter_monthly: { expires_date: new Date(Date.now() + 10 * day).toISOString(), store: "app_store" },
+      pp_plus: { expires_date: new Date(Date.now() + 300 * day).toISOString(), store: "play_store", product_plan_identifier: "yearly" },
+      pp_pro_monthly: { expires_date: new Date(Date.now() - day).toISOString(), store: "app_store" },
+      pp_pro_yearly: { expires_date: new Date(Date.now() + 300 * day).toISOString(), store: "app_store", refunded_at: new Date().toISOString() },
+    });
+    const res = await restore(restoreReq(token));
+    expect(await res.json()).toEqual({ restored: true, tier: "plus" });
+    expect((await getPlan(store, account.id))?.interval).toBe("year");
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain(`/v1/subscribers/${account.id}`);
+    vi.unstubAllGlobals();
+  });
+
+  it("finds nothing in sandbox unless allowed, and needs an album", async () => {
+    process.env.REVENUECAT_SECRET_KEY = "sk_test";
+    const { token } = await createAccount(store);
+    rcReplies({ pp_plus_monthly: { expires_date: new Date(Date.now() + 10 * day).toISOString(), is_sandbox: true } });
+    expect(await (await restore(restoreReq(token))).json()).toEqual({ restored: false, tier: "free" });
+    expect((await restore(restoreReq("nobody-has-this-token-1234"))).status).toBe(401);
+    vi.unstubAllGlobals();
   });
 });

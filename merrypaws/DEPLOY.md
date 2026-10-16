@@ -179,8 +179,11 @@ For Poland and Romania, set złoty and lei too (for example 14,99 zł and 19,99 
 8. Deploy, buy Plus with the sandbox key and a test card, and check that the plan shows in Membership within a few seconds. Then a pack. Then cancel from "Manage or cancel your plan".
 9. Switch to the production key, delete `REVENUECAT_SANDBOX`, deploy.
 
-### In the store apps (later)
+### In the store apps
 
 - **App Store Connect:** create the six subscriptions in one group and the three packs as consumables, with the same IDs. Set the US price; Apple fills in every other country automatically. Then check the eurozone, Poland and Romania prices and change them to the numbers above. Apple converts from dollars and adds VAT, so its automatic euro price usually lands a step higher than you'd pick.
 - **Google Play:** create subscriptions `pp_starter`, `pp_plus` and `pp_pro`, each with base plans `monthly` and `yearly`, and in-app products `pp_pack_3`, `pp_pack_10` and `pp_pack_25`. Set the country prices the same way.
-- In RevenueCat, add the iOS and Android apps, import those products, and add them to the same offering. The webhook already understands them.
+- In RevenueCat, add the iOS app (bundle ID `com.pawpictures.app`, with an App Store Connect in-app purchase key) and the Android app (package `com.pawpictures.app`, with a Google Play service account), import those products, and add them to the same offering. The webhook already understands them.
+- **Project settings → API keys:** copy the App Store key (`appl_`) and the Google Play key (`goog_`) into the app build as `NEXT_PUBLIC_REVENUECAT_IOS_KEY` and `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY`, then `npm run app:apk`. Create a secret key too and add it to Cloudflare as the secret `REVENUECAT_SECRET_KEY`, for Restore purchases.
+- **Project settings → restore behavior:** keep "Transfer to new App User ID", so restoring on a new phone moves the purchase to that album.
+- Test with a Google Play license tester (internal testing track) and an App Store sandbox tester (TestFlight), with `REVENUECAT_SANDBOX=allow` set.

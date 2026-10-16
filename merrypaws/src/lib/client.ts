@@ -12,6 +12,12 @@ import type { StyleId } from "./styles";
 // deployed backend, e.g. https://paw-pictures.you.workers.dev
 export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
 
+// The address for links people share (pack invites, the album link). In the
+// app the page itself is https://localhost, so those point at the site.
+export function shareOrigin(): string {
+  return API_BASE || window.location.origin;
+}
+
 const TOKEN_KEY = "pp_token";
 const DEVICE_KEY = "pp_device";
 const PROFILE_KEY = "pp_profile";

@@ -15,7 +15,7 @@ import { ShareSheet } from "@/components/ShareSheet";
 import { Studio, type ShootRequest, type ShootResult } from "@/components/Studio";
 import { Viewer, type ReportReason } from "@/components/Viewer";
 import { BRAND, TIERS, type Purchase } from "@/lib/config";
-import { buyWithStore, LIST_PRICES, managementUrl, paymentsOn, storePrices, type PriceList } from "@/lib/payments";
+import { buyWithStore, canRestore, LIST_PRICES, managementUrl, paymentsOn, restoreStorePurchases, storePrices, type PriceList } from "@/lib/payments";
 import { cardText, displayName, named } from "@/i18n/app";
 import { I18nProvider, useT } from "@/i18n/react";
 import {
@@ -26,6 +26,7 @@ import {
   postPreview,
   preparePhoto,
   removePhoto,
+  shareOrigin,
   storage,
   track,
   uploadPhoto,
@@ -360,7 +361,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       code = res?.ok ? ((await res.json()) as { code: string }).code : undefined;
     }
     if (!code) return;
-    const url = `${window.location.origin}/?pack=${code}`;
+    const url = `${shareOrigin()}/?pack=${code}`;
     const text = named(t, "invite.text", profile?.petName, { brand: BRAND });
     track("pack_invite_sent");
     try {
@@ -608,6 +609,33 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
     setTab("album");
   }
 
+  // Apple's required "Restore purchases": re-attach this store account's
+  // purchases to the album, then have the server check what's active.
+  async function restore() {
+    setBusy("restore");
+    try {
+      const res = await jsonApi("/api/pay", "POST", {}, token);
+      const data = (await res.json().catch(() => ({}))) as { accountId?: string; token?: string; error?: string };
+      if (!res.ok || !data.accountId) return setToast(errorText(data.error));
+      if (data.token) applyToken(data.token);
+      const tok = data.token ?? token;
+      await restoreStorePurchases(data.accountId);
+      const check = await jsonApi("/api/restore", "POST", {}, tok);
+      const result = (await check.json().catch(() => ({}))) as { restored?: boolean };
+      if (!check.ok) return setToast(t("errors.generic"));
+      await refresh(tok);
+      if (result.restored) {
+        setSheet(null);
+        setToast(t("toasts.restored"));
+      } else setToast(t("toasts.nothingToRestore"));
+    } catch (err) {
+      console.error("restore", err);
+      setToast(t("errors.generic"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function manage() {
     const res = token ? await jsonApi("/api/pay", "POST", {}, token).catch(() => null) : null;
     const data = (await res?.json().catch(() => ({}))) as { accountId?: string } | undefined;
@@ -811,6 +839,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
               }}
               onDeleteData={deleteData}
               onManage={() => void manage()}
+              onRestore={canRestore ? () => void restore() : undefined}
               memorial={Boolean(profile.memorial)}
               onMemorial={(memorial) => {
                 const next = { ...profile, memorial };
@@ -962,6 +991,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
             current={tier}
             busy={busy}
             onBuy={(p) => void buy(p)}
+            onRestore={canRestore ? () => void restore() : undefined}
             onClose={() => {
               track("paywall_dismissed");
               setSheet(null);

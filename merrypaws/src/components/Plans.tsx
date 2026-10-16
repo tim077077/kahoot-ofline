@@ -4,7 +4,7 @@ import { Check, FilmStrip, Lock } from "@phosphor-icons/react";
 import { createContext, useContext, useState } from "react";
 import { SafetySection } from "@/components/Safety";
 import { Sheet } from "@/components/Sheet";
-import type { Account, PetKind } from "@/lib/client";
+import { shareOrigin, type Account, type PetKind } from "@/lib/client";
 import { lookLabel, money, named, tierBlurb, tierName } from "@/i18n/app";
 import { isLocale, LOCALE_NAMES, LOCALES } from "@/i18n/core";
 import { useT, type T } from "@/i18n/react";
@@ -39,7 +39,7 @@ function perks(t: T, tier: Tier) {
 // Three plans, the priciest first as the anchor and Plus in the middle,
 // highlighted and ready to pick. Every price is the full price: no fake
 // discounts, no countdowns (see PSYCHOLOGY.md).
-export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: Purchase) => void; busy: Busy }) {
+export function PlanCards({ current, onBuy, onRestore, busy }: { current: Tier; onBuy: (p: Purchase) => void; onRestore?: () => void; busy: Busy }) {
   const t = useT();
   const priceOf = usePrice();
   const [interval, setInterval] = useState<Interval>("year");
@@ -110,6 +110,11 @@ export function PlanCards({ current, onBuy, busy }: { current: Tier; onBuy: (p: 
         })}
       </div>
       <p className="mt-3 text-center text-sm text-muted">{t("plans.cancelNote")}</p>
+      {onRestore && (
+        <button onClick={onRestore} disabled={busy !== null} className="mt-1 min-h-11 w-full text-sm text-muted underline underline-offset-4 disabled:opacity-60">
+          {busy === "restore" ? t("plans.restoring") : t("plans.restore")}
+        </button>
+      )}
     </div>
   );
 }
@@ -153,11 +158,12 @@ function sheetCopy(t: T, reason: SheetReason, petName: string): { title: string;
   }
 }
 
-export function PlansSheet({ reason, petName, current, onBuy, busy, onClose }: {
+export function PlansSheet({ reason, petName, current, onBuy, onRestore, busy, onClose }: {
   reason: SheetReason;
   petName: string;
   current: Tier;
   onBuy: (p: Purchase) => void;
+  onRestore?: () => void;
   busy: Busy;
   onClose: (dismissed: boolean) => void;
 }) {
@@ -175,7 +181,7 @@ export function PlansSheet({ reason, petName, current, onBuy, busy, onClose }: {
           </div>
         )}
         <div className="mt-4">
-          <PlanCards current={current} onBuy={onBuy} busy={busy} />
+          <PlanCards current={current} onBuy={onBuy} onRestore={onRestore} busy={busy} />
         </div>
         <button onClick={() => onClose(true)} className="mt-2 min-h-12 w-full text-muted underline underline-offset-4">
           {t("plans.notNow")}
@@ -242,6 +248,7 @@ type YouProps = {
   onProfile: (patch: { petName?: string; kind?: PetKind }) => void;
   onDeleteData: () => Promise<void>;
   onManage: () => void;
+  onRestore?: () => void;
   memorial: boolean;
   onMemorial: (on: boolean) => void;
   reminderHour: number | null;
@@ -250,14 +257,14 @@ type YouProps = {
   onSignIn: () => void;
 };
 
-export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, onDeleteData, onManage, memorial, onMemorial, reminderHour, onReminderHour, onBackup, onSignIn }: YouProps) {
+export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, onDeleteData, onManage, onRestore, memorial, onMemorial, reminderHour, onReminderHour, onBackup, onSignIn }: YouProps) {
   const t = useT();
   const [copied, setCopied] = useState(false);
   const [name, setName] = useState(petName);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const tier = account?.tier ?? "free";
-  const link = token && typeof window !== "undefined" ? `${window.location.origin}/#k=${token}` : "";
+  const link = token && typeof window !== "undefined" ? `${shareOrigin()}/#k=${token}` : "";
   const used = account?.photos ?? 0;
   const limit = account?.photoLimit ?? TIERS.free.photos;
 
@@ -297,7 +304,7 @@ export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, 
 
       <h2 className="font-display mt-10 text-xl italic">{t("you.plans")}</h2>
       <div className="mt-3">
-        <PlanCards current={tier} onBuy={onBuy} busy={busy} />
+        <PlanCards current={tier} onBuy={onBuy} onRestore={onRestore} busy={busy} />
       </div>
 
       <h2 className="font-display mt-10 text-xl italic">{t("you.extra")}</h2>

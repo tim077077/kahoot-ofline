@@ -20,6 +20,7 @@ export async function GET() {
     photoStorage: env("S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"),
     portraits: env("GEMINI_API_KEY") || env("GOOGLE_API_KEY"),
     payments: env("NEXT_PUBLIC_REVENUECAT_WEB_KEY", "REVENUECAT_WEBHOOK_AUTH"),
+    restorePurchases: env("REVENUECAT_SECRET_KEY"),
     email: env("RESEND_API_KEY", "EMAIL_FROM"),
     reminders: pushConfigured() && env("CRON_SECRET"),
     stats: env("STATS_KEY"),
