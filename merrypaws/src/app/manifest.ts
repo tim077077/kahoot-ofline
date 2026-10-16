@@ -3,6 +3,8 @@ import { BRAND } from "@/lib/config";
 
 // Lets people add the album to their home screen. On iPhone that's also what
 // unlocks the daily reminder (web push needs a home-screen app there).
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: BRAND,
