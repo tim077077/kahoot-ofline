@@ -66,5 +66,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Paw Pictures saves the portraits you choose into your Photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Paw Pictures lets you pick photos of your pet for your album and portraits.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Paw Pictures lets you take a photo of your pet for your album.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

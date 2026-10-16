@@ -26,6 +26,9 @@ const ro: Catalog<Messages> = {
     play: "Redă",
     pause: "Pauză",
     saveHd: "Salvează în HD",
+    saving: "Se salvează…",
+    savedToPhotos: "Salvată în Fotografii",
+    saveFailed: "Nu s-a putut salva. Încearcă din nou.",
     keepHd: "Păstrează în HD",
     inLovingMemory: "În amintire cu drag",
     inLovingMemoryOf: "În amintire cu drag:",
@@ -468,6 +471,8 @@ const ro: Catalog<Messages> = {
     yourPlan: "Planul tău",
     choose: "Alege {plan}",
     cancelNote: "Anulezi oricând din două atingeri. Fotografiile rămân în album.",
+    renewalNote: "Abonamentele se reînnoiesc automat la prețul afișat până le anulezi. Anulează cu cel puțin 24 de ore înainte de finalul perioadei ca să nu se mai încaseze plata următoare.",
+    renewalNoteStore: "Abonamentele se reînnoiesc automat la prețul afișat până le anulezi. Plata se face din contul App Store sau Google Play; anulează din setările abonamentelor cu cel puțin 24 de ore înainte de finalul perioadei ca să nu se mai încaseze plata următoare.",
     restore: "Restabilește achizițiile",
     restoring: "Se restabilește…",
     portraits: "portrete",
@@ -534,6 +539,8 @@ const ro: Catalog<Messages> = {
     privacy: "Confidențialitatea ta",
     privacyBody: "Albumul tău e privat. Fotografiile sunt folosite doar ca să-ți arătăm albumul și să facem portretele pe care le ceri, și nu le folosim niciodată ca să antrenăm AI.",
     deleteWarning: "Asta șterge toate fotografiile, portretele, planul și creditele nefolosite. Nu se poate anula.",
+    deleteSubscription: "Ștergerea albumului nu anulează abonamentul. Anulează-l întâi, altfel se reînnoiește în continuare.",
+    deleteSubscriptionStore: "Ștergerea albumului nu anulează abonamentul. Anulează-l întâi din abonamentele App Store sau Google Play, altfel se reînnoiește în continuare.",
     deleting: "Se șterge",
     deleteAll: "Șterge tot",
     deleteMine: "Șterge datele mele",
@@ -605,6 +612,36 @@ const ro: Catalog<Messages> = {
     off: "Notificările sunt dezactivate.",
     turnOff: "Dezactivează",
   },
+
+  legal: {
+
+    terms: "Termeni",
+
+    privacy: "Confidențialitate",
+
+  },
+
+
+  consent: {
+
+    title: "Înainte de primul portret",
+
+    body: "Ca să pictăm portretul, fotografia aleasă (și a ta, dacă adaugi una) e trimisă la inteligența artificială Gemini de la Google.",
+
+    onlyThis: "E folosită doar pentru portretul cerut.",
+
+    noTraining: "Nici noi, nici Google nu antrenăm AI cu ea.",
+
+    people: "Adaugă doar fotografii cu oameni care sunt de acord.",
+
+    agree: "Sunt de acord, continuă",
+
+    notNow: "Nu acum",
+
+    declined: "Nicio problemă. Portretele au nevoie de asta, dar albumul merge și fără.",
+
+  },
+
 
   push: {
     titleNamed: "Fotografia zilei cu {name}",

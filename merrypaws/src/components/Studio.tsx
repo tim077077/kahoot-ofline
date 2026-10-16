@@ -3,11 +3,12 @@
 import { ArrowCounterClockwise, Check, CheckCircle, Circle, DownloadSimple, ShareNetwork, XCircle } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/Mascot";
+import { SaveHd } from "@/components/SaveHd";
 import { StyleArt } from "@/components/StyleCard";
 import { MASCOT } from "@/lib/config";
 import { displayName, named, styleBlurb, styleTitle } from "@/i18n/app";
 import { useT } from "@/i18n/react";
-import { downloadUrl, track, type Photo, type Portrait, type UploadPhase } from "@/lib/client";
+import { track, type Photo, type Portrait, type UploadPhase } from "@/lib/client";
 import { prepareUpload } from "@/lib/image";
 import { checkPhoto, type PhotoProblem } from "@/lib/photoCheck";
 import { CANVASES, cleanIdea, findStyle, IDEA_MAX, STYLES, type CanvasId, type Style, type StyleId } from "@/lib/styles";
@@ -604,13 +605,7 @@ function RevealStep({
 
       <div className="rise mt-7 grid gap-3" style={{ animationDelay: "2s" }}>
         {portrait.unlocked ? (
-          <a
-            href={downloadUrl(portrait.id)}
-            download
-            className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent text-lg font-medium text-accent-ink"
-          >
-            <DownloadSimple size={20} weight="bold" /> {t("common.saveHd")}
-          </a>
+          <SaveHd id={portrait.id} className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent text-lg font-medium text-accent-ink" />
         ) : (
           <button
             onClick={onKeep}

@@ -260,12 +260,17 @@ Locally, sign-in codes are printed in the terminal and shown on the page, and re
    - Build variables `NEXT_PUBLIC_REVENUECAT_ANDROID_KEY` and `NEXT_PUBLIC_REVENUECAT_IOS_KEY`; without them the app says payments aren't on.
    - **Restore purchases** under the plans (apps only) re-attaches the store account's purchases, then `/api/restore` asks RevenueCat what's active (needs the secret `REVENUECAT_SECRET_KEY`).
    - Store setup is in DEPLOY.md §10. Keep a 7-day trial on Plus yearly as a lever. TrustMRR verifies RevenueCat revenue.
-3. **Native touches**, so Apple doesn't reject it as a wrapped website:
-   - native push for the daily prompt (the web version already works; the store app replaces it)
-   - Instagram Stories straight from the app ([docs/INSTAGRAM.md](docs/INSTAGRAM.md))
-   - the native photo picker (multi-select)
-   - save to Photos
-   - the native share sheet
-   - Sign in with Apple, if you ever add login
+3. **Native touches** (done in code, `src/lib/native.ts`), so the stores don't treat it as a wrapped website:
+   - The daily reminder as notifications scheduled on the phone (`@capacitor/local-notifications`): the next 14 days at the chosen hour, today's skipped once the photo is in, never for memorial albums. No push server needed.
+   - The system share sheet with the image (`@capacitor/share`), and "Save in HD" straight into Photos (`@capacitor-community/media`).
+   - Haptics on a purchase and a saved portrait.
+   - Photo picking already uses the system's multi-select picker through the file input, and keeps the photo dates the album needs.
+   - Still to do: Instagram Stories straight from the app ([docs/INSTAGRAM.md](docs/INSTAGRAM.md)).
+4. **What the stores check before approving** (done in code):
+   - `/privacy` and `/terms` pages, linked under every price, in the consent sheet and under You → Privacy. Read them and adjust: they describe what the code does today, and they promise Gemini doesn't train on photos, which is only true on a **paid** Gemini API key.
+   - A consent sheet before the first portrait: the photo goes to Google's Gemini AI. Asked once per phone, reset by "Delete my data".
+   - The renewal terms under the plans, worded for the store in the apps.
+   - Deleting the album with an active plan warns that the plan keeps billing, with a button to cancel it first.
+   - iOS usage strings for Photos and the camera, and the encryption declaration, in `ios/App/App/Info.plist`.
 
 Google Play needs a new 12-tester, 14-day closed test for this app. Start it as soon as a build exists.

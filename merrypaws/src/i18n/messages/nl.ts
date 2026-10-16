@@ -25,6 +25,9 @@ const nl: Catalog<Messages> = {
     play: "Afspelen",
     pause: "Pauze",
     saveHd: "Opslaan in HD",
+    saving: "Opslaan…",
+    savedToPhotos: "Opgeslagen in Foto's",
+    saveFailed: "Opslaan lukte niet. Probeer het opnieuw.",
     keepHd: "Bewaar in HD",
     inLovingMemory: "In liefdevolle herinnering",
     inLovingMemoryOf: "In liefdevolle herinnering aan",
@@ -453,6 +456,8 @@ const nl: Catalog<Messages> = {
     yourPlan: "Je abonnement",
     choose: "Kies {plan}",
     cancelNote: "Opzeggen wanneer je wilt, in twee tikken. Je foto's blijven in het album.",
+    renewalNote: "Abonnementen verlengen automatisch tegen de getoonde prijs tot je opzegt. Zeg minstens 24 uur voor het einde van de periode op om de volgende betaling over te slaan.",
+    renewalNoteStore: "Abonnementen verlengen automatisch tegen de getoonde prijs tot je opzegt. Je betaalt via je App Store- of Google Play-account; zeg in de abonnementsinstellingen minstens 24 uur voor het einde van de periode op om de volgende betaling over te slaan.",
     restore: "Aankopen herstellen",
     restoring: "Herstellen…",
     portraits: "portretten",
@@ -507,6 +512,8 @@ const nl: Catalog<Messages> = {
     privacy: "Je privacy",
     privacyBody: "Je album is privé. Je foto's worden alleen gebruikt om je album te tonen en de portretten te maken waar je om vraagt, en nooit om AI te trainen.",
     deleteWarning: "Dit verwijdert alle foto's, je portretten, je abonnement en ongebruikte credits. Dit kan niet ongedaan worden gemaakt.",
+    deleteSubscription: "Je album verwijderen zegt je abonnement niet op. Zeg het eerst op, anders wordt het steeds verlengd.",
+    deleteSubscriptionStore: "Je album verwijderen zegt je abonnement niet op. Zeg het eerst op in je App Store- of Google Play-abonnementen, anders wordt het steeds verlengd.",
     deleting: "Verwijderen",
     deleteAll: "Alles verwijderen",
     deleteMine: "Mijn gegevens verwijderen",
@@ -578,6 +585,36 @@ const nl: Catalog<Messages> = {
     off: "Herinneringen staan uit.",
     turnOff: "Uitzetten",
   },
+
+  legal: {
+
+    terms: "Voorwaarden",
+
+    privacy: "Privacybeleid",
+
+  },
+
+
+  consent: {
+
+    title: "Voor je eerste portret",
+
+    body: "Om het portret te schilderen gaat de foto die je kiest (en je eigen foto, als je die toevoegt) naar Googles Gemini-AI.",
+
+    onlyThis: "Hij wordt alleen gebruikt voor het portret dat je vroeg.",
+
+    noTraining: "Wij en Google trainen er geen AI mee.",
+
+    people: "Voeg alleen foto's toe van mensen die dat goedvinden.",
+
+    agree: "Akkoord en doorgaan",
+
+    notNow: "Nu niet",
+
+    declined: "Geen probleem. Portretten hebben dit nodig, je album werkt ook zonder.",
+
+  },
+
 
   push: {
     titleNamed: "Dagelijkse foto van {name}",

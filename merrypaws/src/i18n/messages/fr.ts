@@ -26,6 +26,9 @@ const fr: Catalog<Messages> = {
     play: "Lire",
     pause: "Pause",
     saveHd: "Enregistrer en HD",
+    saving: "Enregistrement…",
+    savedToPhotos: "Enregistrée dans Photos",
+    saveFailed: "Impossible d’enregistrer. Réessayez.",
     keepHd: "Garder en HD",
     inLovingMemory: "En tendre souvenir",
     inLovingMemoryOf: "En tendre souvenir de",
@@ -454,6 +457,8 @@ const fr: Catalog<Messages> = {
     yourPlan: "Votre formule",
     choose: "Choisir {plan}",
     cancelNote: "Résiliable à tout moment en deux gestes. Vos photos restent dans l’album.",
+    renewalNote: "Les abonnements se renouvellent automatiquement au prix affiché jusqu’à résiliation. Résiliez au moins 24 heures avant la fin de la période pour éviter le prochain prélèvement.",
+    renewalNoteStore: "Les abonnements se renouvellent automatiquement au prix affiché jusqu’à résiliation. Le paiement est débité sur votre compte App Store ou Google Play ; résiliez dans ses réglages d’abonnement au moins 24 heures avant la fin de la période pour éviter le prochain prélèvement.",
     restore: "Restaurer les achats",
     restoring: "Restauration…",
     portraits: "portraits",
@@ -508,6 +513,8 @@ const fr: Catalog<Messages> = {
     privacy: "Votre vie privée",
     privacyBody: "Votre album est privé. Vos photos servent uniquement à afficher votre album et à créer les portraits que vous demandez, et nous ne les utilisons jamais pour entraîner une IA.",
     deleteWarning: "Cela supprime toutes les photos, vos portraits, votre formule et les crédits inutilisés. C’est irréversible.",
+    deleteSubscription: "Supprimer votre album ne résilie pas votre abonnement. Résiliez-le d’abord, sinon il continue de se renouveler.",
+    deleteSubscriptionStore: "Supprimer votre album ne résilie pas votre abonnement. Résiliez-le d’abord dans vos abonnements App Store ou Google Play, sinon il continue de se renouveler.",
     deleting: "Suppression",
     deleteAll: "Tout supprimer",
     deleteMine: "Supprimer mes données",
@@ -579,6 +586,36 @@ const fr: Catalog<Messages> = {
     off: "Les rappels sont désactivés.",
     turnOff: "Désactiver",
   },
+
+  legal: {
+
+    terms: "Conditions",
+
+    privacy: "Confidentialité",
+
+  },
+
+
+  consent: {
+
+    title: "Avant votre premier portrait",
+
+    body: "Pour peindre le portrait, la photo choisie (et la vôtre, si vous en ajoutez une) est envoyée à l’IA Gemini de Google.",
+
+    onlyThis: "Elle sert uniquement à créer le portrait demandé.",
+
+    noTraining: "Ni nous ni Google ne l’utilisons pour entraîner une IA.",
+
+    people: "N’ajoutez que des photos de personnes d’accord pour y figurer.",
+
+    agree: "Accepter et continuer",
+
+    notNow: "Pas maintenant",
+
+    declined: "Pas de souci. Les portraits en ont besoin, mais votre album fonctionne sans.",
+
+  },
+
 
   push: {
     titleNamed: "La photo du jour de {name}",

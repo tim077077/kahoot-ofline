@@ -1,5 +1,6 @@
 "use client";
 
+import { nativeShare } from "./native";
 import { BRAND } from "./config";
 
 // Share cards: the portrait as a print on cream paper with its title and a
@@ -231,6 +232,8 @@ export async function shareToInstagramStory(blob: Blob, title: string) {
 // Native share sheet with the file when the platform supports it, otherwise
 // a download.
 export async function shareOrSave(blob: Blob, filename: string, title: string) {
+  const native = await nativeShare(blob, filename, title).catch(() => "web" as const);
+  if (native !== "web") return native;
   const file = new File([blob], filename, { type: blob.type });
   try {
     if (navigator.canShare?.({ files: [file] })) {

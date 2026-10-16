@@ -2,9 +2,10 @@
 
 import { CaretLeft, CaretRight, DownloadSimple, Flag, Heart, ShareNetwork, Trash, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import { SaveHd } from "@/components/SaveHd";
 import { displayName, styleTitle } from "@/i18n/app";
 import { useT } from "@/i18n/react";
-import { downloadUrl, type Portrait } from "@/lib/client";
+import type { Portrait } from "@/lib/client";
 import { findStyle } from "@/lib/styles";
 
 export type ReportReason = "inappropriate" | "not_my_pet" | "other";
@@ -144,9 +145,7 @@ export function Viewer({ reel, openId, onClose, onNavigate, onStar, onDelete, on
           <>
             <div className="mt-4 grid grid-cols-2 gap-3">
               {p.unlocked ? (
-                <a href={downloadUrl(p.id)} download className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink">
-                  <DownloadSimple size={20} weight="bold" /> {t("common.saveHd")}
-                </a>
+                <SaveHd id={p.id} className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink" />
               ) : (
                 <button onClick={() => onKeep(p)} className="flex min-h-13 items-center justify-center gap-2 rounded-full bg-accent font-medium text-accent-ink active:scale-[0.98]">
                   <DownloadSimple size={20} weight="bold" /> {p.memorial ? t("common.keepHd") : t("common.saveHd")}

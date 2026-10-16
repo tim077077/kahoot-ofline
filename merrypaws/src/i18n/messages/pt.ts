@@ -25,6 +25,9 @@ const pt: Catalog<Messages> = {
     play: "Reproduzir",
     pause: "Pausa",
     saveHd: "Guardar em HD",
+    saving: "A guardar…",
+    savedToPhotos: "Guardada em Fotografias",
+    saveFailed: "Não foi possível guardar. Tente outra vez.",
     keepHd: "Guardar em HD",
     inLovingMemory: "Em memória com carinho",
     inLovingMemoryOf: "Em memória com carinho de",
@@ -453,6 +456,8 @@ const pt: Catalog<Messages> = {
     yourPlan: "O seu plano",
     choose: "Escolher {plan}",
     cancelNote: "Cancele quando quiser em dois toques. As suas fotografias ficam no álbum.",
+    renewalNote: "Os planos renovam-se automaticamente ao preço indicado até cancelar. Cancele pelo menos 24 horas antes do fim do período para evitar a próxima cobrança.",
+    renewalNoteStore: "Os planos renovam-se automaticamente ao preço indicado até cancelar. O pagamento é cobrado na sua conta da App Store ou do Google Play; cancele nas definições de subscrições pelo menos 24 horas antes do fim do período para evitar a próxima cobrança.",
     restore: "Restaurar compras",
     restoring: "A restaurar…",
     portraits: "retratos",
@@ -507,6 +512,8 @@ const pt: Catalog<Messages> = {
     privacy: "A sua privacidade",
     privacyBody: "O seu álbum é privado. As fotografias só servem para mostrar o álbum e criar os retratos que pede, e nunca são usadas para treinar IA.",
     deleteWarning: "Isto apaga todas as fotografias, os retratos, o plano e os créditos por usar. Não pode ser desfeito.",
+    deleteSubscription: "Apagar o álbum não cancela o seu plano. Cancele-o primeiro, ou continua a renovar-se.",
+    deleteSubscriptionStore: "Apagar o álbum não cancela o seu plano. Cancele-o primeiro nas subscrições da App Store ou do Google Play, ou continua a renovar-se.",
     deleting: "A apagar",
     deleteAll: "Apagar tudo",
     deleteMine: "Apagar os meus dados",
@@ -578,6 +585,36 @@ const pt: Catalog<Messages> = {
     off: "Os lembretes estão desativados.",
     turnOff: "Desativar",
   },
+
+  legal: {
+
+    terms: "Termos",
+
+    privacy: "Privacidade",
+
+  },
+
+
+  consent: {
+
+    title: "Antes do seu primeiro retrato",
+
+    body: "Para pintar o retrato, a fotografia que escolher (e a sua, se adicionar uma) é enviada para a IA Gemini da Google.",
+
+    onlyThis: "É usada apenas para criar o retrato que pediu.",
+
+    noTraining: "Nem nós nem a Google a usamos para treinar IA.",
+
+    people: "Adicione apenas fotografias de pessoas que concordem.",
+
+    agree: "Aceitar e continuar",
+
+    notNow: "Agora não",
+
+    declined: "Sem problema. Os retratos precisam disto, mas o álbum funciona sem.",
+
+  },
+
 
   push: {
     titleNamed: "A fotografia do dia de {name}",

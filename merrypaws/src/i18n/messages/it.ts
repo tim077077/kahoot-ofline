@@ -24,6 +24,9 @@ const it: Catalog<Messages> = {
     play: "Riproduci",
     pause: "Pausa",
     saveHd: "Salva in HD",
+    saving: "Salvataggio…",
+    savedToPhotos: "Salvata in Foto",
+    saveFailed: "Impossibile salvare. Riprova.",
     keepHd: "Tienilo in HD",
     inLovingMemory: "In ricordo con affetto",
     inLovingMemoryOf: "In ricordo con affetto di",
@@ -452,6 +455,8 @@ const it: Catalog<Messages> = {
     yourPlan: "Il tuo piano",
     choose: "Scegli {plan}",
     cancelNote: "Annulli quando vuoi in due tocchi. Le tue foto restano nell'album.",
+    renewalNote: "I piani si rinnovano automaticamente al prezzo indicato finché non annulli. Annulla almeno 24 ore prima della fine del periodo per evitare il prossimo addebito.",
+    renewalNoteStore: "I piani si rinnovano automaticamente al prezzo indicato finché non annulli. Il pagamento è addebitato sul tuo account App Store o Google Play; annulla nelle impostazioni degli abbonamenti almeno 24 ore prima della fine del periodo per evitare il prossimo addebito.",
     restore: "Ripristina acquisti",
     restoring: "Ripristino…",
     portraits: "ritratti",
@@ -506,6 +511,8 @@ const it: Catalog<Messages> = {
     privacy: "La tua privacy",
     privacyBody: "Il tuo album è privato. Le tue foto servono solo a mostrare il tuo album e creare i ritratti che chiedi, e non le usiamo mai per addestrare l'IA.",
     deleteWarning: "Questo elimina tutte le foto, i tuoi ritratti, il piano e i crediti non usati. Non si può annullare.",
+    deleteSubscription: "Eliminare l'album non annulla il tuo piano. Annullalo prima, altrimenti continua a rinnovarsi.",
+    deleteSubscriptionStore: "Eliminare l'album non annulla il tuo piano. Annullalo prima negli abbonamenti di App Store o Google Play, altrimenti continua a rinnovarsi.",
     deleting: "Eliminazione",
     deleteAll: "Elimina tutto",
     deleteMine: "Elimina i miei dati",
@@ -577,6 +584,36 @@ const it: Catalog<Messages> = {
     off: "I promemoria sono disattivati.",
     turnOff: "Disattiva",
   },
+
+  legal: {
+
+    terms: "Termini",
+
+    privacy: "Privacy",
+
+  },
+
+
+  consent: {
+
+    title: "Prima del tuo primo ritratto",
+
+    body: "Per dipingere il ritratto, la foto che scegli (e la tua, se ne aggiungi una) viene inviata all'IA Gemini di Google.",
+
+    onlyThis: "Serve solo a creare il ritratto che hai chiesto.",
+
+    noTraining: "Né noi né Google la usiamo per addestrare l'IA.",
+
+    people: "Aggiungi solo foto di persone che sono d'accordo.",
+
+    agree: "Accetta e continua",
+
+    notNow: "Non ora",
+
+    declined: "Nessun problema. I ritratti ne hanno bisogno, ma l'album funziona anche senza.",
+
+  },
+
 
   push: {
     titleNamed: "La foto del giorno di {name}",

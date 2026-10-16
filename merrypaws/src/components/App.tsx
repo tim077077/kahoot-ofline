@@ -11,6 +11,7 @@ import { PackTab } from "@/components/Pack";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { BackupNudge, BackupSheet, ReminderCard, type BackupMode } from "@/components/Safety";
 import { LooksSheet, PlansSheet, PricesContext, YouTab, type Busy, type SheetReason } from "@/components/Plans";
+import { ConsentSheet } from "@/components/Consent";
 import { ShareSheet } from "@/components/ShareSheet";
 import { Studio, type ShootRequest, type ShootResult } from "@/components/Studio";
 import { Viewer, type ReportReason } from "@/components/Viewer";
@@ -42,7 +43,9 @@ import {
 } from "@/lib/client";
 import { makeCollageCard, makePhotoStoryCard, shareToInstagramStory } from "@/lib/share";
 import { findLook, type LookId } from "@/lib/looks";
-import { disableReminder, registerWorker, syncReminder } from "@/lib/reminders";
+import { promptIndex } from "@/lib/dailyPrompts";
+import { tap } from "@/lib/native";
+import { disableReminder, registerWorker, syncReminder, updateLocalReminders } from "@/lib/reminders";
 import type { StyleId } from "@/lib/styles";
 
 type Tab = "album" | "pack" | "studio" | "you";
@@ -106,6 +109,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   const [looksOpen, setLooksOpen] = useState(false);
   const [picked, setPicked] = useState<File[] | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
+  // Waiting on the AI consent sheet: resolves with the answer.
+  const [consentAsk, setConsentAsk] = useState<((ok: boolean) => void) | null>(null);
   const [prices, setPrices] = useState<PriceList>(LIST_PRICES);
   const pricesAsked = useRef(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -471,7 +476,15 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
     void refresh(token);
   }
 
+  function askConsent() {
+    return new Promise<boolean>((resolve) => setConsentAsk(() => resolve));
+  }
+
   async function shoot(req: ShootRequest, onPhase: (p: UploadPhase) => void): Promise<ShootResult> {
+    if (!storage.aiConsent()) {
+      if (!(await askConsent())) return { ok: false, error: t("consent.declined"), code: "consent" };
+      storage.setAiConsent();
+    }
     const form = new FormData();
     form.append("pet", req.pet, "pet.jpg");
     if (req.owner) form.append("owner", req.owner, "owner.jpg");
@@ -532,6 +545,24 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
     setToast(t("toasts.hdReady"));
   }
 
+  // In the apps the daily reminder is scheduled on the phone, so it needs the
+  // words (in the album's language) and whether today's photo is in.
+  const reminderName = profile?.petName;
+  const reminderOff = Boolean(profile?.memorial);
+  const doneToday = Boolean(daily?.doneToday);
+  useEffect(() => {
+    const prompts = t.list("daily.prompts");
+    updateLocalReminders({
+      title: named(t, "push.title", reminderName),
+      body: (day) => {
+        const prompt = prompts[promptIndex(day)] ?? "";
+        return t("push.body", { prompt: t.locale === "de" ? prompt : prompt.charAt(0).toLowerCase() + prompt.slice(1) });
+      },
+      doneToday,
+      off: reminderOff,
+    });
+  }, [t, reminderName, reminderOff, doneToday, reminderHour]);
+
   async function buy(purchase: Purchase) {
     if (!paymentsOn) return setToast(t("errors.paymentsOff"));
     setBusy(purchase.kind === "plan" ? `${purchase.tier}-${purchase.interval}` : purchase.pack);
@@ -559,6 +590,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   // moment later, so wait for the server to see them.
   async function purchased(purchase: Purchase, tok: string | null, unlockId: string | undefined) {
     const before = account?.credits ?? 0;
+    tap(true);
     setTab(purchase.kind === "plan" ? "album" : unlockId ? "studio" : "you");
     setToast(purchase.kind === "plan" ? t("toasts.welcomeMember") : t("toasts.paymentReceived"));
     if (unlockId) setOpenPortrait(unlockId);
@@ -1001,6 +1033,14 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
         )}
 
         {sharing && <ShareSheet portrait={sharing} onClose={() => setSharing(null)} />}
+        {consentAsk && (
+          <ConsentSheet
+            onAnswer={(ok) => {
+              consentAsk(ok);
+              setConsentAsk(null);
+            }}
+          />
+        )}
 
         {milestone && (
           <MilestoneSheet

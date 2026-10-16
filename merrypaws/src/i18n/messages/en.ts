@@ -26,6 +26,9 @@ const en = {
     play: "Play",
     pause: "Pause",
     saveHd: "Save in HD",
+    saving: "Saving…",
+    savedToPhotos: "Saved to Photos",
+    saveFailed: "Couldn't save. Try again.",
     keepHd: "Keep in HD",
     inLovingMemory: "In loving memory",
     inLovingMemoryOf: "In loving memory of",
@@ -455,6 +458,8 @@ const en = {
     yourPlan: "Your plan",
     choose: "Choose {plan}",
     cancelNote: "Cancel anytime in two taps. Your photos stay in the album if you do.",
+    renewalNote: "Plans renew automatically at the price shown until you cancel. Cancel at least 24 hours before the period ends to skip the next charge.",
+    renewalNoteStore: "Plans renew automatically at the price shown until you cancel. Payment is charged to your App Store or Google Play account; cancel in its subscription settings at least 24 hours before the period ends to skip the next charge.",
     restore: "Restore purchases",
     restoring: "Restoring…",
     portraits: "portraits",
@@ -509,6 +514,8 @@ const en = {
     privacy: "Your privacy",
     privacyBody: "Your album is private to you. Your photos are only used to show your album and to make the portraits you ask for, and we never use them to train AI.",
     deleteWarning: "This removes every photo, your portraits, your plan and any unused credits. It can't be undone.",
+    deleteSubscription: "Deleting your album doesn't cancel your plan. Cancel it first, or it keeps renewing.",
+    deleteSubscriptionStore: "Deleting your album doesn't cancel your plan. Cancel it in your App Store or Google Play subscriptions first, or it keeps renewing.",
     deleting: "Deleting",
     deleteAll: "Delete everything",
     deleteMine: "Delete my data",
@@ -582,6 +589,22 @@ const en = {
   },
 
   // Sent by the server: the daily reminder and the emails.
+  legal: {
+    terms: "Terms",
+    privacy: "Privacy policy",
+  },
+
+  consent: {
+    title: "Before your first portrait",
+    body: "To paint a portrait, the photo you pick (and your own photo, if you add one) is sent to Google's Gemini AI.",
+    onlyThis: "It's used only to make the portrait you asked for.",
+    noTraining: "Neither we nor Google use it to train AI.",
+    people: "Only add photos of people who are happy to be in them.",
+    agree: "Agree and continue",
+    notNow: "Not now",
+    declined: "No problem. Portraits need this, but your album works without it.",
+  },
+
   push: {
     titleNamed: "{name}'s photo of the day",
     titleAnon: "Photo of the day",

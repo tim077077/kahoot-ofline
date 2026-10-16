@@ -25,6 +25,9 @@ const de: Catalog<Messages> = {
     play: "Abspielen",
     pause: "Pause",
     saveHd: "In HD speichern",
+    saving: "Wird gespeichert…",
+    savedToPhotos: "In Fotos gespeichert",
+    saveFailed: "Speichern ging nicht. Versuch es noch mal.",
     keepHd: "In HD behalten",
     inLovingMemory: "In liebevoller Erinnerung",
     inLovingMemoryOf: "In liebevoller Erinnerung an",
@@ -453,6 +456,8 @@ const de: Catalog<Messages> = {
     yourPlan: "Dein Tarif",
     choose: "{plan} wählen",
     cancelNote: "Jederzeit mit zwei Tipps kündbar. Deine Fotos bleiben dann im Album.",
+    renewalNote: "Abos verlängern sich automatisch zum angezeigten Preis, bis du kündigst. Kündige spätestens 24 Stunden vor Ende des Zeitraums, damit nicht erneut abgebucht wird.",
+    renewalNoteStore: "Abos verlängern sich automatisch zum angezeigten Preis, bis du kündigst. Bezahlt wird über dein App-Store- oder Google-Play-Konto; kündige in den Abo-Einstellungen spätestens 24 Stunden vor Ende des Zeitraums, damit nicht erneut abgebucht wird.",
     restore: "Käufe wiederherstellen",
     restoring: "Wird wiederhergestellt…",
     portraits: "Porträts",
@@ -507,6 +512,8 @@ const de: Catalog<Messages> = {
     privacy: "Deine Privatsphäre",
     privacyBody: "Dein Album ist privat. Deine Fotos werden nur genutzt, um dein Album zu zeigen und die Porträts zu machen, um die du bittest, und wir trainieren nie KI damit.",
     deleteWarning: "Das entfernt alle Fotos, deine Porträts, deinen Tarif und ungenutzte Credits. Es lässt sich nicht rückgängig machen.",
+    deleteSubscription: "Wenn du dein Album löschst, wird dein Abo nicht gekündigt. Kündige es zuerst, sonst verlängert es sich weiter.",
+    deleteSubscriptionStore: "Wenn du dein Album löschst, wird dein Abo nicht gekündigt. Kündige es zuerst in deinen App-Store- oder Google-Play-Abos, sonst verlängert es sich weiter.",
     deleting: "Wird gelöscht",
     deleteAll: "Alles löschen",
     deleteMine: "Meine Daten löschen",
@@ -578,6 +585,36 @@ const de: Catalog<Messages> = {
     off: "Erinnerungen sind aus.",
     turnOff: "Ausschalten",
   },
+
+  legal: {
+
+    terms: "AGB",
+
+    privacy: "Datenschutz",
+
+  },
+
+
+  consent: {
+
+    title: "Vor deinem ersten Porträt",
+
+    body: "Für das Porträt wird das Foto, das du auswählst (und dein eigenes, falls du eins hinzufügst), an Googles Gemini-KI geschickt.",
+
+    onlyThis: "Es wird nur für das Porträt verwendet, das du dir wünschst.",
+
+    noTraining: "Weder wir noch Google trainieren damit KI.",
+
+    people: "Füge nur Fotos von Menschen hinzu, die damit einverstanden sind.",
+
+    agree: "Zustimmen und weiter",
+
+    notNow: "Nicht jetzt",
+
+    declined: "Kein Problem. Porträts brauchen das, dein Album funktioniert auch ohne.",
+
+  },
+
 
   push: {
     titleNamed: "Das Foto des Tages von {name}",

@@ -18,10 +18,17 @@ export function shareOrigin(): string {
   return API_BASE || window.location.origin;
 }
 
+// The privacy policy and terms always open on the site.
+export function legalUrl(page: "privacy" | "terms"): string {
+  return `${API_BASE}/${page}`;
+}
+
 const TOKEN_KEY = "pp_token";
 const DEVICE_KEY = "pp_device";
 const PROFILE_KEY = "pp_profile";
 const REEL_KEY = "pp_reel";
+// When this phone agreed to its photos going to the AI that paints portraits.
+const AI_CONSENT_KEY = "pp_ai_consent";
 const MAX_REEL = 40;
 
 export type PetKind = "dog" | "cat" | "other";
@@ -136,9 +143,11 @@ export const storage = {
   reel: () => read<Portrait[]>(REEL_KEY, []),
   // Newest first; the oldest previews fall off so storage stays small.
   setReel: (reel: Portrait[]) => write(REEL_KEY, reel.slice(0, MAX_REEL)),
+  aiConsent: () => read<string | null>(AI_CONSENT_KEY, null),
+  setAiConsent: () => write(AI_CONSENT_KEY, new Date().toISOString()),
   // "Delete my data": everything except the device id, which keeps the free
   // portrait from resetting.
-  clear: () => [TOKEN_KEY, PROFILE_KEY, REEL_KEY].forEach((k) => write(k, null)),
+  clear: () => [TOKEN_KEY, PROFILE_KEY, REEL_KEY, AI_CONSENT_KEY].forEach((k) => write(k, null)),
 };
 
 export function api(path: string, init: RequestInit = {}, token?: string | null) {

@@ -27,6 +27,9 @@ const pl: Catalog<Messages> = {
     play: "Odtwórz",
     pause: "Pauza",
     saveHd: "Zapisz w HD",
+    saving: "Zapisywanie…",
+    savedToPhotos: "Zapisano w Zdjęciach",
+    saveFailed: "Nie udało się zapisać. Spróbuj ponownie.",
     keepHd: "Zachowaj w HD",
     inLovingMemory: "Z czułą pamięcią",
     inLovingMemoryOf: "Z czułą pamięcią –",
@@ -489,6 +492,8 @@ const pl: Catalog<Messages> = {
     yourPlan: "Twój plan",
     choose: "Wybierz {plan}",
     cancelNote: "Anuluj w dowolnej chwili dwoma stuknięciami. Zdjęcia zostają w albumie.",
+    renewalNote: "Plany odnawiają się automatycznie w podanej cenie, dopóki ich nie anulujesz. Anuluj co najmniej 24 godziny przed końcem okresu, aby uniknąć kolejnej opłaty.",
+    renewalNoteStore: "Plany odnawiają się automatycznie w podanej cenie, dopóki ich nie anulujesz. Płatność obciąża konto App Store lub Google Play; anuluj w ustawieniach subskrypcji co najmniej 24 godziny przed końcem okresu, aby uniknąć kolejnej opłaty.",
     restore: "Przywróć zakupy",
     restoring: "Przywracanie…",
     portraits: "portretów",
@@ -563,6 +568,8 @@ const pl: Catalog<Messages> = {
     privacy: "Twoja prywatność",
     privacyBody: "Twój album jest prywatny. Zdjęcia służą tylko do pokazania albumu i stworzenia portretów, o które prosisz, i nigdy nie używamy ich do trenowania AI.",
     deleteWarning: "To usuwa wszystkie zdjęcia, portrety, plan i niewykorzystane kredyty. Nie da się tego cofnąć.",
+    deleteSubscription: "Usunięcie albumu nie anuluje planu. Najpierw go anuluj, inaczej będzie się odnawiał.",
+    deleteSubscriptionStore: "Usunięcie albumu nie anuluje planu. Najpierw anuluj go w subskrypcjach App Store lub Google Play, inaczej będzie się odnawiał.",
     deleting: "Usuwanie",
     deleteAll: "Usuń wszystko",
     deleteMine: "Usuń moje dane",
@@ -634,6 +641,36 @@ const pl: Catalog<Messages> = {
     off: "Przypomnienia są wyłączone.",
     turnOff: "Wyłącz",
   },
+
+  legal: {
+
+    terms: "Regulamin",
+
+    privacy: "Polityka prywatności",
+
+  },
+
+
+  consent: {
+
+    title: "Przed pierwszym portretem",
+
+    body: "Aby namalować portret, wybrane zdjęcie (i Twoje, jeśli je dodasz) trafia do sztucznej inteligencji Gemini od Google.",
+
+    onlyThis: "Służy tylko do stworzenia zamówionego portretu.",
+
+    noTraining: "Ani my, ani Google nie trenujemy na nim AI.",
+
+    people: "Dodawaj tylko zdjęcia osób, które się na to zgadzają.",
+
+    agree: "Zgadzam się, dalej",
+
+    notNow: "Nie teraz",
+
+    declined: "Nie ma sprawy. Portrety tego wymagają, ale album działa bez tego.",
+
+  },
+
 
   push: {
     titleNamed: "Zdjęcie dnia – {name}",

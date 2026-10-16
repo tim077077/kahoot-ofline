@@ -3,8 +3,10 @@
 import { Check, FilmStrip, Lock } from "@phosphor-icons/react";
 import { createContext, useContext, useState } from "react";
 import { SafetySection } from "@/components/Safety";
+import { LegalLinks } from "@/components/Legal";
 import { Sheet } from "@/components/Sheet";
 import { shareOrigin, type Account, type PetKind } from "@/lib/client";
+import { isNative } from "@/lib/native";
 import { lookLabel, money, named, tierBlurb, tierName } from "@/i18n/app";
 import { isLocale, LOCALE_NAMES, LOCALES } from "@/i18n/core";
 import { useT, type T } from "@/i18n/react";
@@ -110,6 +112,8 @@ export function PlanCards({ current, onBuy, onRestore, busy }: { current: Tier; 
         })}
       </div>
       <p className="mt-3 text-center text-sm text-muted">{t("plans.cancelNote")}</p>
+      <p className="mt-2 text-center text-xs text-muted">{t(isNative() ? "plans.renewalNoteStore" : "plans.renewalNote")}</p>
+      <LegalLinks className="mt-1" />
       {onRestore && (
         <button onClick={onRestore} disabled={busy !== null} className="mt-1 min-h-11 w-full text-sm text-muted underline underline-offset-4 disabled:opacity-60">
           {busy === "restore" ? t("plans.restoring") : t("plans.restore")}
@@ -386,9 +390,18 @@ export function YouTab({ account, token, petName, kind, onBuy, busy, onProfile, 
 
       <h2 className="font-display mt-10 text-xl italic">{t("you.privacy")}</h2>
       <p className="mt-2 text-muted">{t("you.privacyBody")}</p>
+      <LegalLinks className="mt-2 !text-left" />
       {confirmDelete ? (
         <div className="mt-4 rounded-2xl bg-card p-4">
           <p>{t("you.deleteWarning")}</p>
+          {tier !== "free" && (
+            <div className="mt-3 rounded-xl border border-accent/40 p-3">
+              <p className="font-medium">{t(isNative() ? "you.deleteSubscriptionStore" : "you.deleteSubscription")}</p>
+              <button onClick={onManage} className="mt-2 min-h-11 text-accent underline underline-offset-4">
+                {t("you.manage")}
+              </button>
+            </div>
+          )}
           <div className="mt-3 flex gap-3">
             <button
               onClick={async () => {
