@@ -23,6 +23,8 @@ When you're done, open `https://your-site/api/health` on your phone. Every line 
    | Build command | `npx opennextjs-cloudflare build` |
    | Deploy command | `npx opennextjs-cloudflare deploy` |
 
+   Then under **Settings → Build → Branch control**, set the production branch to the branch with this code. Cloudflare starts on the repo's default branch, and a retry rebuilds the same branch, so after changing it, push a commit to start a fresh build.
+
 3. Don't deploy yet. Add the variables from the steps below first. There are two kinds:
    - **Build variables** (Settings → Build → Variables): everything starting with `NEXT_PUBLIC_`. They're baked into the app when it builds, so a change needs a new build.
    - **Secrets** (Settings → Variables and Secrets, type *Secret*): everything else.
