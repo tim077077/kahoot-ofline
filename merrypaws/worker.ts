@@ -15,15 +15,25 @@ type Env = { CRON_SECRET?: string; NEXT_PUBLIC_SITE_URL?: string } & Record<stri
 // them. Swap each for its value before Next.js runs; OpenNext copies every
 // string in env into process.env. Read once per isolate.
 type StoreSecret = { get(): Promise<string> };
-const isStoreSecret = (v: unknown): v is StoreSecret =>
-  typeof v === "object" && v !== null && typeof (v as StoreSecret).get === "function" && !("fetch" in v) && !("put" in v);
+// Bindings are RPC proxies that claim to have every method, so test by name:
+// anything that isn't a string or one of the real bindings is a secret.
+const NOT_SECRETS = new Set(["ASSETS", "IMAGES"]);
+const isStoreSecret = (k: string, v: unknown): v is StoreSecret =>
+  !NOT_SECRETS.has(k) && typeof v === "object" && v !== null && typeof (v as StoreSecret).get === "function";
 let resolved: Promise<Record<string, string>> | null = null;
 
 async function withSecrets(env: Env): Promise<Env> {
   resolved ??= Promise.all(
     Object.entries(env)
-      .filter(([, v]) => isStoreSecret(v))
-      .map(async ([k, v]) => [k, await (v as StoreSecret).get().catch(() => "")] as const),
+      .filter(([k, v]) => isStoreSecret(k, v))
+      .map(async ([k, v]) => {
+        try {
+          return [k, await (v as StoreSecret).get()] as const;
+        } catch (err) {
+          console.error(JSON.stringify({ event: "secret_unreadable", name: k, error: String(err) }));
+          return [k, ""] as const;
+        }
+      }),
   ).then((pairs) => Object.fromEntries(pairs.filter(([, v]) => v)));
   const secrets = await resolved.catch(() => {
     resolved = null;
