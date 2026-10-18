@@ -20,6 +20,25 @@
   "triggers": {
     "crons": ["0 * * * *"]
   },
+  // Secrets kept in the account's Secrets Store (Storage & databases → Secrets
+  // Store). worker.ts reads them into process.env. A secret added there needs a
+  // line here too; plain Worker secrets (Settings → Variables and Secrets) need nothing.
+  "secrets_store_secrets": [
+    { "binding": "CRON_SECRET", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "CRON_SECRET" },
+    { "binding": "GEMINI_API_KEY", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "GEMINI_API_KEY" },
+    { "binding": "RESEND_API_KEY", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "RESEND_API_KEY" },
+    { "binding": "S3_ACCESS_KEY_ID", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_ACCESS_KEY_ID" },
+    { "binding": "S3_BUCKET", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_BUCKET" },
+    { "binding": "S3_ENDPOINT", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_ENDPOINT" },
+    { "binding": "S3_REGION", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_REGION" },
+    { "binding": "UPSTASH_REDIS_REST_TOKEN", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "UPSTASH_REDIS_REST_TOKEN" },
+    { "binding": "UPSTASH_REDIS_REST_URL", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "UPSTASH_REDIS_REST_URL" },
+    { "binding": "VAPID_PRIVATE_KEY", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "VAPID_PRIVATE_KEY" }
+  ],
+  "vars": {
+    // Read at run time by the hourly reminder timer.
+    "NEXT_PUBLIC_SITE_URL": "https://paw-pictures.timoteiculda07.workers.dev"
+  },
   "observability": {
     "enabled": true
   }

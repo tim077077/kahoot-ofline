@@ -8,7 +8,29 @@
 // @ts-ignore
 import { default as handler } from "./.open-next/worker.js";
 
-type Env = { CRON_SECRET?: string; NEXT_PUBLIC_SITE_URL?: string };
+type Env = { CRON_SECRET?: string; NEXT_PUBLIC_SITE_URL?: string } & Record<string, unknown>;
+
+// Secrets from the account's Secrets Store arrive as bindings you have to ask
+// for (`await env.X.get()`), not strings, so the app's process.env wouldn't see
+// them. Swap each for its value before Next.js runs; OpenNext copies every
+// string in env into process.env. Read once per isolate.
+type StoreSecret = { get(): Promise<string> };
+const isStoreSecret = (v: unknown): v is StoreSecret =>
+  typeof v === "object" && v !== null && typeof (v as StoreSecret).get === "function" && !("fetch" in v) && !("put" in v);
+let resolved: Promise<Record<string, string>> | null = null;
+
+async function withSecrets(env: Env): Promise<Env> {
+  resolved ??= Promise.all(
+    Object.entries(env)
+      .filter(([, v]) => isStoreSecret(v))
+      .map(async ([k, v]) => [k, await (v as StoreSecret).get().catch(() => "")] as const),
+  ).then((pairs) => Object.fromEntries(pairs.filter(([, v]) => v)));
+  const secrets = await resolved.catch(() => {
+    resolved = null;
+    return {};
+  });
+  return { ...env, ...secrets };
+}
 
 // The Android and iOS apps (Capacitor) load the client from these origins and
 // call /api/* here, so those calls need CORS. Auth is a bearer token, never a
@@ -20,7 +42,8 @@ const CORS = {
   "Access-Control-Max-Age": "86400",
 };
 
-async function fetchWithCors(request: Request, env: Env, ctx: unknown): Promise<Response> {
+async function fetchWithCors(request: Request, rawEnv: Env, ctx: unknown): Promise<Response> {
+  const env = await withSecrets(rawEnv);
   const origin = request.headers.get("origin") ?? "";
   const isApi = new URL(request.url).pathname.startsWith("/api/");
   if (!isApi || !APP_ORIGINS.has(origin)) return handler.fetch(request, env, ctx);
@@ -35,7 +58,8 @@ async function fetchWithCors(request: Request, env: Env, ctx: unknown): Promise<
 const worker = {
   fetch: fetchWithCors,
 
-  async scheduled(_event: unknown, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
+  async scheduled(_event: unknown, rawEnv: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
+    const env = await withSecrets(rawEnv);
     const base = (env.NEXT_PUBLIC_SITE_URL || "https://localhost").replace(/\/$/, "");
     const request = new Request(`${base}/api/push/cron`, { headers: { authorization: `Bearer ${env.CRON_SECRET ?? ""}` } });
     const res: Response = await handler.fetch(request, env, ctx);
