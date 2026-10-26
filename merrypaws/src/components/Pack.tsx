@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRinging, Copy, Heart, PawPrint, Smiley, UserPlus } from "@phosphor-icons/react";
+import { ArrowClockwise, BellRinging, Copy, Heart, PawPrint, Smiley, UserPlus } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { Polaroid } from "@/components/Vintage";
@@ -13,7 +13,10 @@ import type { LookId } from "@/lib/looks";
 const REACTION_ICONS: Record<Reaction, typeof PawPrint> = { paw: PawPrint, heart: Heart, laugh: Smiley };
 
 type Props = {
+  // null until the server answers; unreachable when it couldn't.
   cards: PackCard[] | null;
+  unreachable: boolean;
+  onReload: () => void;
   code: string | null;
   look: LookId;
   petName: string;
@@ -30,7 +33,7 @@ const NOTIFY_LATER_KEY = "pp_pack_notify_later";
 
 // Today in the pack. Finite on purpose: one photo per pet per day, then
 // you're done, like opening a letter rather than scrolling a feed.
-export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact, onToggleShare, onAddToday, notify, onNotify }: Props) {
+export function PackTab({ cards, unreachable, onReload, code, look, petName, onInvite, onJoin, onReact, onToggleShare, onAddToday, notify, onNotify }: Props) {
   const t = useT();
   const [joinCode, setJoinCode] = useState("");
   const [joinMsg, setJoinMsg] = useState<string | null>(null);
@@ -109,7 +112,17 @@ export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact,
         </div>
       )}
 
-      {friends.length === 0 ? (
+      {cards === null ? (
+        unreachable && (
+          <div className="mt-8 text-center" role="status">
+            <p className="font-display text-2xl">{t("pack.unreachable")}</p>
+            <p className="mx-auto mt-2 max-w-[30ch] text-muted">{t("album.unreachableBody")}</p>
+            <button onClick={onReload} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-ink/25 px-5 text-sm font-medium">
+              <ArrowClockwise size={16} /> {t("common.tryAgain")}
+            </button>
+          </div>
+        )
+      ) : friends.length === 0 ? (
         <div className="mt-8 text-center">
           <p className="font-display text-2xl">{t("pack.empty")}</p>
           <p className="mx-auto mt-2 max-w-[30ch] text-muted">

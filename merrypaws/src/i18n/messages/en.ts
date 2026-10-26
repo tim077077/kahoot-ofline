@@ -319,6 +319,7 @@ const en = {
     addToday: "Add today's photo",
     empty: "Your pack is empty",
     emptyBody: "Invite a friend with a pet. You'll see each other's photo of the day and can leave a paw.",
+    unreachable: "Can't reach the pack right now",
     noPhoto: "no photo yet today",
     day: "day {n}",
     grow: "Grow the pack",

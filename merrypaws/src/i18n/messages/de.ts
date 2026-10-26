@@ -318,6 +318,7 @@ const de: Catalog<Messages> = {
     addToday: "Heutiges Foto hinzufügen",
     empty: "Dein Rudel ist leer",
     emptyBody: "Lade einen Freund mit Tier ein. Ihr seht gegenseitig euer Foto des Tages und könnt eine Pfote dalassen.",
+    unreachable: "Das Rudel ist gerade nicht erreichbar",
     noPhoto: "heute noch kein Foto",
     day: "Tag {n}",
     grow: "Das Rudel vergrößern",

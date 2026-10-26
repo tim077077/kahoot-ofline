@@ -319,6 +319,7 @@ const fr: Catalog<Messages> = {
     addToday: "Ajouter la photo du jour",
     empty: "Votre meute est vide",
     emptyBody: "Invitez un ami qui a un animal. Vous verrez la photo du jour de l’autre et pourrez laisser une patte.",
+    unreachable: "Impossible d’ouvrir la meute pour le moment",
     noPhoto: "pas encore de photo aujourd’hui",
     day: "jour {n}",
     grow: "Agrandir la meute",

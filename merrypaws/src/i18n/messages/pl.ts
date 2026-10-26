@@ -352,6 +352,7 @@ const pl: Catalog<Messages> = {
     addToday: "Dodaj dzisiejsze zdjęcie",
     empty: "Twoje stado jest puste",
     emptyBody: "Zaproś znajomego, który ma zwierzaka. Będziecie widzieć swoje codzienne zdjęcia i zostawiać łapki.",
+    unreachable: "Nie można teraz otworzyć stada",
     noPhoto: "dziś jeszcze bez zdjęcia",
     day: "dzień {n}",
     grow: "Powiększ stado",

@@ -102,6 +102,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   // Whether the album list has come back, so "no photos yet" is never shown
   // for an album that just couldn't be reached.
   const [photosLoad, setPhotosLoad] = useState<"loading" | "ok" | "failed">("loading");
+  const [packFailed, setPackFailed] = useState(false);
   const [pending, setPending] = useState<Pending[]>([]);
   const [batch, setBatch] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
   const [tab, setTab] = useState<Tab>("album");
@@ -186,6 +187,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   const loadPack = useCallback(async (tok: string | null) => {
     if (!tok) return;
     const res = await api(`/api/pack?day=${localDay()}`, {}, tok).catch(() => null);
+    setPackFailed(!res || res.status >= 500);
     if (res?.ok) setPack((await res.json()) as { code: string; cards: PackCard[] });
   }, []);
 
@@ -263,7 +265,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   }, [refresh, loadPhotos, loadDaily, loadPack]);
 
   useEffect(() => {
-    if (photosLoad !== "failed") return;
+    if (photosLoad !== "failed" && !packFailed) return;
     const again = () => document.visibilityState === "visible" && reloadAll();
     window.addEventListener("online", again);
     document.addEventListener("visibilitychange", again);
@@ -271,7 +273,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       window.removeEventListener("online", again);
       document.removeEventListener("visibilitychange", again);
     };
-  }, [photosLoad, reloadAll]);
+  }, [photosLoad, packFailed, reloadAll]);
 
   // Friends' reactions as native push in the apps (see lib/appPush.ts).
   useEffect(() => {
@@ -888,6 +890,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
           {tab === "pack" && (
             <PackTab
               cards={pack?.cards ?? null}
+              unreachable={packFailed && !pack}
+              onReload={reloadAll}
               code={pack?.code ?? null}
               look={look}
               petName={profile.petName}

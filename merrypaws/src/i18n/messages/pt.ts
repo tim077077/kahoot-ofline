@@ -318,6 +318,7 @@ const pt: Catalog<Messages> = {
     addToday: "Adicionar a fotografia de hoje",
     empty: "A sua matilha está vazia",
     emptyBody: "Convide um amigo com um animal. Vão ver a fotografia do dia um do outro e podem deixar uma pata.",
+    unreachable: "Não é possível abrir a matilha agora",
     noPhoto: "ainda sem fotografia hoje",
     day: "dia {n}",
     grow: "Faça crescer a matilha",

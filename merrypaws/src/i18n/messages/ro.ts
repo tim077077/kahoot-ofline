@@ -332,6 +332,7 @@ const ro: Catalog<Messages> = {
     addToday: "Adaugă fotografia de azi",
     empty: "Haita ta e goală",
     emptyBody: "Invită un prieten cu un animal. Vă vedeți unul altuia fotografia zilei și puteți lăsa o lăbuță.",
+    unreachable: "Haita nu poate fi deschisă acum",
     noPhoto: "încă nicio fotografie azi",
     day: "ziua {n}",
     grow: "Fă haita mai mare",

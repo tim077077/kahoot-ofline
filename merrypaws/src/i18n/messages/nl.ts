@@ -318,6 +318,7 @@ const nl: Catalog<Messages> = {
     addToday: "Foto van vandaag toevoegen",
     empty: "Je roedel is leeg",
     emptyBody: "Nodig een vriend met een huisdier uit. Jullie zien elkaars dagelijkse foto en kunnen een pootje geven.",
+    unreachable: "De roedel is nu niet bereikbaar",
     noPhoto: "nog geen foto vandaag",
     day: "dag {n}",
     grow: "Laat de roedel groeien",

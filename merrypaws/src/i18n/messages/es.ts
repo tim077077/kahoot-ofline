@@ -318,6 +318,7 @@ const es: Catalog<Messages> = {
     addToday: "Añadir la foto de hoy",
     empty: "Tu manada está vacía",
     emptyBody: "Invita a un amigo con mascota. Veréis la foto del día del otro y podréis dejar una pata.",
+    unreachable: "Ahora mismo no se puede abrir la manada",
     noPhoto: "aún no hay foto hoy",
     day: "día {n}",
     grow: "Haz crecer la manada",

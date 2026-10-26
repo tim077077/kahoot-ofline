@@ -317,6 +317,7 @@ const it: Catalog<Messages> = {
     addToday: "Aggiungi la foto di oggi",
     empty: "Il tuo branco è vuoto",
     emptyBody: "Invita un amico con un animale. Vedrete la foto del giorno l'uno dell'altro e potrete lasciare una zampa.",
+    unreachable: "Al momento il branco non è raggiungibile",
     noPhoto: "ancora nessuna foto oggi",
     day: "giorno {n}",
     grow: "Fai crescere il branco",
