@@ -18,7 +18,7 @@ type Props = {
   look: LookId;
   petName: string;
   onInvite: () => void;
-  onJoin: (code: string) => Promise<string | null>;
+  onJoin: (code: string) => Promise<{ text: string; done: boolean }>;
   onReact: (friend: string, reaction: Reaction) => void;
   onToggleShare: (shared: boolean) => void;
   onAddToday: () => void;
@@ -34,6 +34,7 @@ export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact,
   const t = useT();
   const [joinCode, setJoinCode] = useState("");
   const [joinMsg, setJoinMsg] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const [later, setLater] = useState(() => {
     try {
@@ -151,9 +152,13 @@ export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact,
           className="mt-3 flex gap-2"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!joinCode.trim()) return;
-            setJoinMsg(await onJoin(joinCode.trim().toUpperCase()));
-            setJoinCode("");
+            if (!joinCode.trim() || joining) return;
+            setJoining(true);
+            const { text, done } = await onJoin(joinCode.trim().toUpperCase());
+            setJoining(false);
+            setJoinMsg(text);
+            // A typo stays in the box so it can be fixed instead of retyped.
+            if (done) setJoinCode("");
           }}
         >
           <label htmlFor="join-code" className="sr-only">
@@ -162,12 +167,15 @@ export function PackTab({ cards, code, look, petName, onInvite, onJoin, onReact,
           <input
             id="join-code"
             value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.slice(0, 8))}
+            onChange={(e) => {
+              setJoinCode(e.target.value.slice(0, 8));
+              setJoinMsg(null);
+            }}
             placeholder={t("pack.friendsCode")}
             autoCapitalize="characters"
             className="min-h-11 flex-1 rounded-full border border-line bg-card px-4 uppercase tracking-[0.14em] outline-none focus:border-accent"
           />
-          <button type="submit" className="min-h-11 rounded-full bg-ink px-5 text-sm font-medium text-paper">
+          <button type="submit" disabled={joining} className="min-h-11 rounded-full bg-ink px-5 text-sm font-medium text-paper disabled:opacity-60">
             {t("pack.join")}
           </button>
         </form>

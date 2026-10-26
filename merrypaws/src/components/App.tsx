@@ -865,12 +865,14 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
               onInvite={() => void invite()}
               onJoin={async (code) => {
                 const tok = await ensureToken();
-                if (!tok) return t("errors.noServer");
+                if (!tok) return { text: t("errors.noServer"), done: false };
                 const res = await jsonApi("/api/pack/join", "POST", { code }, tok).catch(() => null);
-                const data = (await res?.json().catch(() => ({}))) as { result?: string } | undefined;
+                if (!res) return { text: t("errors.noServer"), done: false };
+                const data = (await res.json().catch(() => ({}))) as { result?: string };
                 await loadPack(tok);
-                const result = data?.result ?? "";
-                return result === "joined" || result === "already" || result === "self" || result === "full" ? t(`join.${result}`) : t("join.noMatch");
+                const result = data.result ?? "";
+                const done = result === "joined" || result === "already";
+                return { text: done || result === "self" || result === "full" ? t(`join.${result}`) : t("join.noMatch"), done };
               }}
               onReact={(friend, r) => void reactTo(friend, r)}
               notify={appPush}
