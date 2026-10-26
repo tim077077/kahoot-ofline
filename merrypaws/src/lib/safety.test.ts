@@ -90,11 +90,11 @@ describe("the daily reminder", () => {
     const sent: Notice[] = [];
     const send = async (_s: typeof sub, n: Notice) => (sent.push(n), "sent" as const);
     await setProfile(store, "a", { petName: "Luna" });
-    await saveReminder(store, "a", sub, 18, "Europe/Bucharest");
-    expect((await getReminder(store, "a"))?.bucket).toBe(utcBucket(18, "Europe/Bucharest"));
-
     // 18:00 in Bucharest on 30 September is 15:00 UTC.
     const six = at("2026-09-30T15:05:00Z");
+    await saveReminder(store, "a", sub, 18, "Europe/Bucharest", six);
+    expect((await getReminder(store, "a"))?.bucket).toBe(15);
+
     expect(await sendDue(store, send, at("2026-09-30T14:05:00Z"))).toMatchObject({ due: 0 });
     expect(await sendDue(store, send, six)).toMatchObject({ sent: 1 });
     expect(sent[0]).toMatchObject({ title: "Luna's photo of the day" });
@@ -109,11 +109,30 @@ describe("the daily reminder", () => {
     const store = new MemoryStore();
     const now = at("2026-09-30T15:05:00Z");
     await setProfile(store, "m", { petName: "Rex", memorial: true });
-    await saveReminder(store, "m", sub, 18, "Europe/Bucharest");
-    await saveReminder(store, "g", sub, 18, "Europe/Bucharest");
+    await saveReminder(store, "m", sub, 18, "Europe/Bucharest", now);
+    await saveReminder(store, "g", sub, 18, "Europe/Bucharest", now);
     const result = await sendDue(store, async () => "gone", now);
     expect(result).toMatchObject({ sent: 0, removed: 1, skipped: 1 });
     expect(await getReminder(store, "g")).toBeNull();
     expect(await getReminder(store, "m")).not.toBeNull();
+  });
+
+  it("follows the clocks back and forward without the app being opened", async () => {
+    const store = new MemoryStore();
+    const sent: string[] = [];
+    const send = async () => (sent.push("x"), "sent" as const);
+    // Saved in summer (UTC+3): 18:00 is 15:00 UTC.
+    await saveReminder(store, "a", sub, 18, "Europe/Bucharest", at("2026-10-20T12:00:00Z"));
+    // After the clocks go back (UTC+2), 15:00 UTC is 17:00 there: too early.
+    expect(await sendDue(store, send, at("2026-10-26T15:05:00Z"))).toMatchObject({ sent: 0, skipped: 1 });
+    expect((await getReminder(store, "a"))?.bucket).toBe(16);
+    expect(await sendDue(store, send, at("2026-10-26T16:05:00Z"))).toMatchObject({ sent: 1 });
+
+    // Saved in winter (16:00 UTC); in spring 16:00 UTC is 19:00: an hour late
+    // still beats none, and it moves to 15 for the next day.
+    const spring = new MemoryStore();
+    await saveReminder(spring, "b", sub, 18, "Europe/Bucharest", at("2027-03-20T12:00:00Z"));
+    expect(await sendDue(spring, send, at("2027-03-29T16:05:00Z"))).toMatchObject({ sent: 1 });
+    expect((await getReminder(spring, "b"))?.bucket).toBe(15);
   });
 });

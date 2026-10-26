@@ -9,7 +9,9 @@ import type { Store } from "./store";
 //
 // Subscriptions sit in 24 buckets by UTC hour so the hourly cron only reads
 // the people due now. The phone re-sends its subscription every time the app
-// opens, which re-buckets it after a clock change or a trip abroad.
+// opens, which re-buckets it after a trip abroad; the cron moves it itself
+// after a clock change, so someone who hasn't opened the app still gets theirs
+// at the right hour.
 
 export type PushSubscriptionJSON = { endpoint: string; keys: { p256dh: string; auth: string } };
 export type Reminder = { sub: PushSubscriptionJSON; hour: number; tz: string; bucket: number };
@@ -53,9 +55,9 @@ export function utcBucket(hour: number, tz: string, now = new Date()) {
   return (hour - offset + 24) % 24;
 }
 
-export async function saveReminder(store: Store, accountId: string, sub: PushSubscriptionJSON, hour: number, tz: string) {
+export async function saveReminder(store: Store, accountId: string, sub: PushSubscriptionJSON, hour: number, tz: string, now = new Date()) {
   const previous = await getReminder(store, accountId);
-  const bucket = utcBucket(hour, tz);
+  const bucket = utcBucket(hour, tz, now);
   if (previous && previous.bucket !== bucket) await store.hdel(`pushq:${previous.bucket}`, accountId);
   const reminder: Reminder = { sub, hour, tz, bucket };
   await store.set(`push:${accountId}`, JSON.stringify(reminder));
@@ -104,8 +106,17 @@ export async function sendDue(store: Store, send: Sender, now = new Date()) {
       continue;
     }
     const clock = localClock(reminder.tz, now);
-    // A clock change since the phone last synced: wait for the right hour.
-    const onTime = Math.abs(clock.hour - reminder.hour) <= 1 || Math.abs(clock.hour - reminder.hour) === 23;
+    // The clocks changed since it was filed: move it to the hour that's right
+    // now. Send if it's on time or an hour late, never early: an early one
+    // waits in its new bucket instead.
+    const right = utcBucket(reminder.hour, reminder.tz, now);
+    if (right !== bucket) {
+      await store.hdel(`pushq:${bucket}`, accountId);
+      await store.hset(`pushq:${right}`, accountId, "1");
+      await store.set(`push:${accountId}`, JSON.stringify({ ...reminder, bucket: right }));
+    }
+    const late = (clock.hour - reminder.hour + 24) % 24;
+    const onTime = late === 0 || late === 1;
     const done = await store.hget(`daily:${accountId}`, clock.day);
     const { memorial } = await getProfile(store, accountId);
     if (!onTime || done || memorial || !(await store.set(`pushsent:${accountId}:${clock.day}`, "1", { ex: 2 * 24 * 3600, nx: true }))) {
