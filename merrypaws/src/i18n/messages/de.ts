@@ -656,6 +656,10 @@ const de: Catalog<Messages> = {
     openAlbum: "Album öffnen",
     safeFooter: "Du bekommst diese E-Mail, weil du mit dieser Adresse ein Album gesichert hast.",
   },
+  crash: {
+    title: "Da ist etwas schiefgelaufen",
+    body: "Die Fotos sind sicher. Noch einmal versuchen; passiert es wieder, die App schließen und neu öffnen.",
+  },
 };
 
 export default de;

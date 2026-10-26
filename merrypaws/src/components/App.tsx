@@ -45,6 +45,7 @@ import { makeCollageCard, makePhotoStoryCard, shareToInstagramStory } from "@/li
 import { findLook, type LookId } from "@/lib/looks";
 import { promptIndex } from "@/lib/dailyPrompts";
 import { tap } from "@/lib/native";
+import { installCrashReporting } from "@/lib/crash";
 import { type AppPushState, appPushState, enableAppPush, forgetAppPush, listenAppPush, syncAppPush } from "@/lib/appPush";
 import { disableReminder, registerWorker, syncReminder, updateLocalReminders } from "@/lib/reminders";
 import type { StyleId } from "@/lib/styles";
@@ -79,6 +80,7 @@ const LOCALE_SYNCED_KEY = "pp_locale_synced";
 const byTaken = (a: Photo, b: Photo) => b.takenAt.localeCompare(a.takenAt);
 
 export function App(props: { samples: Record<StyleId, string | null> }) {
+  useEffect(installCrashReporting, []);
   return (
     <I18nProvider>
       <AppBody {...props} />

@@ -656,6 +656,10 @@ const nl: Catalog<Messages> = {
     openAlbum: "Open het album",
     safeFooter: "Je krijgt dit omdat je een album hebt geback-upt met dit adres.",
   },
+  crash: {
+    title: "Er ging iets mis",
+    body: "De foto’s zijn veilig. Probeer het opnieuw, en gebeurt het weer, sluit de app dan en open hem opnieuw.",
+  },
 };
 
 export default nl;

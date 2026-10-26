@@ -35,7 +35,7 @@ export const CLIENT_EVENTS = [
   "report",
 ] as const;
 
-export const SERVER_EVENTS = ["generation_ok", "generation_failed", "guest_refused", "purchase", "pack_joined"] as const;
+export const SERVER_EVENTS = ["generation_ok", "generation_failed", "guest_refused", "purchase", "pack_joined", "client_crash"] as const;
 
 export type EventName = (typeof CLIENT_EVENTS)[number] | (typeof SERVER_EVENTS)[number];
 

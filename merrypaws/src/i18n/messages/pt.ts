@@ -656,6 +656,10 @@ const pt: Catalog<Messages> = {
     openAlbum: "Abrir o álbum",
     safeFooter: "Recebe isto porque fez cópia de um álbum com este endereço.",
   },
+  crash: {
+    title: "Algo correu mal",
+    body: "As fotos estão em segurança. Tente novamente e, se voltar a acontecer, feche a app e abra-a de novo.",
+  },
 };
 
 export default pt;

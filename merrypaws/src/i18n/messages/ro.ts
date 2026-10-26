@@ -683,6 +683,10 @@ const ro: Catalog<Messages> = {
     openAlbum: "Deschide albumul",
     safeFooter: "Primești asta pentru că ai făcut copie unui album cu această adresă.",
   },
+  crash: {
+    title: "Ceva n-a mers bine",
+    body: "Fotografiile sunt în siguranță. Încearcă din nou, iar dacă se repetă, închide aplicația și deschide-o iar.",
+  },
 };
 
 export default ro;

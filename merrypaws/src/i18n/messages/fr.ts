@@ -657,6 +657,10 @@ const fr: Catalog<Messages> = {
     openAlbum: "Ouvrir l’album",
     safeFooter: "Vous recevez cet e-mail parce que vous avez sauvegardé un album avec cette adresse.",
   },
+  crash: {
+    title: "Un problème est survenu",
+    body: "Les photos sont à l’abri. Réessayez, et si cela se reproduit, fermez l’app puis rouvrez-la.",
+  },
 };
 
 export default fr;

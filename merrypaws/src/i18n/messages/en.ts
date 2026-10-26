@@ -645,6 +645,10 @@ const en = {
     openAlbum: "Open the album",
     safeFooter: "You're getting this because you backed up an album with this address.",
   },
+  crash: {
+    title: "Something went wrong",
+    body: "The photos are safe. Try again, and if it keeps happening, close the app and open it again.",
+  },
 };
 
 export default en;

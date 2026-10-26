@@ -655,6 +655,10 @@ const it: Catalog<Messages> = {
     openAlbum: "Apri l'album",
     safeFooter: "Ricevi questa email perché hai fatto il backup di un album con questo indirizzo.",
   },
+  crash: {
+    title: "Qualcosa è andato storto",
+    body: "Le foto sono al sicuro. Riprova e, se succede ancora, chiudi l’app e riaprila.",
+  },
 };
 
 export default it;

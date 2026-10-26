@@ -105,6 +105,8 @@ On iPhone, reminders only work after the site is added to the Home Screen. The a
 
 `NEXT_PUBLIC_SITE_URL` is needed in both places: the app uses it at build time, and the hourly timer reads it at run time.
 
+**Crashes on people's phones** show up in the Worker's **Logs**: search for `client_crash`. Each one has the error, where it happened and the phone's browser; album keys and email addresses are blanked out first. `/api/stats` counts them per day.
+
 **Payments can wait.** Leave the `REVENUECAT_*` values empty for the friends test: the plans show "Payments aren't switched on yet." Section 10 sets them up.
 
 Deploy again (build variables only apply to a new build), then check `/api/health`.
