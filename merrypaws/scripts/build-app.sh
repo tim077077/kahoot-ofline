@@ -20,7 +20,8 @@ trap restore EXIT
 mv src/app/api "$stash/api"
 
 # Stale dev route types point at the stashed API routes and fail the build.
-rm -rf out .next/dev
+rm -rf out
+rm -rf .next/dev/types 2>/dev/null || true
 # Reaction push needs Firebase's app config; without it, asking for a token
 # crashes the Android app, so it only switches on once the file is there.
 if [ -z "${NEXT_PUBLIC_NATIVE_PUSH:-}" ] && [ -f android/app/google-services.json ]; then
