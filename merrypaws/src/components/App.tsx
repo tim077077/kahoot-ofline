@@ -151,6 +151,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   const applyToken = useCallback((tok: string | null) => {
     // Another album on this phone: the old one's reactions stop coming here.
     if (tokenRef.current && tokenRef.current !== tok) void forgetAppPush(tokenRef.current);
+    if (tokenRef.current !== tok) storage.setAccount(null);
     tokenRef.current = tok;
     storage.setToken(tok);
     setToken(tok);
@@ -162,6 +163,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       if (!res?.ok) return null;
       const data = (await res.json()) as Account & { invalidToken?: boolean };
       if (data.invalidToken) applyToken(null);
+      else storage.setAccount(data);
       setAccount(data);
       return data;
     },
@@ -227,7 +229,11 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   // invite (?pack=...).
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
-    if (hash.get("k")) storage.setToken(hash.get("k"));
+    const linked = hash.get("k");
+    if (linked) {
+      if (linked !== storage.token()) storage.setAccount(null);
+      storage.setToken(linked);
+    }
     const query = new URLSearchParams(window.location.search);
     const invite = query.get("pack");
     if (invite) {
@@ -248,6 +254,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       const tok = storage.token();
       tokenRef.current = tok;
       setToken(tok);
+      if (tok) setAccount(storage.account());
       setReady(true);
       registerWorker();
       await Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);

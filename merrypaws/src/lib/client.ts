@@ -29,6 +29,9 @@ const PROFILE_KEY = "pp_profile";
 const REEL_KEY = "pp_reel";
 // When this phone agreed to its photos going to the AI that paints portraits.
 const AI_CONSENT_KEY = "pp_ai_consent";
+// The last plan and credits the server reported, shown while offline so a
+// member never sees "Free" just because there's no signal.
+const ACCOUNT_KEY = "pp_account";
 const MAX_REEL = 40;
 
 export type PetKind = "dog" | "cat" | "other";
@@ -145,9 +148,11 @@ export const storage = {
   setReel: (reel: Portrait[]) => write(REEL_KEY, reel.slice(0, MAX_REEL)),
   aiConsent: () => read<string | null>(AI_CONSENT_KEY, null),
   setAiConsent: () => write(AI_CONSENT_KEY, new Date().toISOString()),
+  account: () => read<Account | null>(ACCOUNT_KEY, null),
+  setAccount: (account: Account | null) => write(ACCOUNT_KEY, account),
   // "Delete my data": everything except the device id, which keeps the free
   // portrait from resetting.
-  clear: () => [TOKEN_KEY, PROFILE_KEY, REEL_KEY, AI_CONSENT_KEY].forEach((k) => write(k, null)),
+  clear: () => [TOKEN_KEY, PROFILE_KEY, REEL_KEY, AI_CONSENT_KEY, ACCOUNT_KEY].forEach((k) => write(k, null)),
 };
 
 export function api(path: string, init: RequestInit = {}, token?: string | null) {
