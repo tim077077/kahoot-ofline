@@ -144,6 +144,8 @@ const en = {
     waitingNamed: "{name}'s album is waiting",
     waitingAnon: "Their album is waiting",
     waitingBody: "Add your favourite photos and they'll be kept here like prints in an old family album.",
+    unreachable: "Can't reach the album right now",
+    unreachableBody: "The photos are safe. They'll be back as soon as there's a connection.",
     addPhotos: "Add photos",
     titleNamed: "{name}'s",
     titleAnon: "The",

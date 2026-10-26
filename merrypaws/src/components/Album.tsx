@@ -18,6 +18,8 @@ type Props = {
   petName: string;
   photos: Photo[];
   pending: Pending[];
+  load: "loading" | "ok" | "failed";
+  onReload: () => void;
   onRetry: (key: string) => void;
   onSkip: (key: string) => void;
   portraits: Portrait[];
@@ -78,6 +80,20 @@ export function Album(props: Props) {
   const since = photos.length ? new Date(photos.at(-1)!.takenAt).getFullYear() : null;
 
   if (photos.length === 0 && pending.length === 0) {
+    // Not "no photos yet" until the server has said so.
+    if (props.load === "loading") return <section className="min-h-[72dvh]" aria-busy />;
+    if (props.load === "failed") {
+      return (
+        <section className="flex min-h-[72dvh] flex-col items-center justify-center px-8 text-center" role="status">
+          <Mascot size={120} still />
+          <h1 className="font-display mt-6 text-[2rem] leading-tight">{t("album.unreachable")}</h1>
+          <p className="mt-2 max-w-[30ch] text-muted">{t("album.unreachableBody")}</p>
+          <button onClick={props.onReload} className="mt-8 inline-flex min-h-14 items-center gap-2 rounded-full border border-ink/25 px-8 text-lg font-medium active:scale-[0.98]">
+            <ArrowClockwise size={20} /> {t("common.tryAgain")}
+          </button>
+        </section>
+      );
+    }
     return (
       <section className="flex min-h-[72dvh] flex-col items-center justify-center px-8 text-center">
         <Mascot size={120} />

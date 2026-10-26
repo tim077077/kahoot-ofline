@@ -143,6 +143,8 @@ const pt: Catalog<Messages> = {
     waitingNamed: "O álbum de {name} está à espera",
     waitingAnon: "O álbum está à espera",
     waitingBody: "Adicione as suas fotografias favoritas e serão guardadas aqui como impressões num velho álbum de família.",
+    unreachable: "Não é possível abrir o álbum agora",
+    unreachableBody: "As fotos estão em segurança. Voltam assim que houver ligação.",
     addPhotos: "Adicionar fotografias",
     titleNamed: "{name}",
     titleAnon: "O nosso",

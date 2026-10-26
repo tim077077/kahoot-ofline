@@ -149,6 +149,8 @@ const ro: Catalog<Messages> = {
     waitingNamed: "Albumul lui {name} te așteaptă",
     waitingAnon: "Albumul te așteaptă",
     waitingBody: "Adaugă fotografiile preferate și vor fi păstrate aici ca niște poze într-un album vechi de familie.",
+    unreachable: "Albumul nu poate fi deschis acum",
+    unreachableBody: "Fotografiile sunt în siguranță. Revin imediat ce există conexiune.",
     addPhotos: "Adaugă fotografii",
     titleNamed: "{name}",
     titleAnon: "Albumul nostru",

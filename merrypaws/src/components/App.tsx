@@ -99,6 +99,9 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [reel, setReel] = useState<Portrait[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  // Whether the album list has come back, so "no photos yet" is never shown
+  // for an album that just couldn't be reached.
+  const [photosLoad, setPhotosLoad] = useState<"loading" | "ok" | "failed">("loading");
   const [pending, setPending] = useState<Pending[]>([]);
   const [batch, setBatch] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
   const [tab, setTab] = useState<Tab>("album");
@@ -165,10 +168,13 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   );
 
   const loadPhotos = useCallback(async (tok: string | null) => {
-    if (!tok) return;
+    if (!tok) return setPhotosLoad("ok");
     const res = await api("/api/photos", {}, tok).catch(() => null);
-    if (!res?.ok) return;
-    setPhotos(((await res.json()) as { photos: Photo[] }).photos);
+    const data = res?.ok ? ((await res.json().catch(() => null)) as { photos: Photo[] } | null) : null;
+    if (data) {
+      setPhotos(data.photos);
+      setPhotosLoad("ok");
+    } else setPhotosLoad(res && res.status < 500 ? "ok" : "failed");
   }, []);
 
   const loadDaily = useCallback(async (tok: string | null) => {
@@ -247,6 +253,25 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       await joinInvite(tok);
     })();
   }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite]);
+
+  // Opened with no signal: load everything again once it's back, or when the
+  // app comes to the front.
+  const reloadAll = useCallback(() => {
+    const tok = tokenRef.current;
+    setPhotosLoad((now) => (now === "failed" ? "loading" : now));
+    void Promise.all([refresh(tok), loadPhotos(tok), loadDaily(tok), loadPack(tok)]);
+  }, [refresh, loadPhotos, loadDaily, loadPack]);
+
+  useEffect(() => {
+    if (photosLoad !== "failed") return;
+    const again = () => document.visibilityState === "visible" && reloadAll();
+    window.addEventListener("online", again);
+    document.addEventListener("visibilitychange", again);
+    return () => {
+      window.removeEventListener("online", again);
+      document.removeEventListener("visibilitychange", again);
+    };
+  }, [photosLoad, reloadAll]);
 
   // Friends' reactions as native push in the apps (see lib/appPush.ts).
   useEffect(() => {
@@ -788,6 +813,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
             <Album
               petName={profile.petName}
               photos={photos}
+              load={photosLoad}
+              onReload={reloadAll}
               pending={pending}
               onRetry={retryPending}
               onSkip={skipPending}
