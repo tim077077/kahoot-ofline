@@ -245,7 +245,7 @@ function Welcome({ t }: { t: T }) {
       <MascotSnap costume="none" bg="linear-gradient(180deg,#f3cf98,#9fbfb6)" caption={t("onboarding.snaps.lake")} date="'20 7 14" rotate={-1} className="bottom-0 left-[26%]" />
       <Tape className="left-[14%] top-[4%]" rotate={-18} />
       <Tape className="right-[12%] -top-2" rotate={10} />
-      <Tape className="top-[40%] left-[40%]" rotate={-4} />
+      <Tape className="top-[26%] left-[38%]" rotate={-4} />
     </div>
   );
 }
