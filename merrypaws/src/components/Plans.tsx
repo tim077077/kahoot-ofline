@@ -68,7 +68,7 @@ export function PlanCards({ current, onBuy, onRestore, busy }: { current: Tier; 
           const isCurrent = current === tier;
           const featured = tier === TARGET_TIER;
           return (
-            <div key={tier} className={`relative rounded-2xl bg-card p-5 ${featured ? "ring-2 ring-accent shadow-[0_18px_36px_-24px_var(--shadow)]" : "opacity-95"}`}>
+            <div key={tier} className={`relative rounded-2xl bg-card p-5 ${featured ? "ring-2 ring-accent shadow-[0_18px_36px_-24px_var(--shadow)]" : ""}`}>
               {featured && (
                 <span className="dymo absolute -top-3 left-5" data-tone="red">
                   {t("plans.mostLoved")}
