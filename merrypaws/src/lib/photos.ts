@@ -53,7 +53,13 @@ export async function addPhoto(
     h: Math.round(input.h) || 0,
   };
   await objects.put(fileKey(accountId, photo.id, "full"), input.image, "image/jpeg");
-  await objects.put(fileKey(accountId, photo.id, "thumb"), input.thumb, "image/jpeg");
+  try {
+    await objects.put(fileKey(accountId, photo.id, "thumb"), input.thumb, "image/jpeg");
+  } catch (err) {
+    // Don't leave half a photo in the bucket.
+    await objects.del(fileKey(accountId, photo.id, "full")).catch(() => {});
+    throw err;
+  }
   await store.hset(key(accountId), photo.id, JSON.stringify(photo));
   return { ok: true, photo };
 }

@@ -442,6 +442,12 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       URL.revokeObjectURL(url);
       setBatch((b) => ({ ...b, done: b.done + 1 }));
     };
+    let offline = false;
+    const fail = (item: (typeof items)[number]) => {
+      failed.push(item.file);
+      setPending((p) => p.map((x) => (x.key === item.key ? { ...x, progress: "failed", file: item.file, tags } : x)));
+      setBatch((b) => ({ ...b, done: b.done + 1 }));
+    };
     async function worker() {
       while (next < items.length) {
         const item = items[next++];
@@ -461,14 +467,11 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
             full = true;
             finish(item.key, item.url);
           } else {
-            failed.push(item.file);
-            setPending((p) => p.map((x) => (x.key === item.key ? { ...x, progress: "failed" } : x)));
-            setBatch((b) => ({ ...b, done: b.done + 1 }));
+            if (error === "network") offline = true;
+            fail(item);
           }
         } catch {
-          failed.push(item.file);
-          setPending((p) => p.map((x) => (x.key === item.key ? { ...x, progress: "failed" } : x)));
-          setBatch((b) => ({ ...b, done: b.done + 1 }));
+          fail(item);
         }
       }
     }
@@ -476,9 +479,24 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
     if (added) track("photos_added");
     await Promise.all([refresh(tok), loadDaily(tok), loadPack(tok)]);
     if (full) openSheet("photos");
-    // Failed prints stay on the page for a moment, then clear.
-    setTimeout(() => setPending((p) => p.filter((x) => x.progress !== "failed")), 6000);
+    // Failed prints stay, each with a retry, until sent or skipped.
+    if (failed.length) setToast(offline ? t("toasts.albumOffline") : t("toasts.uploadFailed"));
     return failed;
+  }
+
+  function skipPending(key: string) {
+    setPending((p) => {
+      const gone = p.find((x) => x.key === key);
+      if (gone) URL.revokeObjectURL(gone.url);
+      return p.filter((x) => x.key !== key);
+    });
+  }
+
+  function retryPending(key: string) {
+    const item = pending.find((x) => x.key === key);
+    if (!item?.file) return skipPending(key);
+    skipPending(key);
+    void addPhotos([item.file], item.tags ?? []);
   }
 
   async function changePhoto(id: string, patch: Partial<Pick<Photo, "tags" | "caption" | "favorite">>) {
@@ -769,6 +787,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
               petName={profile.petName}
               photos={photos}
               pending={pending}
+              onRetry={retryPending}
+              onSkip={skipPending}
               portraits={reel}
               look={look}
               account={account}

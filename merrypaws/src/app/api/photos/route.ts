@@ -41,14 +41,21 @@ export async function POST(request: Request) {
   } catch {
     tags = [];
   }
-  const result = await addPhoto(ctx.store, ctx.objects, ctx.accountId, await currentTier(ctx.store, ctx.accountId), {
-    image: new Uint8Array(await image.arrayBuffer()),
-    thumb: new Uint8Array(await thumb.arrayBuffer()),
-    takenAt: String(form?.get("takenAt") ?? ""),
-    tags,
-    w: Number(form?.get("w")),
-    h: Number(form?.get("h")),
-  });
+  let result: Awaited<ReturnType<typeof addPhoto>>;
+  try {
+    result = await addPhoto(ctx.store, ctx.objects, ctx.accountId, await currentTier(ctx.store, ctx.accountId), {
+      image: new Uint8Array(await image.arrayBuffer()),
+      thumb: new Uint8Array(await thumb.arrayBuffer()),
+      takenAt: String(form?.get("takenAt") ?? ""),
+      tags,
+      w: Number(form?.get("w")),
+      h: Number(form?.get("h")),
+    });
+  } catch (err) {
+    // The bucket said no (wrong key, missing bucket): /api/health says which.
+    console.error(JSON.stringify({ event: "photo_upload_failed", error: String(err) }));
+    return Response.json({ error: "storage_failed" }, { status: 503 });
+  }
   if (!result.ok) return Response.json({ error: result.error }, { status: 402 });
   // Any photo added today counts for today's roll (the first one is the one
   // the pack sees).

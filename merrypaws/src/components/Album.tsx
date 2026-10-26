@@ -1,6 +1,6 @@
 "use client";
 
-import { FilmStrip, Heart, Plus } from "@phosphor-icons/react";
+import { ArrowClockwise, FilmStrip, Heart, Plus, X } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { Highlight } from "@/components/Collage";
 import { Mascot } from "@/components/Mascot";
@@ -11,12 +11,15 @@ import type { Account, Photo, Portrait } from "@/lib/client";
 import { TIERS } from "@/lib/config";
 import type { LookId } from "@/lib/looks";
 
-export type Pending = { key: string; url: string; progress: "waiting" | "uploading" | "failed" };
+// A failed one keeps its file, so a tap can send it again.
+export type Pending = { key: string; url: string; progress: "waiting" | "uploading" | "failed"; file?: File; tags?: string[] };
 
 type Props = {
   petName: string;
   photos: Photo[];
   pending: Pending[];
+  onRetry: (key: string) => void;
+  onSkip: (key: string) => void;
   portraits: Portrait[];
   look: LookId;
   account: Account | null;
@@ -132,14 +135,31 @@ export function Album(props: Props) {
 
       {pending.length > 0 && (
         <div className="mt-8 grid grid-cols-3 gap-x-4 gap-y-6 px-5">
-          {pending.map((p) => (
-            <div key={p.key} className="relative">
-              <Print src={p.url} imgClassName={p.progress === "failed" ? "opacity-40" : "negative"} />
-              <span className="absolute inset-x-0 bottom-2 text-center text-xs font-medium text-[#fbf8f2] drop-shadow">
-                {p.progress === "failed" ? t("album.didntUpload") : t("album.developing")}
-              </span>
-            </div>
-          ))}
+          {pending.map((p) =>
+            p.progress === "failed" ? (
+              <div key={p.key} className="relative">
+                <button onClick={() => props.onRetry(p.key)} className="block w-full text-left" aria-label={`${t("album.didntUpload")}. ${t("album.tapRetry")}`}>
+                  <Print src={p.url} imgClassName="opacity-40" />
+                  <span className="absolute inset-x-0 bottom-2 flex flex-col items-center text-center text-xs font-medium leading-tight text-[#fbf8f2] drop-shadow">
+                    <ArrowClockwise size={18} weight="bold" />
+                    {t("album.tapRetry")}
+                  </span>
+                </button>
+                <button
+                  onClick={() => props.onSkip(p.key)}
+                  aria-label={t("album.skipPhoto")}
+                  className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-card text-muted shadow"
+                >
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            ) : (
+              <div key={p.key} className="relative">
+                <Print src={p.url} imgClassName="negative" />
+                <span className="absolute inset-x-0 bottom-2 text-center text-xs font-medium text-[#fbf8f2] drop-shadow">{t("album.developing")}</span>
+              </div>
+            ),
+          )}
         </div>
       )}
 
