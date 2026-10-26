@@ -140,9 +140,11 @@ export function Album(props: Props) {
               <div key={p.key} className="relative">
                 <button onClick={() => props.onRetry(p.key)} className="block w-full text-left" aria-label={`${t("album.didntUpload")}. ${t("album.tapRetry")}`}>
                   <Print src={p.url} imgClassName="opacity-40" />
-                  <span className="absolute inset-x-0 bottom-2 flex flex-col items-center text-center text-xs font-medium leading-tight text-[#fbf8f2] drop-shadow">
-                    <ArrowClockwise size={18} weight="bold" />
-                    {t("album.tapRetry")}
+                  <span className="absolute inset-0 flex items-center justify-center p-2">
+                    <span className="flex flex-col items-center gap-1 rounded-xl bg-[#2a1b14]/75 px-2 py-1.5 text-center text-xs font-medium leading-tight text-[#fbf8f2]">
+                      <ArrowClockwise size={18} weight="bold" />
+                      {t("album.tapRetry")}
+                    </span>
                   </span>
                 </button>
                 <button

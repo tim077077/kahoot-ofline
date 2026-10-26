@@ -130,7 +130,7 @@ const en = {
     putting: "Putting them in the album, {done} of {total}",
     allInNamed: { one: "{n} photo is in {name}'s album", other: "All {n} are in {name}'s album" },
     allInAnon: { one: "{n} photo is in the album", other: "All {n} are in the album" },
-    offline: "Couldn't reach the album. Check your connection.",
+    offline: "Couldn't save them just now. They're still on your phone.",
     partial: "{done} of {total} are in. {failed} didn't make it.",
     dayOne: "Day 1 of the photo-a-day roll",
     openNamed: "Open {name}'s album",

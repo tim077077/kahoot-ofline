@@ -148,7 +148,7 @@ const pl: Catalog<Messages> = {
       many: "Wszystkie {n} są w albumie",
       other: "Wszystkie {n} są w albumie",
     },
-    offline: "Brak połączenia z albumem. Sprawdź internet.",
+    offline: "Nie udało się ich teraz zapisać. Nadal są w twoim telefonie.",
     partial: "{done} z {total} jest w środku. Nie udało się: {failed}.",
     dayOne: "Dzień 1 rolki z jednym zdjęciem dziennie",
     openNamed: "Otwórz album – {name}",

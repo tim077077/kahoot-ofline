@@ -129,7 +129,7 @@ const pt: Catalog<Messages> = {
     putting: "A colocar no álbum, {done} de {total}",
     allInNamed: { one: "{n} fotografia está no álbum de {name}", other: "As {n} estão no álbum de {name}" },
     allInAnon: { one: "{n} fotografia está no álbum", other: "As {n} estão no álbum" },
-    offline: "Não foi possível contactar o álbum. Verifique a ligação.",
+    offline: "Não foi possível guardá-las agora. Continuam no teu telemóvel.",
     partial: "{done} de {total} já estão. {failed} não conseguiram.",
     dayOne: "Dia 1 do rolo de uma fotografia por dia",
     openNamed: "Abrir o álbum de {name}",

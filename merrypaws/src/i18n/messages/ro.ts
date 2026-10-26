@@ -135,7 +135,7 @@ const ro: Catalog<Messages> = {
       other: "Toate cele {n} sunt în albumul lui {name}",
     },
     allInAnon: { one: "{n} fotografie e în album", few: "Toate cele {n} sunt în album", other: "Toate cele {n} sunt în album" },
-    offline: "Albumul nu poate fi contactat. Verifică-ți conexiunea.",
+    offline: "Nu s-au putut salva acum. Sunt încă pe telefonul tău.",
     partial: "{done} din {total} sunt înăuntru. {failed} n-au reușit.",
     dayOne: "Ziua 1 din rola cu o fotografie pe zi",
     openNamed: "Deschide albumul lui {name}",

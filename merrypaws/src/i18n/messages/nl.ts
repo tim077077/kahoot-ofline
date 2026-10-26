@@ -129,7 +129,7 @@ const nl: Catalog<Messages> = {
     putting: "In het album plakken, {done} van {total}",
     allInNamed: { one: "{n} foto staat in het album van {name}", other: "Alle {n} staan in het album van {name}" },
     allInAnon: { one: "{n} foto staat in het album", other: "Alle {n} staan in het album" },
-    offline: "Kan het album niet bereiken. Controleer je verbinding.",
+    offline: "Ze konden nu niet worden opgeslagen. Ze staan nog op je telefoon.",
     partial: "{done} van {total} staan erin. {failed} zijn niet gelukt.",
     dayOne: "Dag 1 van de rol met één foto per dag",
     openNamed: "Open het album van {name}",
