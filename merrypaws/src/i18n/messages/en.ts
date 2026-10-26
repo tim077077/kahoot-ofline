@@ -146,6 +146,7 @@ const en = {
     waitingBody: "Add your favourite photos and they'll be kept here like prints in an old family album.",
     unreachable: "Can't reach the album right now",
     unreachableBody: "The photos are safe. They'll be back as soon as there's a connection.",
+    opening: "Opening the album…",
     addPhotos: "Add photos",
     titleNamed: "{name}'s",
     titleAnon: "The",

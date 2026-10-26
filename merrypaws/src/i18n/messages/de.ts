@@ -145,6 +145,7 @@ const de: Catalog<Messages> = {
     waitingBody: "Füge deine Lieblingsfotos hinzu, und sie werden hier aufbewahrt wie Abzüge in einem alten Familienalbum.",
     unreachable: "Das Album ist gerade nicht erreichbar",
     unreachableBody: "Die Fotos sind sicher. Sie sind wieder da, sobald es eine Verbindung gibt.",
+    opening: "Das Album wird geöffnet…",
     addPhotos: "Fotos hinzufügen",
     titleNamed: "{name}",
     titleAnon: "Das",

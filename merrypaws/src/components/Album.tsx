@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowClockwise, FilmStrip, Heart, Plus, X } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Highlight } from "@/components/Collage";
 import { Mascot } from "@/components/Mascot";
 import { MonthHeading, Print, Stack } from "@/components/Vintage";
@@ -71,6 +71,26 @@ function groupPages(photos: Photo[]) {
 
 const TURNS = [-1.5, 1.2, -0.6, 0.8, -1, 1.6];
 
+// Blank for a quick load; a word from the mascot only if it's taking a while.
+function AlbumLoading() {
+  const t = useT();
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 700);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <section className="flex min-h-[72dvh] flex-col items-center justify-center px-8 text-center" aria-busy>
+      {slow && (
+        <>
+          <Mascot size={96} mood="working" />
+          <p className="font-display mt-4 italic text-muted">{t("album.opening")}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function Album(props: Props) {
   const { photos, pending, portraits, look, account } = props;
   const t = useT();
@@ -81,7 +101,7 @@ export function Album(props: Props) {
 
   if (photos.length === 0 && pending.length === 0) {
     // Not "no photos yet" until the server has said so.
-    if (props.load === "loading") return <section className="min-h-[72dvh]" aria-busy />;
+    if (props.load === "loading") return <AlbumLoading />;
     if (props.load === "failed") {
       return (
         <section className="flex min-h-[72dvh] flex-col items-center justify-center px-8 text-center" role="status">

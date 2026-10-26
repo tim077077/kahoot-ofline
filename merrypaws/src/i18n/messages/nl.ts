@@ -145,6 +145,7 @@ const nl: Catalog<Messages> = {
     waitingBody: "Voeg je favoriete foto's toe en ze worden hier bewaard als afdrukken in een oud familiealbum.",
     unreachable: "Het album is nu niet bereikbaar",
     unreachableBody: "De foto’s zijn veilig. Ze zijn terug zodra er weer verbinding is.",
+    opening: "Het album wordt geopend…",
     addPhotos: "Foto's toevoegen",
     titleNamed: "{name}",
     titleAnon: "Ons",

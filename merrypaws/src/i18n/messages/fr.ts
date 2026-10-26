@@ -146,6 +146,7 @@ const fr: Catalog<Messages> = {
     waitingBody: "Ajoutez vos photos préférées, elles seront gardées ici comme des tirages dans un vieil album de famille.",
     unreachable: "Impossible d’ouvrir l’album pour le moment",
     unreachableBody: "Les photos sont à l’abri. Elles reviendront dès que la connexion sera rétablie.",
+    opening: "Ouverture de l’album…",
     addPhotos: "Ajouter des photos",
     titleNamed: "{name}",
     titleAnon: "Notre",
