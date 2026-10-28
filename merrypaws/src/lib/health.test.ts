@@ -59,7 +59,10 @@ describe("health", () => {
     expect(storageHint(new Error("Upload failed: 404"), ENDPOINT)).toMatch(/Bucket not found/);
     expect(storageHint(new Error("Upload failed: 403"), `${ENDPOINT}/paw-pictures`)).toMatch(/same R2 token/);
     expect(storageHint(new TypeError("fetch failed"), ENDPOINT)).toMatch(/Can't reach/);
-    expect(storageHint(new Error("x"), "my r2 endpoint")).toMatch(/isn't a web address/);
+    expect(storageHint(new Error("x"), "my r2 endpoint")).toMatch(/isn't a web address\. It should/);
+    expect(storageHint(new Error("x"), "paw-pictures")).toMatch(/looks like a bucket name/);
+    expect(storageHint(new Error("x"), "f".repeat(64))).toMatch(/Secret Access Key/);
+    expect(storageHint(new Error("x"), "  ")).toMatch(/empty/);
   });
 
   it("accepts the endpoint the ways people paste it", () => {
