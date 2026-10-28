@@ -31,6 +31,7 @@
     { "binding": "S3_BUCKET", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_BUCKET" },
     { "binding": "S3_ENDPOINT", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_ENDPOINT" },
     { "binding": "S3_REGION", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_REGION" },
+    { "binding": "S3_SECRET_ACCESS_KEY", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "S3_SECRET_ACCESS_KEY" },
     { "binding": "UPSTASH_REDIS_REST_TOKEN", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "UPSTASH_REDIS_REST_TOKEN" },
     { "binding": "UPSTASH_REDIS_REST_URL", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "UPSTASH_REDIS_REST_URL" },
     { "binding": "VAPID_PRIVATE_KEY", "store_id": "2931abc75cd34364a0584b868bf2eceb", "secret_name": "VAPID_PRIVATE_KEY" }
