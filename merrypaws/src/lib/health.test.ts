@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkStorage, missing, storageHint } from "./health";
-import type { ObjectStore } from "./objects";
+import { normalizeEndpoint, type ObjectStore } from "./objects";
 
 vi.mock("server-only", () => ({}));
 
@@ -57,8 +57,17 @@ describe("health", () => {
     setStorageEnv();
     expect((await checkStorage(() => memoryObjects(new Error("Upload failed: 403")))).hint).toMatch(/same R2 token/);
     expect(storageHint(new Error("Upload failed: 404"), ENDPOINT)).toMatch(/Bucket not found/);
-    expect(storageHint(new Error("Upload failed: 403"), `${ENDPOINT}/paw-pictures`)).toMatch(/without the bucket name/);
+    expect(storageHint(new Error("Upload failed: 403"), `${ENDPOINT}/paw-pictures`)).toMatch(/same R2 token/);
     expect(storageHint(new TypeError("fetch failed"), ENDPOINT)).toMatch(/Can't reach/);
-    expect(storageHint(new Error("x"), "abc123.r2.cloudflarestorage.com")).toMatch(/isn't a web address/);
+    expect(storageHint(new Error("x"), "my r2 endpoint")).toMatch(/isn't a web address/);
+  });
+
+  it("accepts the endpoint the ways people paste it", () => {
+    const id = "0123456789abcdef0123456789abcdef";
+    const want = `https://${id}.r2.cloudflarestorage.com`;
+    for (const pasted of [want, `${want}/`, `${want}/paw-pictures`, ` ${want} `, `"${want}"`, `${id}.r2.cloudflarestorage.com`, id]) {
+      expect(normalizeEndpoint(pasted)).toBe(want);
+    }
+    expect(normalizeEndpoint("https://abc.eu.r2.cloudflarestorage.com")).toBe("https://abc.eu.r2.cloudflarestorage.com");
   });
 });

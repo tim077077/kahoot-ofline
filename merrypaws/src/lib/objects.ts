@@ -115,11 +115,25 @@ export class ObjectsNotConfiguredError extends Error {
 
 const globalForObjects = globalThis as unknown as { __objects?: ObjectStore };
 
+// The endpoint as people tend to paste it: with spaces or quotes around it,
+// without https://, as just the account id, or with the bucket name on the
+// end. All of those mean https://<account-id>.r2.cloudflarestorage.com.
+export function normalizeEndpoint(raw: string) {
+  let value = raw.trim().replace(/^["']|["']$/g, "").trim();
+  if (/^[0-9a-f]{32}$/i.test(value)) value = `${value}.r2.cloudflarestorage.com`;
+  if (!/^[a-z]+:\/\//i.test(value)) value = `https://${value}`;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value;
+  }
+}
+
 export function getObjects(): ObjectStore {
   if (globalForObjects.__objects) return globalForObjects.__objects;
   const { S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_REGION } = process.env;
   if (S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY_ID && S3_SECRET_ACCESS_KEY) {
-    globalForObjects.__objects = new S3Store(S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_REGION || "auto");
+    globalForObjects.__objects = new S3Store(normalizeEndpoint(S3_ENDPOINT), S3_BUCKET.trim(), S3_ACCESS_KEY_ID.trim(), S3_SECRET_ACCESS_KEY.trim(), S3_REGION?.trim() || "auto");
   } else if (process.env.NODE_ENV === "production") {
     throw new ObjectsNotConfiguredError();
   } else {

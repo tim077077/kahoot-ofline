@@ -1,4 +1,4 @@
-import type { ObjectStore } from "./objects";
+import { normalizeEndpoint, type ObjectStore } from "./objects";
 
 // What /api/health says about each service. Names of missing settings are
 // fine to show; values never are.
@@ -11,13 +11,12 @@ export const missing = (names: string[], env: Record<string, string | undefined>
 export function storageHint(err: unknown, endpoint = process.env.S3_ENDPOINT ?? "") {
   const text = String(err instanceof Error ? err.message : err);
   const status = Number(text.match(/\b(\d{3})\b/)?.[1]);
-  let path = "";
   try {
-    path = new URL(endpoint).pathname.replace(/\/$/, "");
+    const host = new URL(normalizeEndpoint(endpoint)).hostname;
+    if (!host.endsWith(".r2.cloudflarestorage.com") && !host.includes(".")) throw new Error("not a host");
   } catch {
     return "S3_ENDPOINT isn't a web address. It should look like https://<account-id>.r2.cloudflarestorage.com";
   }
-  if (path) return "S3_ENDPOINT should end at .r2.cloudflarestorage.com, without the bucket name after it.";
   if (status === 401 || status === 403) return "R2 refused the key. S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must come from the same R2 token, with Object Read & Write on this bucket.";
   if (status === 404) return "Bucket not found. S3_BUCKET must be the bucket's exact name, and S3_ENDPOINT must use the same Cloudflare account.";
   if (status === 400) return "R2 rejected the request. Set S3_REGION to auto and check S3_ENDPOINT.";
