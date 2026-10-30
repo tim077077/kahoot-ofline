@@ -1,4 +1,5 @@
 import { backupEmail } from "@/lib/auth";
+import { isOwner, OWNER_SHOWN } from "@/lib/owner";
 import { removeDeviceToken } from "@/lib/nativePush";
 import { LIMITS, TIERS } from "@/lib/config";
 import { accountIdForToken, createAccount, deleteAccount, freeTrialsLeft, getCredits } from "@/lib/credits";
@@ -40,13 +41,16 @@ export async function GET(request: Request) {
   await refreshAllowance(store, accountId);
   const tier = await currentTier(store, accountId);
   const plan = await getPlan(store, accountId);
+  const owner = await isOwner(store, accountId);
   return Response.json({
     account: true,
     tier,
     renewsUntil: tier !== "free" && plan ? new Date(plan.until).toISOString() : null,
     interval: tier !== "free" ? plan?.interval : null,
-    credits: await getCredits(store, accountId),
-    previews: await previewsLeft(store, accountId),
+    // The owner's limits are never reached, so the app never shows a paywall.
+    credits: owner ? OWNER_SHOWN : await getCredits(store, accountId),
+    previews: owner ? OWNER_SHOWN : await previewsLeft(store, accountId),
+    owner,
     photos: await photoCount(store, accountId),
     photoLimit: TIERS[tier].photos,
     freeLeft,

@@ -74,6 +74,7 @@ function snooze(key: string) {
   }
 }
 
+const OWNER_KEY = "pp_owner_code";
 const ERROR_CODES = ["limit_reached", "slow_down", "generation_failed", "refused", "bad_idea", "bad_request", "not_configured", "expired"] as const;
 const LOCALE_SYNCED_KEY = "pp_locale_synced";
 
@@ -229,6 +230,12 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
   // invite (?pack=...).
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
+    // The owner's link (#owner=...): kept until there's an album to apply it to.
+    if (hash.get("owner")) {
+      try {
+        sessionStorage.setItem(OWNER_KEY, hash.get("owner")!);
+      } catch {}
+    }
     const linked = hash.get("k");
     if (linked) {
       if (linked !== storage.token()) storage.setAccount(null);
@@ -262,6 +269,23 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       await joinInvite(tok);
     })();
   }, [refresh, loadPhotos, loadDaily, loadPack, joinInvite]);
+
+  useEffect(() => {
+    let code: string | null = null;
+    try {
+      code = sessionStorage.getItem(OWNER_KEY);
+    } catch {}
+    if (!token || !code) return;
+    try {
+      sessionStorage.removeItem(OWNER_KEY);
+    } catch {}
+    void jsonApi("/api/owner", "POST", { code }, token)
+      .then(async (res) => {
+        setToast(res.ok ? t("toasts.ownerOn") : t("toasts.ownerWrong"));
+        if (res.ok) await refresh(token);
+      })
+      .catch(() => setToast(t("errors.noServer")));
+  }, [token, refresh, t]);
 
   // Opened with no signal: load everything again once it's back, or when the
   // app comes to the front.

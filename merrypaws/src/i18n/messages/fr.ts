@@ -52,6 +52,8 @@ const fr: Catalog<Messages> = {
   },
 
   toasts: {
+    ownerOn: "Mode propriétaire activé : portraits illimités, en HD.",
+    ownerWrong: "Ce code propriétaire ne correspond pas.",
     joinedPack: "Vous avez rejoint la meute d’un ami. Dites bonjour d’une patte.",
     welcomeMember: "Bienvenue ! Votre abonnement est actif.",
     paymentReceived: "Paiement reçu. Vos crédits arrivent.",

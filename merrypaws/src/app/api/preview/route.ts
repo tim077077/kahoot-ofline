@@ -1,4 +1,5 @@
 import { LIMITS } from "@/lib/config";
+import { isOwner } from "@/lib/owner";
 import { clearPortraitFailure, recordPortraitFailure } from "@/lib/health";
 import { accountIdForToken, releaseFreeTrial, takeFreeTrial, takeMinuteSlot } from "@/lib/credits";
 import { isValidDay, markDay } from "@/lib/daily";
@@ -41,13 +42,13 @@ export async function POST(request: Request) {
   // Members spend their plan's previews, then pack previews. Anyone without
   // an allowance (guests, or members who ran out) gets the one free portrait
   // per device, if it's still unused.
-  let source: PreviewSource | "free" | null = null;
+  let source: PreviewSource | "free" | "owner" | null = null;
   if (accountId) {
     if (!(await takeMinuteSlot(store, accountId, LIMITS.previewsPerMinute))) {
       return Response.json({ error: "slow_down" }, { status: 429 });
     }
     await refreshAllowance(store, accountId);
-    source = await takePreview(store, accountId);
+    source = (await isOwner(store, accountId)) ? "owner" : await takePreview(store, accountId);
   }
   if (!source && (await takeFreeTrial(store, guest, freeLimits))) source = "free";
   if (!source) {
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
     await track(store, "generation_failed");
     await recordPortraitFailure(store, reason);
     if (source === "free") await releaseFreeTrial(store, guest);
-    else if (accountId) await releasePreview(store, accountId, source);
+    else if (accountId && source !== "owner") await releasePreview(store, accountId, source);
     // A safety refusal is usually the owner's scene; say so, so they reword it.
     return Response.json({ error: reason.startsWith("refused") ? "refused" : "generation_failed" }, { status: 502 });
   }

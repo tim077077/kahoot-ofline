@@ -39,10 +39,10 @@ export type UnlockResult = "unlocked" | "already" | "no_credits" | "missing";
 
 // Spend one credit to unlock a portrait. The NX flag makes double clicks and
 // webhook retries unlock (and charge) only once.
-export async function unlockWithCredit(store: Store, id: string, accountId: string): Promise<UnlockResult> {
+export async function unlockWithCredit(store: Store, id: string, accountId: string, free = false): Promise<UnlockResult> {
   if (!(await getPortrait(store, id))) return "missing";
   if (!(await store.set(`unlocked:${id}`, accountId, { ex: TTL, nx: true }))) return "already";
-  if (!(await takeCredit(store, accountId))) {
+  if (!free && !(await takeCredit(store, accountId))) {
     await store.del(`unlocked:${id}`);
     return "no_credits";
   }

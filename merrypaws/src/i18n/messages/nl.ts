@@ -51,6 +51,8 @@ const nl: Catalog<Messages> = {
   },
 
   toasts: {
+    ownerOn: "Eigenaarsmodus staat aan: onbeperkt portretten, in HD.",
+    ownerWrong: "Die eigenaarscode klopt niet.",
     joinedPack: "Je zit nu in de roedel van een vriend. Geef een pootje.",
     welcomeMember: "Welkom! Je abonnement is actief.",
     paymentReceived: "Betaling ontvangen. Je credits komen eraan.",

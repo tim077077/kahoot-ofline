@@ -1,4 +1,5 @@
 import { PREVIEWS_PER_CREDIT, TIERS, type Interval, type Tier } from "./config";
+import { isOwner } from "./owner";
 import type { Store } from "./store";
 
 // Membership state and portrait allowances.
@@ -23,6 +24,7 @@ export async function getPlan(store: Store, accountId: string): Promise<PlanStat
 
 export async function currentTier(store: Store, accountId: string | null, now = Date.now()): Promise<Tier> {
   if (!accountId) return "free";
+  if (await isOwner(store, accountId)) return "pro";
   const plan = await getPlan(store, accountId);
   return plan && plan.until > now ? plan.tier : "free";
 }

@@ -102,6 +102,7 @@ On iPhone, reminders only work after the site is added to the Home Screen. The a
 | `NEXT_PUBLIC_SITE_URL` | build variable **and** secret | `https://paw-pictures.<you>.workers.dev` (or your domain) |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | build variable | your support email |
 | `STATS_KEY` | secret | a long random string; `/api/stats` with `Authorization: Bearer <it>` shows your funnel |
+| `OWNER_CODE` | secret | a long made-up password (12+ characters). Open `https://your-site/#owner=<it>` once, in the browser that holds your album: that album gets unlimited portraits, HD without paws and the Pro album size. Each portrait still costs the Google bill. |
 
 `NEXT_PUBLIC_SITE_URL` is needed in both places: the app uses it at build time, and the hourly timer reads it at run time.
 

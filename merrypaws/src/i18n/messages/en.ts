@@ -52,6 +52,8 @@ const en = {
   },
 
   toasts: {
+    ownerOn: "Owner mode is on: unlimited portraits, in HD.",
+    ownerWrong: "That owner code didn't match.",
     joinedPack: "You joined a friend's pack. Say hi with a paw.",
     welcomeMember: "Welcome in. Your membership is active.",
     paymentReceived: "Payment received. Your credits are on their way.",

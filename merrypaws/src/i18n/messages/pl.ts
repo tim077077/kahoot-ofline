@@ -53,6 +53,8 @@ const pl: Catalog<Messages> = {
   },
 
   toasts: {
+    ownerOn: "Tryb właściciela włączony: nieograniczone portrety w HD.",
+    ownerWrong: "Ten kod właściciela nie pasuje.",
     joinedPack: "Jesteś teraz w stadzie znajomego. Przybij łapę.",
     welcomeMember: "Witaj! Subskrypcja jest aktywna.",
     paymentReceived: "Płatność otrzymana. Kredyty są w drodze.",

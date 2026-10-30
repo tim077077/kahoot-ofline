@@ -52,6 +52,8 @@ const ro: Catalog<Messages> = {
   },
 
   toasts: {
+    ownerOn: "Modul proprietar este activ: portrete nelimitate, în HD.",
+    ownerWrong: "Codul de proprietar nu se potrivește.",
     joinedPack: "Acum ești în haita unui prieten. Dă o lăbuță.",
     welcomeMember: "Bun venit! Abonamentul tău e activ.",
     paymentReceived: "Plată primită. Creditele tale sunt pe drum.",

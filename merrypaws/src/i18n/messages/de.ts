@@ -51,6 +51,8 @@ const de: Catalog<Messages> = {
   },
 
   toasts: {
+    ownerOn: "Besitzermodus ist an: unbegrenzte Porträts, in HD.",
+    ownerWrong: "Dieser Besitzercode passt nicht.",
     joinedPack: "Du bist im Rudel eines Freundes. Sag hallo mit einer Pfote.",
     welcomeMember: "Willkommen! Deine Mitgliedschaft ist aktiv.",
     paymentReceived: "Zahlung erhalten. Deine Credits sind unterwegs.",

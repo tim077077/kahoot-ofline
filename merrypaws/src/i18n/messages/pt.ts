@@ -51,6 +51,8 @@ const pt: Catalog<Messages> = {
   },
 
   toasts: {
+    ownerOn: "Modo de proprietário ativo: retratos ilimitados, em HD.",
+    ownerWrong: "Esse código de proprietário não corresponde.",
     joinedPack: "Já faz parte da matilha de um amigo. Dê a pata.",
     welcomeMember: "Bem-vindo! A sua subscrição está ativa.",
     paymentReceived: "Pagamento recebido. Os seus créditos estão a caminho.",
