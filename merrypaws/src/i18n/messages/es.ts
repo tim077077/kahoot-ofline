@@ -41,6 +41,7 @@ const es: Catalog<Messages> = {
     slow_down: "Son muchos retratos en un minuto. Espera un momento y vuelve a intentarlo.",
     generation_failed: "La copia no ha salido. No se ha cobrado nada, así que vuelve a intentarlo.",
     refused: "Esa escena no se puede pintar. No se ha cobrado nada. Prueba a describirla de otra forma.",
+    no_pet: "No hemos encontrado ninguna mascota en esa foto. No se ha cobrado nada. Elige una en la que se le vea bien la cara.",
     bad_idea: "Primero describe la escena en una o dos frases.",
     bad_request: "Esa foto no se puede usar. Prueba con un JPG o PNG de menos de 4 MB.",
     not_configured: "Eso todavía no está activado.",

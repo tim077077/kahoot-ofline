@@ -24,6 +24,11 @@ const BLOCKED = new Set<string>([
   FinishReason.IMAGE_SAFETY,
 ]);
 
+// Said before every prompt: with no animal in the photo, the model would
+// otherwise paint a made-up one, which is never what the person wanted.
+export const NO_PET_RULE =
+  "First look at the first image. If it does not clearly show an animal, do not create any image: reply with exactly the word NO_PET and nothing else. Otherwise create the image described below.";
+
 // Tries the main model, then the fallback. A safety refusal isn't retried:
 // the fallback would refuse the same photo and cost a second call.
 export async function generateImage(images: Blob[], prompt: string): Promise<Generated> {
@@ -39,7 +44,7 @@ export async function generateImage(images: Blob[], prompt: string): Promise<Gen
         inlineData: { mimeType: img.type || "image/jpeg", data: Buffer.from(await img.arrayBuffer()).toString("base64") },
       })),
     )),
-    { text: prompt },
+    { text: `${NO_PET_RULE}\n\n${prompt}` },
   ];
   const models = [GEMINI_IMAGE_MODEL, GEMINI_FALLBACK_MODEL].filter((m, idx, all): m is string => Boolean(m) && all.indexOf(m) === idx);
 
@@ -51,19 +56,27 @@ export async function generateImage(images: Blob[], prompt: string): Promise<Gen
         contents: [{ role: "user", parts }],
         // 1K is plenty for a phone and a print up to about 4x5 inches, and the
         // cheapest size.
-        config: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "4:5", imageSize: "1K" } },
+        // Text is allowed only so the model can say NO_PET instead of
+        // inventing an animal when the photo has none.
+        config: { responseModalities: ["TEXT", "IMAGE"], imageConfig: { aspectRatio: "4:5", imageSize: "1K" } },
       });
       const candidate = res.candidates?.[0];
       if (res.promptFeedback?.blockReason || (candidate?.finishReason && BLOCKED.has(candidate.finishReason))) {
         throw new GenerationError(`refused: ${res.promptFeedback?.blockReason ?? candidate?.finishReason}`);
       }
       const image = candidate?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
-      if (!image?.data) throw new GenerationError(`${model} returned no image (${candidate?.finishReason ?? "empty"})`);
+      if (!image?.data) {
+        const said = candidate?.content?.parts?.map((p) => p.text ?? "").join(" ") ?? "";
+        if (/NO_PET/.test(said)) throw new GenerationError("no_pet");
+        throw new GenerationError(`${model} returned no image (${candidate?.finishReason ?? "empty"})`);
+      }
       return { bytes: Buffer.from(image.data, "base64"), mimeType: image.mimeType || "image/png", mock: false, model };
     } catch (err) {
       lastError = err;
       console.error(JSON.stringify({ event: "model_failed", model, reason: err instanceof Error ? err.message : String(err) }));
-      if (err instanceof GenerationError && err.message.startsWith("refused")) break;
+      // A refusal or a photo without a pet would go the same way on the
+      // fallback, at the cost of a second call.
+      if (err instanceof GenerationError && (err.message.startsWith("refused") || err.message === "no_pet")) break;
     }
   }
   throw lastError instanceof Error ? lastError : new GenerationError("Every model failed");

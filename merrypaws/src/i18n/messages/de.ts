@@ -41,6 +41,7 @@ const de: Catalog<Messages> = {
     slow_down: "Das sind viele Porträts in einer Minute. Warte kurz und versuch es nochmal.",
     generation_failed: "Der Abzug ist nichts geworden. Es wurde nichts berechnet, versuch es einfach nochmal.",
     refused: "Diese Szene können wir nicht malen. Es wurde nichts berechnet. Beschreib sie einmal anders.",
+    no_pet: "Auf diesem Foto haben wir kein Tier gefunden. Es wurde nichts berechnet. Wähle eines, auf dem das Gesicht gut zu sehen ist.",
     bad_idea: "Beschreib die Szene zuerst in ein, zwei Sätzen.",
     bad_request: "Dieses Foto geht leider nicht. Versuch ein JPG oder PNG unter 4 MB.",
     not_configured: "Das ist noch nicht eingeschaltet.",

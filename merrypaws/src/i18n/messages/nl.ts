@@ -41,6 +41,7 @@ const nl: Catalog<Messages> = {
     slow_down: "Dat zijn veel portretten in een minuut. Wacht even en probeer het opnieuw.",
     generation_failed: "De afdruk is niet gelukt. Er is niets afgeschreven, dus probeer het gerust opnieuw.",
     refused: "Die scène kunnen we niet schilderen. Er is niets afgeschreven. Probeer haar anders te beschrijven.",
+    no_pet: "We vonden geen dier op die foto. Er is niets afgeschreven. Kies er een waarop het gezicht goed te zien is.",
     bad_idea: "Beschrijf eerst de scène in een of twee zinnen.",
     bad_request: "Die foto werkt niet. Probeer een JPG of PNG kleiner dan 4 MB.",
     not_configured: "Dat staat nog niet aan.",

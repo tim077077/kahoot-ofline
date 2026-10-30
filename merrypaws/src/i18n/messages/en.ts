@@ -42,6 +42,7 @@ const en = {
     slow_down: "That's a lot of portraits in a minute. Give it a moment and try again.",
     generation_failed: "The print didn't come out. Nothing was charged, so try again.",
     refused: "That scene couldn't be painted. Nothing was charged. Try describing it another way.",
+    no_pet: "We couldn't find a pet in that photo. Nothing was charged. Pick one where their face is easy to see.",
     bad_idea: "Describe the scene in a sentence or two first.",
     bad_request: "That photo couldn't be used. Try a JPG or PNG under 4 MB.",
     not_configured: "That isn't switched on yet.",

@@ -88,6 +88,7 @@ export async function POST(request: Request) {
       if (freeForTesting()) await releaseTestingCap(store);
     } else if (accountId) await releasePreview(store, accountId, source);
     // A safety refusal is usually the owner's scene; say so, so they reword it.
+    if (reason === "no_pet") return Response.json({ error: "no_pet" }, { status: 422 });
     return Response.json({ error: reason.startsWith("refused") ? "refused" : "generation_failed" }, { status: 502 });
   }
 }

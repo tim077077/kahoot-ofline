@@ -75,7 +75,7 @@ function snooze(key: string) {
 }
 
 const OWNER_KEY = "pp_owner_code";
-const ERROR_CODES = ["limit_reached", "slow_down", "generation_failed", "refused", "bad_idea", "bad_request", "not_configured", "expired"] as const;
+const ERROR_CODES = ["limit_reached", "slow_down", "generation_failed", "refused", "no_pet", "bad_idea", "bad_request", "not_configured", "expired"] as const;
 const LOCALE_SYNCED_KEY = "pp_locale_synced";
 
 const byTaken = (a: Photo, b: Photo) => b.takenAt.localeCompare(a.takenAt);

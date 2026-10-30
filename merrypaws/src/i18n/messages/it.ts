@@ -40,6 +40,7 @@ const it: Catalog<Messages> = {
     slow_down: "Sono tanti ritratti in un minuto. Aspetta un attimo e riprova.",
     generation_failed: "La stampa non è venuta. Non ti è stato addebitato nulla, quindi riprova.",
     refused: "Quella scena non si può dipingere. Non ti è stato addebitato nulla. Prova a descriverla in un altro modo.",
+    no_pet: "Non abbiamo trovato un animale in questa foto. Non è stato addebitato nulla. Scegline una in cui il muso si veda bene.",
     bad_idea: "Prima descrivi la scena in una o due frasi.",
     bad_request: "Quella foto non si può usare. Prova con un JPG o PNG sotto i 4 MB.",
     not_configured: "Questa funzione non è ancora attiva.",

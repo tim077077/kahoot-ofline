@@ -41,6 +41,7 @@ const pt: Catalog<Messages> = {
     slow_down: "São muitos retratos num minuto. Aguarde um momento e tente novamente.",
     generation_failed: "A impressão não saiu. Não foi cobrado nada, por isso tente novamente.",
     refused: "Essa cena não pode ser pintada. Não foi cobrado nada. Experimente descrevê-la de outra forma.",
+    no_pet: "Não encontrámos nenhum animal nessa fotografia. Nada foi cobrado. Escolha uma em que se veja bem a cara.",
     bad_idea: "Primeiro descreva a cena numa ou duas frases.",
     bad_request: "Essa fotografia não funciona. Experimente um JPG ou PNG com menos de 4 MB.",
     not_configured: "Isso ainda não está ativado.",

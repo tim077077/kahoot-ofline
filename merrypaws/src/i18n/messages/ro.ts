@@ -42,6 +42,7 @@ const ro: Catalog<Messages> = {
     slow_down: "Sunt multe portrete într-un minut. Așteaptă puțin și încearcă din nou.",
     generation_failed: "Fotografia n-a ieșit. Nu ți s-a luat nimic, așa că încearcă din nou.",
     refused: "Scena asta nu poate fi pictată. Nu ți s-a luat nimic. Încearcă s-o descrii altfel.",
+    no_pet: "Nu am găsit niciun animal în fotografie. Nu s-a perceput nimic. Alege una în care i se vede bine fața.",
     bad_idea: "Mai întâi descrie scena în una sau două propoziții.",
     bad_request: "Fotografia asta nu merge. Încearcă un JPG sau PNG sub 4 MB.",
     not_configured: "Asta nu e încă activată.",

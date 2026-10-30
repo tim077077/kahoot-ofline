@@ -30,7 +30,8 @@ describe("generateImage", () => {
     expect(url).toContain("gemini-nano-banana-2.1:generateContent");
     const sent = JSON.parse(String(init.body));
     expect(sent.contents[0].parts[0].inlineData).toEqual({ mimeType: "image/jpeg", data: "AQI=" });
-    expect(sent.contents[0].parts[1].text).toBe("a portrait");
+    expect(sent.contents[0].parts[1].text).toMatch(/NO_PET[\s\S]*a portrait$/);
+    expect(sent.generationConfig.responseModalities).toEqual(["TEXT", "IMAGE"]);
     expect(sent.generationConfig.imageConfig).toEqual({ aspectRatio: "4:5", imageSize: "1K" });
   });
 
@@ -52,6 +53,15 @@ describe("generateImage", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { generateImage } = await import("./stager");
     await expect(generateImage([new Blob([new Uint8Array([1])], { type: "image/jpeg" })], "p")).rejects.toThrow("refused");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so, once, when there's no animal in the photo", async () => {
+    const fetch = vi.fn(async () => reply({ candidates: [{ content: { parts: [{ text: "NO_PET" }] }, finishReason: "STOP" }] }));
+    vi.stubGlobal("fetch", fetch);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { generateImage } = await import("./stager");
+    await expect(generateImage([new Blob([new Uint8Array([1])], { type: "image/jpeg" })], "p")).rejects.toThrow("no_pet");
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

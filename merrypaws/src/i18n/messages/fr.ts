@@ -42,6 +42,7 @@ const fr: Catalog<Messages> = {
     slow_down: "Cela fait beaucoup de portraits en une minute. Patientez un instant et réessayez.",
     generation_failed: "Le tirage n’a pas marché. Rien n’a été facturé, vous pouvez réessayer.",
     refused: "Cette scène ne peut pas être peinte. Rien n’a été facturé. Essayez de la décrire autrement.",
+    no_pet: "Nous n’avons pas trouvé d’animal sur cette photo. Rien n’a été facturé. Choisissez-en une où son visage se voit bien.",
     bad_idea: "Décrivez d’abord la scène en une phrase ou deux.",
     bad_request: "Cette photo n’est pas utilisable. Essayez un JPG ou un PNG de moins de 4 Mo.",
     not_configured: "Ce n’est pas encore activé.",

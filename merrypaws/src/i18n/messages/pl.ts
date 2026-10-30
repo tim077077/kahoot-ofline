@@ -43,6 +43,7 @@ const pl: Catalog<Messages> = {
     slow_down: "To sporo portretów w minutę. Odczekaj chwilę i spróbuj ponownie.",
     generation_failed: "Odbitka nie wyszła. Nic nie zostało pobrane, więc spróbuj jeszcze raz.",
     refused: "Tej sceny nie da się namalować. Nic nie zostało pobrane. Spróbuj opisać ją inaczej.",
+    no_pet: "Nie znaleźliśmy zwierzaka na tym zdjęciu. Nic nie zostało pobrane. Wybierz takie, na którym dobrze widać pyszczek.",
     bad_idea: "Najpierw opisz scenę w jednym lub dwóch zdaniach.",
     bad_request: "Tego zdjęcia nie da się użyć. Spróbuj pliku JPG lub PNG mniejszego niż 4 MB.",
     not_configured: "To jeszcze nie jest włączone.",
