@@ -28,7 +28,7 @@ When you're done, open `https://your-site/api/health` on your phone. Every line 
 3. Don't deploy yet. Add the variables from the steps below first. There are two kinds:
    - **Build variables** (Settings → Build → Variables): everything starting with `NEXT_PUBLIC_`. They're baked into the app when it builds, so a change needs a new build.
    - **Secrets** (Settings → Variables and Secrets, type *Secret*): everything else.
-     - Or in the account's **Secrets Store** (Storage & databases → Secrets Store). Then each one also needs a line under `secrets_store_secrets` in `wrangler.jsonc`, or the app never sees it. Plain Worker secrets need nothing extra.
+     - Or in the account's **Secrets Store** (Storage & databases → Secrets Store). Then each one also needs a line under `secrets_store_secrets` in `wrangler.jsonc`, or the app never sees it. Plain Worker secrets need nothing extra. **Changed a value there later?** Deploy again (push any commit, or the latest deployment → Retry build): the Worker reads Secrets Store values once when it starts, so an edit alone isn't picked up.
 4. Deploy. You get a `paw-pictures.<you>.workers.dev` address. A custom domain goes under **Settings → Domains & Routes**.
 
 Every push to the branch deploys again by itself.
