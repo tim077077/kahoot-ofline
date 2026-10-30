@@ -38,7 +38,10 @@
   ],
   "vars": {
     // Read at run time by the hourly reminder timer.
-    "NEXT_PUBLIC_SITE_URL": "https://paw-pictures.timoteiculda07.workers.dev"
+    "NEXT_PUBLIC_SITE_URL": "https://paw-pictures.timoteiculda07.workers.dev",
+    // Everything free while Tim tests (60 portraits a day site-wide). Remove
+    // before taking payments.
+    "FREE_FOR_TESTING": "1"
   },
   "observability": {
     "enabled": true

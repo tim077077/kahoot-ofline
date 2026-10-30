@@ -28,3 +28,19 @@ describe("owner mode", () => {
     expect(await claimOwner(store, "acc1", "a-long-owner-code-123", "2.2.2.2", now)).toBe("slow_down");
   });
 });
+
+describe("free for testing", () => {
+  it("makes every album an owner, with a site-wide daily cap", async () => {
+    const { underTestingCap, releaseTestingCap, TESTING_PORTRAITS_PER_DAY } = await import("./owner");
+    vi.stubEnv("FREE_FOR_TESTING", "1");
+    const store = new MemoryStore();
+    expect(await isOwner(store, "anyone")).toBe(true);
+    expect(await isOwner(store, null)).toBe(false);
+    const now = new Date("2026-10-30T10:00:00Z");
+    for (let i = 0; i < TESTING_PORTRAITS_PER_DAY; i++) expect(await underTestingCap(store, now)).toBe(true);
+    expect(await underTestingCap(store, now)).toBe(false);
+    await releaseTestingCap(store, now);
+    expect(await underTestingCap(store, now)).toBe(true);
+    expect(await underTestingCap(store, new Date("2026-10-31T10:00:00Z"))).toBe(true);
+  });
+});

@@ -1,5 +1,5 @@
 import { LIMITS } from "@/lib/config";
-import { isOwner } from "@/lib/owner";
+import { freeForTesting, isOwner, releaseTestingCap, underTestingCap } from "@/lib/owner";
 import { clearPortraitFailure, recordPortraitFailure } from "@/lib/health";
 import { accountIdForToken, releaseFreeTrial, takeFreeTrial, takeMinuteSlot } from "@/lib/credits";
 import { isValidDay, markDay } from "@/lib/daily";
@@ -49,6 +49,9 @@ export async function POST(request: Request) {
     }
     await refreshAllowance(store, accountId);
     source = (await isOwner(store, accountId)) ? "owner" : await takePreview(store, accountId);
+    if (source === "owner" && freeForTesting() && !(await underTestingCap(store))) {
+      return Response.json({ error: "slow_down" }, { status: 429 });
+    }
   }
   if (!source && (await takeFreeTrial(store, guest, freeLimits))) source = "free";
   if (!source) {
@@ -81,7 +84,9 @@ export async function POST(request: Request) {
     await track(store, "generation_failed");
     await recordPortraitFailure(store, reason);
     if (source === "free") await releaseFreeTrial(store, guest);
-    else if (accountId && source !== "owner") await releasePreview(store, accountId, source);
+    else if (source === "owner") {
+      if (freeForTesting()) await releaseTestingCap(store);
+    } else if (accountId) await releasePreview(store, accountId, source);
     // A safety refusal is usually the owner's scene; say so, so they reword it.
     return Response.json({ error: reason.startsWith("refused") ? "refused" : "generation_failed" }, { status: 502 });
   }
