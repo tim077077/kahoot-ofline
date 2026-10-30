@@ -424,6 +424,7 @@ const de: Catalog<Messages> = {
     "family-album": { title: "Sommer ’72", blurb: "Ein verblasster Familienschnappschuss aus einem langen, warmen Sommer." },
     "golden-age": { title: "Abend in Perlen", blurb: "Studio-Glamour aus der goldenen Zeit des Farbfilms." },
     "film-noir": { title: "Die lange Nacht", blurb: "Schwarz-weißer Noir. Schatten der Jalousie, Regen am Fenster." },
+    "animated-film": { title: "Das große Abenteuer", blurb: "Der Star im eigenen Animationsfilm. Große Augen, leuchtende Farben, und trotzdem ganz sie." },
     "silent-era": { title: "Der kleine Wanderer", blurb: "Stummfilm-Sepia mit weicher Irisblende." },
     "holiday-special": { title: "Weihnachten zu Hause", blurb: "Weihnachten in den 1950ern am Kamin, auf warmem Farbfilm." },
     "painted-pet": { title: "Das gemalte Porträt", blurb: "Ein modernes gemaltes Porträt auf einer flachen Farbe, darüber sein Name." },

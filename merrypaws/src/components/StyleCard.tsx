@@ -23,6 +23,10 @@ const LOOK: Record<StyleId, { bg: string; filter: string; overlay?: string }> = 
     filter: "grayscale(1) contrast(1.45)",
     overlay: "repeating-linear-gradient(-28deg, rgba(0,0,0,0) 0 14px, rgba(0,0,0,0.42) 14px 26px)",
   },
+  "animated-film": {
+    bg: "radial-gradient(70% 55% at 50% 30%, #fff2b8 0%, #9fd7f2 55%, #6fbf73 100%)",
+    filter: "saturate(1.25) brightness(1.05)",
+  },
   "silent-era": {
     bg: "radial-gradient(80% 70% at 50% 40%, #e2cba4 0%, #a98a5f 70%)",
     filter: "sepia(1) contrast(1.1)",

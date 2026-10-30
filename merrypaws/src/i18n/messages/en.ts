@@ -425,6 +425,7 @@ const en = {
     "family-album": { title: "Summer of '72", blurb: "A faded family snapshot from a long, warm summer." },
     "golden-age": { title: "Evening in Pearls", blurb: "Studio glamour from the golden age of colour film." },
     "film-noir": { title: "The Long Night", blurb: "Black and white noir. Blind shadows, rain on the glass." },
+    "animated-film": { title: "The Big Adventure", blurb: "The star of their own animated movie. Big eyes, bright colour, still them." },
     "silent-era": { title: "The Little Wanderer", blurb: "Silent-film sepia with a soft iris vignette." },
     "holiday-special": { title: "Home for Christmas", blurb: "A 1950s Christmas by the fire, in warm colour film." },
     "painted-pet": { title: "The Painted Portrait", blurb: "A modern painted portrait on a flat colour, their name lettered on top." },

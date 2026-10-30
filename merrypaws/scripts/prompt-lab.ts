@@ -8,7 +8,7 @@
 //      dog.ceo to start with. Real photos from friends are the better test.
 //   2. GEMINI_API_KEY=... npm run lab -- --yes            (all eras, main model)
 //      GEMINI_API_KEY=... npm run lab -- --yes --model gemini-3.1-flash-image
-//      GEMINI_API_KEY=... npm run lab -- --yes --styles royal-court,film-noir
+//      GEMINI_API_KEY=... npm run lab -- --yes --styles royal-court,animated-film
 //   3. Open prompt-lab/out/index.html. Each row is one pet: the original, then
 //      every era. Ask one question per cell: "is that the same animal?"
 //

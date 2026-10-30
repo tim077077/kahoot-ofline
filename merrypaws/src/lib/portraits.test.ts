@@ -45,7 +45,9 @@ describe("prompts", () => {
     for (const style of STYLES.filter((s) => s.kind !== "idea")) {
       const alone = buildPortraitPrompt(style, false);
       const together = buildPortraitPrompt(style, true);
-      expect(alone.indexOf("Keep the pet exactly recognisable")).toBeLessThan(alone.indexOf("The setting"));
+      const identity = style.identity ?? "Keep the pet exactly recognisable";
+      expect(alone.indexOf(identity)).toBeGreaterThan(-1);
+      expect(alone.indexOf(identity)).toBeLessThan(alone.indexOf("The setting"));
       expect(alone).not.toContain("Keep the person");
       expect(together).toContain("Keep the person exactly recognisable");
       expect(together).toContain(style.prompt.ownerWardrobe);
@@ -167,5 +169,22 @@ describe("saving portraits", () => {
     expect(objects.files.get(portrait.fullKey)?.contentType).toBe("image/png");
     expect(await store.get(`portrait:${portrait.id}`)).not.toContain("AQID");
     expect((await getPortrait(store, portrait.id))?.mimeType).toBe("image/png");
+  });
+});
+
+describe("animated film", () => {
+  const animated = findStyle("animated-film")!;
+
+  it("may stylise the pet, but keeps this pet and their own collar", () => {
+    const prompt = buildPortraitPrompt(animated, false);
+    expect(prompt).toContain("animated-film character version of themselves");
+    expect(prompt).toContain("Keep the collar, tag or harness");
+    expect(prompt).not.toContain("do not turn them into a cartoon");
+  });
+
+  it("replaces Film Noir in the picker, while old Film Noir portraits keep their style", () => {
+    expect(STYLES.filter((s) => !s.retired).map((s) => s.id)).not.toContain("film-noir");
+    expect(findStyle("film-noir")?.retired).toBe(true);
+    expect(STYLES.filter((s) => !s.retired)).toHaveLength(8);
   });
 });

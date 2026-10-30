@@ -424,6 +424,7 @@ const es: Catalog<Messages> = {
     "family-album": { title: "Verano del 72", blurb: "Una instantánea familiar desvaída de un verano largo y cálido." },
     "golden-age": { title: "Noche de perlas", blurb: "Glamour de estudio de la edad de oro del carrete en color." },
     "film-noir": { title: "La larga noche", blurb: "Cine negro en blanco y negro. Sombras de persiana, lluvia en el cristal." },
+    "animated-film": { title: "La gran aventura", blurb: "La estrella de su propia película de animación. Ojos grandes, color vivo y sigue siendo él." },
     "silent-era": { title: "El pequeño vagabundo", blurb: "Sepia de cine mudo con un suave iris." },
     "holiday-special": { title: "Navidad en casa", blurb: "Una Navidad de los años 50 junto a la chimenea, en cálido color." },
     "painted-pet": { title: "El retrato pintado", blurb: "Un retrato pintado moderno sobre un color liso, con su nombre rotulado encima." },

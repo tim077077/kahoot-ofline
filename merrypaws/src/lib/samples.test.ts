@@ -11,6 +11,6 @@ describe("era samples", () => {
 
   it("covers every era", () => {
     const samples = styleSamples();
-    for (const s of STYLES) expect(samples[s.id], s.id).toBe(`/styles/${s.id}.jpg`);
+    for (const s of STYLES.filter((style) => !style.retired)) expect(samples[s.id], s.id).toBe(`/styles/${s.id}.jpg`);
   });
 });

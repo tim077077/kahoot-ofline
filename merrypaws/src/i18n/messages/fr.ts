@@ -425,6 +425,7 @@ const fr: Catalog<Messages> = {
     "family-album": { title: "L’été 72", blurb: "Un instantané de famille délavé, d’un long été chaud." },
     "golden-age": { title: "Soirée en perles", blurb: "Le glamour des studios à l’âge d’or de la pellicule couleur." },
     "film-noir": { title: "La Longue Nuit", blurb: "Film noir en noir et blanc. Ombres de stores, pluie sur la vitre." },
+    "animated-film": { title: "La Grande Aventure", blurb: "La vedette de son propre film d’animation. De grands yeux, des couleurs vives, et toujours lui." },
     "silent-era": { title: "Le Petit Vagabond", blurb: "Sépia du cinéma muet avec un doux iris." },
     "holiday-special": { title: "Noël à la maison", blurb: "Un Noël des années 50 au coin du feu, en couleurs chaudes." },
     "painted-pet": { title: "Le Portrait peint", blurb: "Un portrait peint moderne sur un aplat de couleur, son nom en lettres au-dessus." },

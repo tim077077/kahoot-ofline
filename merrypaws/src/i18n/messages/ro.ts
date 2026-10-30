@@ -439,6 +439,7 @@ const ro: Catalog<Messages> = {
     "family-album": { title: "Vara lui '72", blurb: "O poză de familie decolorată dintr-o vară lungă și caldă." },
     "golden-age": { title: "Seară cu perle", blurb: "Glamour de studio din epoca de aur a filmului color." },
     "film-noir": { title: "Noaptea lungă", blurb: "Noir alb-negru. Umbre de jaluzele, ploaie pe geam." },
+    "animated-film": { title: "Marea aventură", blurb: "Vedeta propriului film de animație. Ochi mari, culori vii și tot el rămâne." },
     "silent-era": { title: "Micul vagabond", blurb: "Sepia de film mut, cu un iris blând." },
     "holiday-special": { title: "Crăciun acasă", blurb: "Un Crăciun din anii '50 lângă șemineu, în culori calde." },
     "painted-pet": { title: "Portretul pictat", blurb: "Un portret pictat modern pe o culoare uniformă, cu numele scris deasupra." },

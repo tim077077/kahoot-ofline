@@ -460,6 +460,7 @@ const pl: Catalog<Messages> = {
     "family-album": { title: "Lato '72", blurb: "Wyblakła rodzinna fotka z długiego, ciepłego lata." },
     "golden-age": { title: "Wieczór z perłami", blurb: "Studyjny blask ze złotej ery kolorowej kliszy." },
     "film-noir": { title: "Długa noc", blurb: "Czarno-biały noir. Cienie żaluzji, deszcz na szybie." },
+    "animated-film": { title: "Wielka przygoda", blurb: "Gwiazda własnego filmu animowanego. Wielkie oczy, żywe kolory, a wciąż to on." },
     "silent-era": { title: "Mały włóczęga", blurb: "Sepia z kina niemego z miękką przesłoną." },
     "holiday-special": { title: "Święta w domu", blurb: "Boże Narodzenie z lat 50. przy kominku, w ciepłych kolorach." },
     "painted-pet": { title: "Malowany portret", blurb: "Nowoczesny malowany portret na jednolitym tle, z imieniem napisanym u góry." },

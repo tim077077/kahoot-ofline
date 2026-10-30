@@ -27,7 +27,8 @@ export type StyleId =
   | "silent-era"
   | "holiday-special"
   | "painted-pet"
-  | "your-scene";
+  | "your-scene"
+  | "animated-film";
 
 // The costume Biscuit wears on the style card until real example stills exist.
 export type Costume = "crown" | "none" | "pearls" | "fedora" | "boater" | "scarf";
@@ -42,6 +43,10 @@ export type Style = {
   year: number;
   blurb: string;
   costume: Costume;
+  // No longer offered, but kept so portraits already made in it keep their title.
+  retired?: boolean;
+  // Replaces the usual likeness rule, for a style that may stylise the animal.
+  identity?: string;
   prompt: {
     // What the finished picture physically is.
     medium: string;
@@ -62,6 +67,10 @@ export type Style = {
     avoid: string;
   };
 };
+
+// The animated film may stylise the animal itself, but only so far: it is
+// still this pet, not a cute stand-in of the same breed.
+const ANIMATED_IDENTITY = `Turn the pet into an animated-film character version of themselves. Slightly larger, more expressive eyes and softened shapes are welcome, but they must stay unmistakably the same individual: the same coat colour and pattern with every marking on the correct side, the same coat texture (curls stay curls), the same ear shape and how the ears sit, the same muzzle length, nose colour and body build. Keep the collar, tag or harness they wear in the photo. Do not make them look like a different breed. The same number of eyes, ears and legs.`;
 
 export const STYLES: Style[] = [
   {
@@ -147,6 +156,8 @@ export const STYLES: Style[] = [
   {
     id: "film-noir",
     kind: "era",
+    // Replaced by the animated film: the dog came out bigger and greyer.
+    retired: true,
     title: "The Long Night",
     year: 1947,
     blurb: "Black and white noir. Blind shadows, rain on the glass.",
@@ -166,6 +177,31 @@ export const STYLES: Style[] = [
       texture: "fine silver grain, a faint haze in the air, glistening rain on the glass",
       mood: "mysterious, moody and cool, the hero of the story",
       avoid: "no colour at all, no stripes of shadow across the eyes, no cigarettes, no weapons, no modern objects",
+    },
+  },
+  {
+    id: "animated-film",
+    kind: "era",
+    title: "The Big Adventure",
+    year: 2026,
+    blurb: "The star of their own animated movie. Big eyes, bright colour, still them.",
+    costume: "none",
+    identity: ANIMATED_IDENTITY,
+    prompt: {
+      medium: "a still frame from a modern feature-length 3D animated family film, a polished computer-animated render with soft global illumination",
+      wardrobe: "exactly the collar, tag or harness they wear in the photo, kept as it is, and no costume",
+      ownerWardrobe: "their everyday clothes from the photo, simplified into clean animated-film shapes",
+      set: "a sunlit, colourful storybook garden with oversized flowers, a white picket fence and soft rolling hills behind, gently out of focus",
+      pose: "sitting proudly facing the camera, head tilted a little, with a happy, expressive face",
+      ownerPose: "the person kneeling beside the pet with an arm around them, both smiling at the camera, the person an animated character too",
+      light:
+        "warm late-afternoon key light with a soft rim light outlining the fur, bright cheerful fill light, no harsh shadows",
+      camera: "eye level with the pet, a 50mm-equivalent virtual lens, vertical framing, the pet in sharp focus and the background softly blurred",
+      palette: "saturated but harmonious colour: sky blue, fresh greens, warm sunshine yellow, and the pet's true coat colour",
+      texture: "a clean 3D render: individually groomed fur strands, a soft glow through the ears, smooth shading, no film grain",
+      mood: "joyful, warm and full of personality, the hero of their own movie",
+      avoid:
+        "no photorealism, no flat 2D cartoon, no caricature that changes the breed or the coat, no human clothes on the pet, no logos or text",
     },
   },
   {
@@ -356,7 +392,7 @@ export function buildPortraitPrompt(style: Style, withOwner: boolean, extras: Pr
 
   return [
     `Turn the photo into ${p.medium}. ${who}`,
-    illustrated ? PET_IDENTITY_STYLISED : PET_IDENTITY,
+    style.identity ?? (illustrated ? PET_IDENTITY_STYLISED : PET_IDENTITY),
     withOwner ? OWNER_IDENTITY : "",
     `The pet wears ${p.wardrobe}.${withOwner ? ` The person wears ${p.ownerWardrobe}.` : ""}`,
     `The setting: ${p.set}.${illustrated ? ` The background colour is ${canvas.prompt}, edge to edge.` : ""} Pose: ${withOwner ? p.ownerPose : p.pose}.`,

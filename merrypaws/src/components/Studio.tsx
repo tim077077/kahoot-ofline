@@ -140,7 +140,7 @@ export function Studio(props: Props) {
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5" role="radiogroup" aria-label={t("studio.era")}>
-        {STYLES.map((s) => (
+        {STYLES.filter((s) => !s.retired).map((s) => (
           <EraCard key={s.id} style={s} sample={props.samples[s.id]} selected={props.style === s.id} onSelect={() => props.onStyle(s.id)} />
         ))}
       </div>

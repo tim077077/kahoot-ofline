@@ -424,6 +424,7 @@ const nl: Catalog<Messages> = {
     "family-album": { title: "Zomer van '72", blurb: "Een vervaagd familiekiekje uit een lange, warme zomer." },
     "golden-age": { title: "Avond met parels", blurb: "Studioglamour uit de gouden eeuw van kleurenfilm." },
     "film-noir": { title: "De lange nacht", blurb: "Zwart-wit noir. Schaduwen van jaloezieën, regen op het raam." },
+    "animated-film": { title: "Het grote avontuur", blurb: "De ster van hun eigen animatiefilm. Grote ogen, felle kleuren, en nog steeds zichzelf." },
     "silent-era": { title: "De kleine zwerver", blurb: "Sepia uit de stomme film met een zacht iris." },
     "holiday-special": { title: "Kerst thuis", blurb: "Een kerst uit de jaren 50 bij de open haard, in warme kleuren." },
     "painted-pet": { title: "Het geschilderde portret", blurb: "Een modern geschilderd portret op een effen kleur, met de naam erboven." },

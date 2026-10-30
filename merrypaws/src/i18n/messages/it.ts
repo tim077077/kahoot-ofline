@@ -423,6 +423,7 @@ const it: Catalog<Messages> = {
     "family-album": { title: "Estate del '72", blurb: "Un'istantanea di famiglia sbiadita da una lunga estate calda." },
     "golden-age": { title: "Serata di perle", blurb: "Glamour da studio dell'età d'oro della pellicola a colori." },
     "film-noir": { title: "La lunga notte", blurb: "Noir in bianco e nero. Ombre di veneziane, pioggia sul vetro." },
+    "animated-film": { title: "La grande avventura", blurb: "Il protagonista del suo film d’animazione. Occhi grandi, colori vivaci, ed è sempre lui." },
     "silent-era": { title: "Il piccolo vagabondo", blurb: "Seppia del cinema muto con un morbido iris." },
     "holiday-special": { title: "Natale a casa", blurb: "Un Natale anni '50 accanto al camino, in caldi colori." },
     "painted-pet": { title: "Il ritratto dipinto", blurb: "Un ritratto dipinto moderno su tinta unita, con il suo nome scritto sopra." },

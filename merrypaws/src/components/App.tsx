@@ -48,7 +48,7 @@ import { tap } from "@/lib/native";
 import { installCrashReporting } from "@/lib/crash";
 import { type AppPushState, appPushState, enableAppPush, forgetAppPush, listenAppPush, syncAppPush } from "@/lib/appPush";
 import { disableReminder, registerWorker, syncReminder, updateLocalReminders } from "@/lib/reminders";
-import type { StyleId } from "@/lib/styles";
+import { findStyle, type StyleId } from "@/lib/styles";
 
 type Tab = "album" | "pack" | "studio" | "you";
 
@@ -256,7 +256,8 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
       if (invite) setInvitedBy(invite);
       const saved = storage.profile();
       setProfile(saved);
-      if (saved?.favorite) setStyle(saved.favorite);
+      // A favourite era that's been retired falls back to the first one.
+      if (saved?.favorite) setStyle(findStyle(saved.favorite)?.retired ? "royal-court" : saved.favorite);
       setReel(storage.reel());
       const tok = storage.token();
       tokenRef.current = tok;
