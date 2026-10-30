@@ -598,7 +598,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
     if (req.idea) form.append("idea", req.idea);
     try {
       const { status, body } = await postPreview(form, token, onPhase);
-      const data = body as { id?: string; preview?: string; mock?: boolean; error?: string; daily?: DailyResult };
+      const data = body as { id?: string; preview?: string; mock?: boolean; unlocked?: boolean; error?: string; daily?: DailyResult };
       if (status >= 400 || !data.id || !data.preview) {
         if (data.error === "limit_reached") openSheet("previews");
         return { ok: false, error: errorText(data.error), code: data.error };
@@ -610,7 +610,7 @@ function AppBody({ samples }: { samples: Record<StyleId, string | null> }) {
         petName: profile?.petName ?? "",
         withOwner: Boolean(req.owner),
         createdAt: new Date().toISOString(),
-        unlocked: false,
+        unlocked: Boolean(data.unlocked),
         starred: false,
         memorial: req.memorial || undefined,
         mock: data.mock,

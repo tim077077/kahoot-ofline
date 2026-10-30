@@ -225,7 +225,9 @@ export const STYLES: Style[] = [
     prompt: {
       medium:
         "a modern hand-painted pet portrait illustration in gouache-style brushwork, the kind of custom keepsake portrait people frame and hang at home",
-      wardrobe: "a neat little bow tie, or a simple bandana, in a colour that complements the background",
+      // Their own collar is part of who they are; only a bare neck gets one.
+      wardrobe:
+        "exactly the collar, tag or harness they wear in the photo, kept as it is; only if they wear nothing at the neck, a neat little bow tie or a simple bandana in a colour that complements the background",
       ownerWardrobe: "simple modern clothes in plain colours that complement the background",
       set: "a completely flat, solid background in one calm colour, with no scenery, pattern, gradient, texture or cast shadow",
       pose: "a head-and-chest portrait, facing three-quarters toward the viewer, ears relaxed in their natural position, a calm, happy expression, centred with clear space above the head",

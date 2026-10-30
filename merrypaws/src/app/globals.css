@@ -260,13 +260,13 @@ input::placeholder {
   animation: develop 2.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* While developing: the star's own photo as a film negative, breathing. */
+/* While developing: the star's own photo half-appeared, warm and hazy, like
+   a print coming up in the tray. (A true negative read as a broken photo.) */
 @keyframes negative {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.5; filter: sepia(0.9) brightness(1.2) contrast(0.6) blur(2px); }
+  50% { opacity: 0.8; filter: sepia(0.7) brightness(1.1) contrast(0.75) blur(0.8px); }
 }
 .negative {
-  filter: invert(1) sepia(0.6) hue-rotate(160deg) contrast(0.9);
   animation: negative 2.8s ease-in-out infinite;
 }
 

@@ -107,18 +107,18 @@ async function imagesBinding(): Promise<ImagesBinding | undefined> {
   }
 }
 
-async function previewWithImages(images: ImagesBinding, full: Uint8Array): Promise<Buffer> {
-  const result = await images
-    .input(stream(full))
-    .transform({ width: PREVIEW_EDGE, height: PREVIEW_EDGE, fit: "scale-down" })
-    .draw(stream(Buffer.from(TILE_PNG_BASE64, "base64")), { repeat: true, top: 0, left: 0 })
-    .output({ format: "image/jpeg", quality: 72 });
+async function previewWithImages(images: ImagesBinding, full: Uint8Array, paws: boolean): Promise<Buffer> {
+  const sized = images.input(stream(full)).transform({ width: PREVIEW_EDGE, height: PREVIEW_EDGE, fit: "scale-down" });
+  const result = await (paws ? sized.draw(stream(Buffer.from(TILE_PNG_BASE64, "base64")), { repeat: true, top: 0, left: 0 }) : sized).output({
+    format: "image/jpeg",
+    quality: 72,
+  });
   return Buffer.from(await result.response().arrayBuffer());
 }
 
-function previewInJs(full: Uint8Array): Buffer {
+function previewInJs(full: Uint8Array, paws: boolean): Buffer {
   const small = shrink(decode(full), PREVIEW_EDGE);
-  overlay(small);
+  if (paws) overlay(small);
   return Buffer.from(jpeg.encode({ width: small.width, height: small.height, data: small.data }, 72).data);
 }
 
@@ -126,8 +126,9 @@ function previewInJs(full: Uint8Array): Buffer {
 // full-resolution image never leaves the server until the portrait is unlocked.
 // WATERMARK_ENGINE=js skips the Images binding (needs Workers Paid for the CPU
 // time). Wrangler's local Images stand-in ignores draw(), so check the paws
-// on the first real deploy.
-export async function makePreview(full: Uint8Array): Promise<Buffer> {
+// on the first real deploy. Without paws (the owner, or free testing) it's
+// the same small JPEG, clean.
+export async function makePreview(full: Uint8Array, paws = true): Promise<Buffer> {
   const images = process.env.WATERMARK_ENGINE === "js" ? undefined : await imagesBinding();
-  return images ? previewWithImages(images, full) : previewInJs(full);
+  return images ? previewWithImages(images, full, paws) : previewInJs(full, paws);
 }

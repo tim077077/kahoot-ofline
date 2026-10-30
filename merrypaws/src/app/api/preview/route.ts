@@ -6,7 +6,7 @@ import { isValidDay, markDay } from "@/lib/daily";
 import { track } from "@/lib/events";
 import { bearerToken, guestOf, storeOr503 } from "@/lib/http";
 import { isAlbumFull, refreshAllowance, releasePreview, takePreview, type PreviewSource } from "@/lib/plans";
-import { savePortrait } from "@/lib/portraits";
+import { savePortrait, unlockWithCredit } from "@/lib/portraits";
 import { getObjects } from "@/lib/objects";
 import { generateImage } from "@/lib/stager";
 import { buildPortraitPrompt, cleanIdea, cleanName, findCanvas, findStyle } from "@/lib/styles";
@@ -62,8 +62,11 @@ export async function POST(request: Request) {
   try {
     const images = owner ? [pet, owner] : [pet];
     const full = await generateImage(images, buildPortraitPrompt(style, Boolean(owner), extras));
-    const preview = await makePreview(full.bytes);
+    // The owner (and everyone, while testing) sees it clean and already kept.
+    const clean = source === "owner";
+    const preview = await makePreview(full.bytes, !clean);
     const portrait = await savePortrait(store, getObjects(), full, style.id);
+    if (clean && accountId) await unlockWithCredit(store, portrait.id, accountId, true);
     await track(store, "generation_ok");
     await clearPortraitFailure(store);
     // A portrait keeps the daily roll going too.
@@ -75,6 +78,7 @@ export async function POST(request: Request) {
       style: style.id,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
       mock: full.mock,
+      unlocked: clean,
       daily,
     });
   } catch (err) {
