@@ -1,4 +1,6 @@
+import { scrub } from "./crashLog";
 import { normalizeEndpoint, type ObjectStore } from "./objects";
+import type { Store } from "./store";
 
 // What /api/health says about each service. Names of missing settings are
 // fine to show; values never are.
@@ -51,4 +53,23 @@ export async function checkStorage(objects: () => ObjectStore): Promise<{ ok: bo
   } catch (err) {
     return { ok: false, hint: storageHint(err) };
   }
+}
+
+// The last portrait that failed, and why, so /api/health can say what the
+// image service answered without anyone digging through logs. Keys are
+// blanked; a portrait that works clears it.
+const PORTRAIT_FAILURE = "health:portraitFailure";
+
+export async function recordPortraitFailure(store: Store, reason: string, now = new Date()) {
+  const clean = scrub(reason.replace(/AIza[0-9A-Za-z_-]{20,}/g, "…")).replace(/\s+/g, " ").slice(0, 400);
+  await store.set(PORTRAIT_FAILURE, JSON.stringify({ at: now.toISOString(), reason: clean }), { ex: 7 * 24 * 3600 }).catch(() => {});
+}
+
+export async function clearPortraitFailure(store: Store) {
+  await store.del(PORTRAIT_FAILURE).catch(() => {});
+}
+
+export async function lastPortraitFailure(store: Store): Promise<{ at: string; reason: string } | null> {
+  const raw = await store.get(PORTRAIT_FAILURE).catch(() => null);
+  return raw ? (JSON.parse(raw) as { at: string; reason: string }) : null;
 }

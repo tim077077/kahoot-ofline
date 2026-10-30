@@ -74,3 +74,18 @@ describe("health", () => {
     expect(normalizeEndpoint("https://abc.eu.r2.cloudflarestorage.com")).toBe("https://abc.eu.r2.cloudflarestorage.com");
   });
 });
+
+describe("last portrait failure", () => {
+  it("keeps the reason without any key, and clears on success", async () => {
+    const { MemoryStore } = await import("./store");
+    const { recordPortraitFailure, lastPortraitFailure, clearPortraitFailure } = await import("./health");
+    const store = new MemoryStore();
+    await recordPortraitFailure(store, `got status: 400. API key not valid: AIzaSyD${"x".repeat(32)}`, new Date("2026-10-30T10:00:00Z"));
+    const last = await lastPortraitFailure(store);
+    expect(last?.at).toBe("2026-10-30T10:00:00.000Z");
+    expect(last?.reason).toContain("API key not valid");
+    expect(last?.reason).not.toContain("AIza");
+    await clearPortraitFailure(store);
+    expect(await lastPortraitFailure(store)).toBeNull();
+  });
+});

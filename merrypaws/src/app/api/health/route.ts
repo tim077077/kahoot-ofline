@@ -1,5 +1,5 @@
 import { fcmConfigured } from "@/lib/fcm";
-import { checkStorage, missing } from "@/lib/health";
+import { checkStorage, lastPortraitFailure, missing } from "@/lib/health";
 import { getObjects } from "@/lib/objects";
 import { getStore } from "@/lib/store";
 import { pushConfigured } from "@/lib/webpush";
@@ -52,5 +52,8 @@ export async function GET() {
   if (!pushConfigured()) fix.reminders = `Missing: ${missing(["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "CRON_SECRET"]).join(", ")}`;
   if (!checks.appPush) fix.appPush = "Missing or unreadable: FIREBASE_SERVICE_ACCOUNT";
   if (!checks.siteUrl) fix.siteUrl = "Set NEXT_PUBLIC_SITE_URL to the site's address (build variable).";
+  // Set up isn't the same as working: the last failed portrait says why.
+  const failure = database ? await lastPortraitFailure(s) : null;
+  if (failure) fix.lastPortraitFailure = `${failure.at}: ${failure.reason}`;
   return Response.json({ ready: Object.values(checks).every(Boolean), ...checks, fix }, { headers: { "Cache-Control": "no-store" } });
 }

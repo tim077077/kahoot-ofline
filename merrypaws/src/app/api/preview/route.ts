@@ -1,4 +1,5 @@
 import { LIMITS } from "@/lib/config";
+import { clearPortraitFailure, recordPortraitFailure } from "@/lib/health";
 import { accountIdForToken, releaseFreeTrial, takeFreeTrial, takeMinuteSlot } from "@/lib/credits";
 import { isValidDay, markDay } from "@/lib/daily";
 import { track } from "@/lib/events";
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
     const preview = await makePreview(full.bytes);
     const portrait = await savePortrait(store, getObjects(), full, style.id);
     await track(store, "generation_ok");
+    await clearPortraitFailure(store);
     // A portrait keeps the daily roll going too.
     const day = form?.get("day");
     const daily =
@@ -76,6 +78,7 @@ export async function POST(request: Request) {
     const reason = err instanceof Error ? err.message : String(err);
     console.error(JSON.stringify({ event: "generation_failed", style: style.id, withOwner: Boolean(owner), reason, ideaLength: extras.idea?.length }));
     await track(store, "generation_failed");
+    await recordPortraitFailure(store, reason);
     if (source === "free") await releaseFreeTrial(store, guest);
     else if (accountId) await releasePreview(store, accountId, source);
     // A safety refusal is usually the owner's scene; say so, so they reword it.
